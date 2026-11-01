@@ -1,0 +1,61 @@
+name: "[Research Only] MVP10 20261008 Classification Inventory"
+on:
+  push:
+    branches:
+      - research/daily-video-mvp10-a-20261029
+    paths:
+      - .github/workflows/research-mvp10-universe-classification.yml
+
+permissions:
+  contents: read
+
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Assert isolated branch
+        run: |
+          test "$GITHUB_REF_NAME" = "research/daily-video-mvp10-a-20261029"
+          test "$GITHUB_REF_TYPE" = "branch"
+      - uses: actions/checkout@v4
+        with:
+          ref: research/daily-video-mvp10-a-20261029
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/research_mvp10_dated_universe_classification.js
+            tests/research_mvp10_dated_universe_classification.test.js
+            data_twse/twse_industry_Stock.csv
+            data_twse/twse_industry_InnovationBoard.csv
+            data_twse/twse_industry_TDR.csv
+            data_twse/twse_industry_ETF.csv
+            data_daily_gain_over_5/20261008.json
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Verify categories and adversarial cases
+        run: node --test tests/research_mvp10_dated_universe_classification.test.js
+      - name: Produce non-authorizing research inventory
+        run: |
+          mkdir -p research-inventory
+          node scripts/research_mvp10_dated_universe_classification.js 20261008 > research-inventory/20261008-categories.json
+          node - <<'NODE'
+          const fs=require('fs'),c=require('crypto');
+          const f='research-inventory/20261008-categories.json',r=JSON.parse(fs.readFileSync(f));
+          if(r.stock_count!==35 || r.category_counts.Stock!==32 || r.category_counts.TDR!==1 ||
+             r.category_counts.InnovationBoard!==2 || r.classification_certified!==false ||
+             r.render_authorized!==false || r.source_snapshot_effective_on_target_date_verified!==false)
+            throw Error('RESEARCH_SCOPE_OR_COUNT_MISMATCH');
+          const sha=c.createHash('sha256').update(fs.readFileSync(f)).digest('hex');
+          console.log(JSON.stringify({date:r.target_date,counts:r.category_counts,sha256:sha,decision:r.decision},null,2));
+          NODE
+          echo "Research inventory ONLY: current category snapshot cannot certify 20261008 historical validity; no video render authorized" >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve research-only classification inventory
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mvp10-20261008-classification-inventory
+          path: research-inventory/
+          if-no-files-found: warn
+          retention-days: 30
