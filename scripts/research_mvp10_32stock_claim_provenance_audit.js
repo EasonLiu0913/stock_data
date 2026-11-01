@@ -51,8 +51,8 @@ function audit(root){
   let check;
   try{
    const v=verify(root,code);
-   check={status:'NUMERIC_SOURCE_RECONCILED',price:v.official_close,foreign_net_shares:v.institutional.foreign.net_shares,
-    margin_delta:v.margin.delta,source_count:Object.keys(v.source_sha256).length};
+   check={status:v.margin.record_status==='no_record'?'NUMERIC_SOURCE_PARTIAL_NO_MARGIN_ROW':'NUMERIC_SOURCE_RECONCILED',price:v.official_close,foreign_net_shares:v.institutional.foreign.net_shares,
+    margin_delta:v.margin.delta,margin_record_status:v.margin.record_status,source_count:Object.keys(v.source_sha256).length};
   }catch(e){check={status:'NUMERIC_SOURCE_CONFLICT',error:String(e.message).slice(0,360)}}
   auditRows.push({code,name:s.name,
    evidence_strength:p.evidence_strength,dated_news_source_count:matchSources.length,
@@ -70,6 +70,7 @@ function audit(root){
   original_list_count:35,provisional_stock_count:32,
   matched_official_numeric_claim_count:count('NUMERIC_SOURCE_RECONCILED'),
   original_numeric_claim_conflict_count:count('NUMERIC_SOURCE_CONFLICT'),
+  official_numeric_partial_missing_margin_count:count('NUMERIC_SOURCE_PARTIAL_NO_MARGIN_ROW'),
   strong_claims_count:stronger.length,
   strong_claims_with_only_unread_secondary_or_generic_links:stronger.filter(x=>x.strong_claim_using_only_secondary_or_generic).length,
   primary_company_disclosure_document_content_verified_count:0,
