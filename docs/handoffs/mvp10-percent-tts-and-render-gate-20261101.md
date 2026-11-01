@@ -109,3 +109,27 @@ anti_loop: do not repeat conditional math or rerun original invalid render; go t
 next_action: promptA
 plan_changed: no
 publication_authorized: false
+
+
+## 2026-11-01 — Real isolated row-level dated candidate workspaces
+
+research_progress_status: PROGRESS
+phase_status: MVP10-A INCOMPLETE; MVP10-B FROZEN_NOT_ELIGIBLE
+research_progress_evidence:
+- New script `scripts/research_mvp10_isolated_candidate_workspace.js`, regression `tests/research_mvp10_isolated_candidate_workspace.test.js`, research-only workflow `.github/workflows/research-mvp10-isolated-candidate-workspace.yml`.
+- GitHub CI [#41312843847](https://github.com/EasonLiu0913/stock_data/actions/runs/41312843847), head `8561f4a485fd830a3e939f6eecbe0c4a1a173845`, job `124866656527`, conclusion **SUCCESS**, Node tests **4/4 PASS**. Tests verify unchanged source bytes, ordering, duplicate output refusal and no output inside original repository.
+- Artifact #`13086456247`, `mvp10-isolated-20261008-source-candidates`, ZIP SHA256 `dde7fd87e8bef9a2d2dbb55a18da290bd5aa432a64fe875dc10bd3d125c5406a`, size 92,906 bytes.
+- Runner-temp scenario `stock-category-only`: 32 provisional stocks, excluded 9103, 6645, 7740. Manifest SHA256 `69f348abc11f6c2b82bb6be0fb01ded0e83be741d64c79e4f490a718b028ea23`.
+- Runner-temp scenario `innovation-conditional`: 34 provisional stocks, excluded 9103 only. Manifest SHA256 `59a82e9b1d828d80d1c4fea34ad67ed8f450cad8fac0abfbb0e9869da8b8b0f5`.
+- Each workspace contains five separate noncanonical date-matched per-security record sets: raw, facts, news, AI, published, in exact common code order, with source file SHA256 provenance. Frozen source files unchanged. No old market-summary, priority watchlist or global/market aggregate copied.
+- All row outputs carry `canonical_daily_video_input:false` and `record_carry_forward_status:UNVERIFIED_REQUIRES_NEW_SOURCE_RECONCILIATION`. Manifests carry `all_aggregate_statistics_invalidated:true`, `classification_archive_publisher_effective_date_verified:false`, `stock_identity_scope_certified:false`, `summary_regenerated:false`, `editorial_script_rebuilt:false`, `video_render_authorized:false`, `publication_authorized:false`.
+- Actual date/quote and pre-date TWSE category snapshot evidence established in preceding CI rounds, but date-effective ordinary-stock classification and InnovationBoard inclusion are **not yet certified**. Do not represent candidate row extraction as real regenerated published analysis or a validated MP4.
+- No main change, Pages, production, cron, YouTube upload or release-lock changes.
+
+current_blocker: ordinary common-stock effective-date eligibility, plus full source/claim-valid aggregate analysis, market-summary and narrative reconstitution; draft stock records themselves now physically exist.
+planned_research: next A should use provisional stock-category-only records in isolation, recompute source-linked aggregate counts and editorial draft from scratch, and flag any dependent causal/news or scope facts still unverified. Then run mandatory validation only after all original gates and dated identity checks are satisfied. Do NOT repeat generic snapshot/classification inventory or the already successful row extraction.
+prior_attempt: previous A had conditional script numbers and drafts but no candidate workspace; now both 32/34 source-preserving candidate workspaces are emitted.
+anti_loop: do not retry original DR-inclusive render or present 32/34 scenarios as certified publishing inputs.
+next_action: promptA
+plan_changed: no
+publication_authorized: false
