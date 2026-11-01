@@ -1,0 +1,60 @@
+name: "[Research Only] MVP10 Conditional Editorial Drafts"
+on:
+  push:
+    branches:
+      - research/daily-video-mvp10-a-20261029
+    paths:
+      - .github/workflows/research-mvp10-conditional-editorial-drafts.yml
+permissions:
+  contents: read
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Enforce isolated branch
+        run: |
+          test "$GITHUB_REF_NAME" = "research/daily-video-mvp10-a-20261029"
+          test "$GITHUB_REF_TYPE" = "branch"
+      - uses: actions/checkout@v4
+        with:
+          ref: research/daily-video-mvp10-a-20261029
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/research_mvp10_conditional_editorial_drafts.js
+            tests/research_mvp10_conditional_editorial_drafts.test.js
+            data_daily_gain_over_5/20261008.json
+            data_daily_gain_over_5/analysis/20261008.json
+            data_daily_gain_over_5/analysis-news/20261008.json
+            video_scripts/daily-gainers/20261008.json
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Verify source-bound draft numbers and source preservation
+        run: node --test tests/research_mvp10_conditional_editorial_drafts.test.js
+      - name: Generate conditional research-only narration proposals
+        run: |
+          mkdir -p research-editorial-drafts
+          node scripts/research_mvp10_conditional_editorial_drafts.js 20261008 > research-editorial-drafts/20261008-conditional-drafts.json
+          node - <<'NODE'
+          const fs=require('node:fs'),crypto=require('node:crypto');
+          const f='research-editorial-drafts/20261008-conditional-drafts.json';
+          const r=JSON.parse(fs.readFileSync(f,'utf8'));
+          if(r.render_authorized!==false||r.publication_authorized!==false||r.scenarios.length!==2||
+             r.decision!=='DRAFT_ONLY_CONDITIONAL_NOT_RENDERABLE')throw Error('CONDITIONAL_DRAFT_GATE_FAILED');
+          console.log(JSON.stringify({
+            scenarios:r.scenarios.map(x=>({name:x.name,count:x.conditional_stock_count,
+              biotech:x.conditional_biotech_codes.length,avg:x.conditional_biotech_average_gain_pct,
+              catalysts:x.conditional_public_catalyst_count,coverage_pct:x.conditional_catalyst_coverage_pct})),
+            digest:crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex')},null,2));
+          NODE
+          echo "Conditional scenario research drafts ONLY. No audio, video, YouTube or source write." >> "$GITHUB_STEP_SUMMARY"
+      - name: Save conditional drafts (not publishable)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mvp10-20261008-conditional-editorial-drafts
+          path: research-editorial-drafts/
+          if-no-files-found: warn
+          retention-days: 30
