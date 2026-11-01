@@ -66,3 +66,25 @@ anti_loop: do not rerun old invalid full Render-only video; do not recertify his
 next_action: promptA — bounded dated candidate/claims dependency mapping and non-destructive regeneration without release effects.
 plan_changed: no
 publication_authorized: false
+
+
+## 2026-11-01 — No-write dated regeneration dependency preflight
+
+research_progress_status: PROGRESS
+phase_status: MVP10-A INCOMPLETE; MVP10-B FROZEN/NOT_ELIGIBLE
+research_progress_evidence:
+- Research code `scripts/research_mvp10_rebuild_preflight.js`, regression `tests/research_mvp10_rebuild_preflight.test.js`, isolated read-only workflow `.github/workflows/research-mvp10-rebuild-preflight.yml`; GitHub Run [#41312188482](https://github.com/EasonLiu0913/stock_data/actions/runs/41312188482), commit `54505a502183d7763f062e1cbfb3a68c51fa6b26`, conclusion **success**, Node tests **4/4 PASS**.
+- Artifact `13086211063`: `20261008-rebuild-dependency-map.json`, report SHA256 `f98d5522ac8d627db6fb5bc5ebb0b45e95d6892898dd4908308dc9bca404d3ff`. Independent artifact zip digest `sha256:b87e94abec1040a123bde8d82215474f9ac373ac8e8663d86b2f96cd570d8f31`.
+- Seven inputs from the same 20261008 chain: raw, analysis-news, analysis-facts, analysis-ai, published analysis, market-summary, video script. The raw/news/facts/AI/published code order and count all match **the original invalid 35-stock universe**, not the required new eligible universe. Changes to original inputs are prohibited in preflight; the test confirms byte-for-byte preservation. Stage order: type/date evidence -> regenerated raw >=5% candidates -> facts -> news -> AI -> published analysis -> market-summary -> editorial script -> **only then** Render-only.
+- Existing video scenes needing editorial revalidation/redraft are 1, 2, 3 and 9, including original `9103` in scenes 2/3 and counts/theme/catalyst coverage in opening/closing. This is a minimal set of direct known impacts, not certification that other scene claims are source-valid.
+- The existing `build_daily_gainers_market_summary.js` derives a final result only when published analysis exactly matches the raw code order; `validate_daily_gainers_market_summary.js` separately checks news, summary coverage and lineage. Neither validator can certify simply removing 9103 from the narration. Original code/figures need fully reconciled research artifacts.
+- Prior evidence: archived TWSE category snapshots show Stock=32, InnovationBoard=2, TDR=1, ETF=0; InnovationBoard classification/date acceptance needs evidence before choosing whether eligible. Same-day MI_INDEX quote archive matches 35/35 source codes but does not certify ordinary security identity.
+- `main` and all production, upload, Pages and release flags unchanged. No full 1080p media or private YouTube test claimed.
+
+current_blocker: actual dated ordinary-stock eligibility for InnovationBoard and full semantic/AI/editorial regeneration, not further smoke testing of the TTS parser.
+planned_research: next distinct executable A action is an isolated **no-write draft-plan/script reconciliation** driven by the frozen dated source and exact affected claims, including source-specific numeric counts and explicit unsupported-claim omissions. Stop before sending a new script to render unless raw/analysis/news/facts/summary and hard eligibility are all date-aligned and independently validated. No repeated archive category inventory.
+prior_attempt: full render failed because 9103 TDR included; now actual 7-source dependency chain and affected scene IDs are recorded with source hashes, confirming rebuild sequence.
+anti_loop: do not repeat TTS smoke, DR rejection or archive roster audits with unchanged inputs; do not retry original Render-only with unchanged legacy raw/script. Concentrate next A on concrete claim-aware replacement draft and input proof, or report BLOCKED if authorization/date evidence is missing.
+next_action: promptA
+plan_changed: no
+publication_authorized: false
