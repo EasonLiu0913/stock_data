@@ -1,0 +1,82 @@
+name: "[Research Only] MVP10 Percent TTS Smoke"
+# Isolated verification of percentage narration only. No production jobs or uploads.
+on:
+  push:
+    branches:
+      - research/daily-video-mvp10-a-20261029
+    paths:
+      - .github/workflows/research-mvp10-percent-tts-smoke.yml
+
+permissions:
+  contents: read
+
+jobs:
+  percentage-tts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Assert isolated branch
+        run: |
+          test "$GITHUB_REF_NAME" = "research/daily-video-mvp10-a-20261029"
+          test "$GITHUB_REF_TYPE" = "branch"
+      - uses: actions/checkout@v4
+        with:
+          ref: research/daily-video-mvp10-a-20261029
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/daily_gainers_spoken_text.py
+            tests/test_daily_gainers_spoken_text.py
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run source-matched normalization regression
+        run: python -m unittest discover -s tests -p 'test_daily_gainers_spoken_text.py' -v
+      - name: Synthesize real YunJhe percentage audio (never publish)
+        env:
+          TTS_VOICE: zh-TW-YunJheNeural
+          TTS_RATE: "+15%"
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --no-cache-dir edge-tts==7.3.1
+          mkdir -p percent-tts-smoke
+          python - <<'PY'
+          import asyncio, hashlib, json, os, sys
+          from pathlib import Path
+          sys.path.insert(0, 'scripts')
+          import edge_tts
+          from daily_gainers_spoken_text import normalize_spoken_text
+          original = '跌幅百分之1.95% percent'
+          spoken = normalize_spoken_text(original)
+          assert spoken == '跌幅百分之1.95', repr(spoken)
+          assert '%' not in spoken and 'percent' not in spoken.lower()
+          out = Path('percent-tts-smoke')
+          target = out / 'yunzhe-1.95.mp3'
+          async def main():
+              await edge_tts.Communicate(text=spoken, voice=os.environ['TTS_VOICE'], rate=os.environ['TTS_RATE']).save(str(target))
+          asyncio.run(main())
+          data = target.read_bytes()
+          if len(data) < 1000:
+              raise RuntimeError('TTS_AUDIO_EMPTY_OR_TRUNCATED')
+          evidence = {
+              'input_text': original,
+              'tts_text': spoken,
+              'voice': os.environ['TTS_VOICE'],
+              'rate': os.environ['TTS_RATE'],
+              'audio_file': target.name,
+              'audio_size_bytes': len(data),
+              'audio_sha256': hashlib.sha256(data).hexdigest(),
+              'github_sha': os.environ['GITHUB_SHA'],
+              'acoustic_manual_review': False,
+              'publication_authorized': False,
+          }
+          (out / 'evidence.json').write_text(json.dumps(evidence, ensure_ascii=False, indent=2) + '\n')
+          print(json.dumps(evidence, ensure_ascii=False))
+          PY
+          ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1 percent-tts-smoke/yunzhe-1.95.mp3
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: research-percent-tts-smoke
+          path: percent-tts-smoke/
+          if-no-files-found: warn
+          retention-days: 14
