@@ -1,0 +1,65 @@
+name: "[Research Only] MVP10 Five-Stock Scene Source Claims"
+on:
+  push:
+    branches:
+      - research/daily-video-mvp10-a-20261029
+    paths:
+      - .github/workflows/research-mvp10-multi-scene-source-claims.yml
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Isolate research branch
+        run: |
+          test "$GITHUB_REF_NAME" = "research/daily-video-mvp10-a-20261029"
+          test "$GITHUB_REF_TYPE" = "branch"
+      - uses: actions/checkout@v4
+        with:
+          ref: research/daily-video-mvp10-a-20261029
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/research_mvp10_multi_security_source_claims.js
+            tests/research_mvp10_multi_security_source_claims.test.js
+            data_daily_gain_over_5/20261008.json
+            data_daily_gain_over_5/analysis-facts/20261008.json
+            data_daily_gain_over_5/analysis/20261008.json
+            data_twse_mi_index/20261008_twse_mi_index.json
+            data_twse_foreign_investors/20261008_twse_foreign_investors.json
+            data_twse_investment_trust/20261008_twse_investment_trust.json
+            data_twse_dealers/20261008_twse_dealers.json
+            data_twse_margin_balance/20261008_twse_margin_balance.csv
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify five company scenes against exchange originals
+        run: node --test tests/research_mvp10_multi_security_source_claims.test.js
+      - name: Produce no-publish per-security source checks
+        run: |
+          mkdir -p research-company-source-checks
+          node - <<'NODE'
+          const fs=require('fs'),crypto=require('crypto');
+          const {verify}=require('./scripts/research_mvp10_multi_security_source_claims');
+          const p='research-company-source-checks/20261008-scene4-7-numeric-evidence.json';
+          const codes=['6672','2305','1301','3416','2428'];
+          const checks=codes.map(c=>verify(process.cwd(),c));
+          if(checks.some(x=>x.render_authorized!==false||x.publication_authorized!==false||
+             x.external_news_catalyst_verified!==false))throw Error('UNAUTHORIZED_CLAIM_PROMOTION');
+          const b=Buffer.from(JSON.stringify({date:'20261008',codes,checks,company_catalyst_evidence_verified:false,
+            canonical_analysis_complete:false,render_authorized:false,publication_authorized:false},null,2)+'\n');
+          fs.writeFileSync(p,b);
+          console.log(JSON.stringify({checked:checks.map(x=>({code:x.code,close:x.official_close,
+            foreign_net_shares:x.institutional.foreign.net_shares,
+            margin_delta:x.margin.delta})),sha256:crypto.createHash('sha256').update(b).digest('hex')},null,2));
+          NODE
+      - name: Preserve research evidence only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mvp10-scene4-7-source-evidence
+          path: research-company-source-checks/
+          if-no-files-found: warn
+          retention-days: 14
