@@ -1,0 +1,77 @@
+name: "[Research Only] MVP10 32-Stock Numeric and Claim Provenance"
+on:
+  push:
+    branches:
+      - research/daily-video-mvp10-a-20261029
+    paths:
+      - .github/workflows/research-mvp10-32stock-claim-provenance.yml
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Research branch only
+        run: |
+          test "$GITHUB_REF_NAME" = "research/daily-video-mvp10-a-20261029"
+          test "$GITHUB_REF_TYPE" = "branch"
+      - uses: actions/checkout@v4
+        with:
+          ref: research/daily-video-mvp10-a-20261029
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/research_mvp10_32stock_claim_provenance_audit.js
+            scripts/research_mvp10_multi_security_source_claims.js
+            scripts/research_mvp10_dated_universe_classification.js
+            tests/research_mvp10_32stock_claim_provenance_audit.test.js
+            data_daily_gain_over_5/20261008.json
+            data_daily_gain_over_5/analysis-facts/20261008.json
+            data_daily_gain_over_5/analysis-news/20261008.json
+            data_daily_gain_over_5/analysis-ai/20261008.json
+            data_daily_gain_over_5/analysis/20261008.json
+            data_twse/twse_industry_Stock.csv
+            data_twse/twse_industry_InnovationBoard.csv
+            data_twse/twse_industry_TDR.csv
+            data_twse/twse_industry_ETF.csv
+            data_twse_mi_index/20261008_twse_mi_index.json
+            data_twse_foreign_investors/20261008_twse_foreign_investors.json
+            data_twse_investment_trust/20261008_twse_investment_trust.json
+            data_twse_dealers/20261008_twse_dealers.json
+            data_twse_margin_balance/20261008_twse_margin_balance.csv
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Run original-source batch tests
+        run: node --test tests/research_mvp10_32stock_claim_provenance_audit.test.js
+      - name: Generate 32-stock claim provenance blockers
+        run: |
+          mkdir -p research-claim-provenance
+          node scripts/research_mvp10_32stock_claim_provenance_audit.js > research-claim-provenance/20261008-32stock-numeric-and-catalyst-evidence.json
+          node - <<'NODE'
+          const fs=require('node:fs'),crypto=require('node:crypto');
+          const p='research-claim-provenance/20261008-32stock-numeric-and-catalyst-evidence.json';
+          const b=fs.readFileSync(p),r=JSON.parse(b);
+          if(r.render_authorized!==false||r.publication_authorized!==false||
+             r.market_summary_final!==false||r.provisional_stock_count!==32||
+             r.confirmed_original_2305_name!=='全友'||r.strong_claims_count!==11)
+             throw Error('RESEARCH_AUDIT_WRONGLY_PROMOTED');
+          console.log(JSON.stringify({date:r.target_date,stocks:r.provisional_stock_count,
+            numeric_matches:r.matched_official_numeric_claim_count,
+            numeric_conflicts:r.original_numeric_claim_conflict_count,
+            strong_claims:r.strong_claims_count,
+            unread_secondary_or_generic:r.strong_claims_with_only_unread_secondary_or_generic_links,
+            verified_primary_company_filings:r.primary_company_disclosure_document_content_verified_count,
+            report_sha256:crypto.createHash('sha256').update(b).digest('hex'),
+            decision:r.decision},null,2));
+          NODE
+          echo "This is a research evidence gap audit, NOT full company-events proof or approved final media source." >> "$GITHUB_STEP_SUMMARY"
+      - name: Retain research claim evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mvp10-20261008-32stock-claim-provenance
+          path: research-claim-provenance/
+          if-no-files-found: warn
+          retention-days: 14
