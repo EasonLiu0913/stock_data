@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from daily_gainers_spoken_text import normalize_spoken_dates, normalize_spoken_text
+from daily_gainers_spoken_text import normalize_spoken_dates, normalize_spoken_text, normalize_spoken_percentages
 
 
 class SpokenDatesTest(unittest.TestCase):
@@ -29,6 +29,28 @@ class SpokenDatesTest(unittest.TestCase):
         spoken = normalize_spoken_dates(caption)
         self.assertEqual(caption, "10/7 強勢股；2026/10/07 收盤。")
         self.assertEqual(spoken, "十月七日 強勢股；二零二六年十月七日 收盤。")
+
+    def test_percentage_tts_only_and_no_english_suffix(self):
+        cases = {
+            "跌幅 1.95%": "跌幅 百分之1.95",
+            "跌幅百分之1.95 percent": "跌幅百分之1.95",
+            "跌幅百分之1.95% percent": "跌幅百分之1.95",
+            "上漲 5％": "上漲 百分之5",
+            "法人占比 9.91 percent": "法人占比 百分之9.91",
+            "上漲百分之1.95": "上漲百分之1.95",
+            "跌幅 -1.95%": "跌幅 負百分之1.95",
+            "百分之1.95 percent percent": "百分之1.95",
+        }
+        for source, expected in cases.items():
+            with self.subTest(source=source):
+                self.assertEqual(normalize_spoken_text(source), expected)
+                self.assertNotIn("percent", normalize_spoken_text(source).lower())
+
+    def test_percentage_display_is_untouched(self):
+        caption = "跌幅 1.95%，成交占比 9.91%。"
+        self.assertEqual(normalize_spoken_text(caption), "跌幅 百分之1.95，成交占比 百分之9.91。")
+        self.assertEqual(caption, "跌幅 1.95%，成交占比 9.91%。")
+        self.assertEqual(normalize_spoken_percentages("https://example.com/1.95%"), "https://example.com/1.95%")
 
 
 if __name__ == "__main__":
