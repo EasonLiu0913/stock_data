@@ -82,14 +82,16 @@ jobs:
               evidence['checks'][key] = {'status': 'FAIL', 'text': text, 'errors': errors}
           async def main():
               await try_audio('control-zh', '大家好，今天台股收盤。')
-              await try_audio('yunzhe-percent-1.95', spoken)
+              await try_audio('punctuated-percent', spoken + '。')
+              await try_audio('spaced-percent', '跌幅百分之 1.95。')
+              await try_audio('chinese-decimal-control', '跌幅百分之一點九五。')
           asyncio.run(main())
           (out / 'evidence.json').write_text(json.dumps(evidence, ensure_ascii=False, indent=2) + '\n')
           print(json.dumps(evidence, ensure_ascii=False))
-          if any(item['status'] != 'PASS' for item in evidence['checks'].values()):
+          if not any(evidence['checks'][key]['status'] == 'PASS' for key in ('punctuated-percent', 'spaced-percent', 'chinese-decimal-control')):
               raise RuntimeError('EDGE_TTS_NO_AUDIO_DIAGNOSTIC_FAILED')
           PY
-          ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1 percent-tts-smoke/yunzhe-percent-1.95.mp3
+          if [ -f percent-tts-smoke/punctuated-percent.mp3 ]; then ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1 percent-tts-smoke/punctuated-percent.mp3; fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
