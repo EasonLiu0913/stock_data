@@ -24,6 +24,7 @@ jobs:
           persist-credentials: false
           sparse-checkout: |
             scripts/research_mvp10_dated_universe_classification.js
+            scripts/audit_twse_isin_category_snapshot.js
             tests/research_mvp10_dated_universe_classification.test.js
             data_twse/twse_industry_Stock.csv
             data_twse/twse_industry_InnovationBoard.csv
@@ -36,6 +37,50 @@ jobs:
           node-version: "24"
       - name: Verify categories and adversarial cases
         run: node --test tests/research_mvp10_dated_universe_classification.test.js
+      - name: Verify pre-date archived category snapshots (read-only)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p archived/data_twse archived/data_daily_gain_over_5
+          cp data_daily_gain_over_5/20261008.json archived/data_daily_gain_over_5/20261008.json
+          declare -A history=(
+            [Stock]=8ec4711cac2ac570218f4d57b5c078a06a59b7cc
+            [InnovationBoard]=496c52cd2d5da9e8e9672f9ff55811eecd7bb2b3
+            [TDR]=9e65f777b89eccf1fb4bd192966aed5541a66293
+            [ETF]=b9501de8b08b0732d47b2e13bcac28705a8dc89c
+          )
+          for category in Stock InnovationBoard TDR ETF; do
+            ref="${history[$category]}"
+            gh api "repos/$GITHUB_REPOSITORY/contents/data_twse/twse_industry_${category}.csv?ref=${ref}" --jq .content | base64 --decode > "archived/data_twse/twse_industry_${category}.csv"
+            test -s "archived/data_twse/twse_industry_${category}.csv"
+          done
+          node - <<'NODE'
+          const {inspect}=require('./scripts/audit_twse_isin_category_snapshot');
+          const proof=inspect({root:'archived/data_twse'});
+          if(proof.source_integrity_verified!==true || proof.historical_effective_date_verified!==false)
+            throw Error('ARCHIVE_STATUS_INCORRECT');
+          console.log(JSON.stringify(proof,null,2));
+          NODE
+          node scripts/research_mvp10_dated_universe_classification.js 20261008 archived > archived/20261008-pre-date-categories.json
+          node - <<'NODE'
+          const fs=require('fs'),r=JSON.parse(fs.readFileSync('archived/20261008-pre-date-categories.json'));
+          if(r.category_counts.Stock!==32||r.category_counts.InnovationBoard!==2||
+             r.category_counts.TDR!==1||r.category_counts.ETF!==0||r.classification_certified!==false||
+             r.source_snapshot_effective_on_target_date_verified!==false||r.issues.length)
+             throw Error('PRE_DATE_CATEGORY_RECONCILIATION_FAILED');
+          console.log(JSON.stringify({date:r.target_date,decision:r.decision,category_counts:r.category_counts},null,2));
+          NODE
+          echo "Archive commits precede 20261008; publisher historical validity still unverified" >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve pre-date category evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mvp10-20261008-pre-date-category-evidence
+          path: archived/20261008-pre-date-categories.json
+          if-no-files-found: warn
+          retention-days: 30
       - name: Produce non-authorizing research inventory
         run: |
           mkdir -p research-inventory
