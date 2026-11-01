@@ -48,14 +48,23 @@ function verify(root,code='9919'){
  sources[margin.path]=margin.sha256;
  const lines=margin.data.toString('utf8').replace(/^\uFEFF/,'').trim().split(/\r?\n/),header=csv(lines.shift());
  const hits=lines.map(csv).filter(row=>str(row[0])===code);
- if(hits.length!==1)throw Error('MARGIN_MISSING_OR_DUPLICATE');
- const prev=num(hits[0][header.indexOf('融資前日餘額')]),curr=num(hits[0][header.indexOf('融資今日餘額')]);
- same(prev,f.flow.margin.margin_prev,'MARGIN_PREV');
- same(curr,f.flow.margin.margin_now,'MARGIN_CURRENT');
- same(curr-prev,f.flow.margin.margin_delta,'MARGIN_DELTA');
+ if(hits.length>1)throw Error('MARGIN_DUPLICATE');
+ let marginResult;
+ if(hits.length===0){
+  const m=f.flow?.margin;
+  if(!m||[m.margin_prev,m.margin_now,m.margin_delta,m.short_prev,m.short_now,m.short_delta].some(x=>x!==null))
+   throw Error('MISSING_MARGIN_ROW_WAS_IMPUTED_OR_UNCHECKED:'+code);
+  marginResult={previous:null,current:null,delta:null,record_status:'no_record'};
+ }else{
+  const prev=num(hits[0][header.indexOf('融資前日餘額')]),curr=num(hits[0][header.indexOf('融資今日餘額')]);
+  same(prev,f.flow.margin.margin_prev,'MARGIN_PREV');
+  same(curr,f.flow.margin.margin_now,'MARGIN_CURRENT');
+  same(curr-prev,f.flow.margin.margin_delta,'MARGIN_DELTA');
+  marginResult={previous:prev,current:curr,delta:curr-prev,record_status:'reported'};
+ }
  return {target_date:DATE,code:code,claim_type:'SAME_DAY_NUMERIC_SOURCE_CROSSCHECK',
   official_close:close,official_change:delta,raw_gain_pct:r.change_pct,
-  institutional,margin:{previous:prev,current:curr,delta:curr-prev},source_sha256:sources,
+  institutional,margin:marginResult,source_sha256:sources,
   date_effective_ordinary_identity_verified:false,external_news_catalyst_verified:false,
   independent_publication_scope_verified:false,render_authorized:false,publication_authorized:false,
   decision:'NUMERIC_SOURCE_CROSSCHECK_ONLY'};
