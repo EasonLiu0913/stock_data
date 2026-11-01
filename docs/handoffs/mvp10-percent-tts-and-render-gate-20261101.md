@@ -177,3 +177,24 @@ anti_loop: do not repeat 9919 source check, percentage TTS, or 32/34 aggregation
 next_action: promptA
 plan_changed: no
 publication_authorized: false
+
+
+## 2026-11-01 — Full 9-scene source-bound editorial research draft
+
+research_progress_status: PROGRESS
+phase_status: MVP10-A INCOMPLETE; MVP10-B FROZEN_NOT_ELIGIBLE
+research_progress_evidence:
+- `scripts/research_mvp10_full_editorial_storyboard.js` now composes a **complete nine-scene 20261008 research-only storyboard** using the independently materialized 32-stock Stock-category candidate, re-derived summary arithmetic, prior conditional scene rewrites, and the independent same-day source-numeric verification for 9919. This produces an actual JSON draft in a runner-temp research workspace, not a canonical/production video script.
+- Isolated GitHub Actions [#41314916698](https://github.com/EasonLiu0913/stock_data/actions/runs/41314916698), head `610b7e04bdb859859b1306445737cd650f47756f`, job `124872797829`, **SUCCESS**, **3/3** tests PASS. Actual nine scenes checked for 1100–5500 aggregate narration characters, V4 opening, presentation contract, only in-scope candidate stock codes, removal of 9103 references, no CC opening, privacy/private and retention of original immutable 35-stock script bytes.
+- GitHub Artifact `13086916303` (`mvp10-20261008-full-nine-scene-research-draft`) ZIP digest `sha256:a5f8a3ff6ce99c9ea3ceba78b4ce3d877b2adc2f996db4891a860dcb5d202022`, size 100403 bytes. `full-nine-scene-editorial-draft.json` SHA256 `4bcf2fee4b6615eeba99a9723f9c492c91049c303b370a1f2dc464272ca08467`.
+- Scenes 1,2,3,9 use conditional Stock-category-only figures and rewritten risk-oriented narration; 3 uses the separately checked numeric 9919 data; scene 8 low-liquidity count corrected from three to two under the 32-stock candidate. Scenes **4,5,6,7** retain original 20261008 prose and are explicitly tagged `LEGACY_PROSE_NEEDS_FULL_SOURCE_CLAIM_REVALIDATION`; no unsupported institutional/news company claims are certified by this artifact. All scenes require final source/policy signoff.
+- The actual independent 20261008 effective ordinary-stock eligibility proof remains missing, as does a complete 32-stock published AI/facts/market-summary reconciliation and official original date/source claim validation for surviving story references. Thus `market_summary_final:false`, `upstream_ai_semantic_reverified:false`, `eligible_stock_identity_verified:false`, `render_authorized:false`, `publication_authorized:false`. No fully playable 1080p MP4 is claimed, and **the original strict Render-only workflow was NOT invoked or weakened**.
+- All scripts and workflows only on isolated research branch, `main` unchanged; production cron, Pages, YouTube/YouTube credentials and all publishing locks remain untouched.
+
+current_blocker: verify remaining four editorial scenes' numerical claims against dated official originals; independently verify their company-specific catalyst claims or replace with source-safe narration; reconcile date-effective stock-type and 32-stock final analysis/market summary before source-gated full 1080p video.
+planned_research: next distinct A should be **bounded multi-scene claim reconciliation for 4/5/6/7** (6672,2305,1301,3416,2428), using dated actual source archives and disclosure records, then revise them without unverified causal claims. Run a single script-level CI on the full nine-scene narrative rather than more single-security smoke tests. Stop if actual official inputs unavailable; state exactly which claim lacks source.
+prior_attempt: only partial four-scene conditional redrafts existed and 9919 had independent numeric validation. Now a complete nine-scene draft artifact exists with explicit remaining unverified scenes.
+anti_loop: do not rerun the successful nine-scene structure test without new source evidence, don't repeat 9919 or DR/percentage smoke, and don't describe a storyboard as the full 1080p render. No artificial pass on failed official source/date gates.
+next_action: promptA
+plan_changed: no
+publication_authorized: false
