@@ -1,0 +1,69 @@
+name: "[Research Only] MVP10 Isolated Candidate Workspace"
+on:
+  push:
+    branches:
+      - research/daily-video-mvp10-a-20261029
+    paths:
+      - .github/workflows/research-mvp10-isolated-candidate-workspace.yml
+permissions:
+  contents: read
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Enforce research isolation
+        run: |
+          test "$GITHUB_REF_NAME" = "research/daily-video-mvp10-a-20261029"
+          test "$GITHUB_REF_TYPE" = "branch"
+      - uses: actions/checkout@v4
+        with:
+          ref: research/daily-video-mvp10-a-20261029
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/research_mvp10_isolated_candidate_workspace.js
+            scripts/research_mvp10_dated_universe_classification.js
+            tests/research_mvp10_isolated_candidate_workspace.test.js
+            data_daily_gain_over_5/20261008.json
+            data_daily_gain_over_5/analysis-facts/20261008.json
+            data_daily_gain_over_5/analysis-news/20261008.json
+            data_daily_gain_over_5/analysis-ai/20261008.json
+            data_daily_gain_over_5/analysis/20261008.json
+            data_twse/twse_industry_Stock.csv
+            data_twse/twse_industry_InnovationBoard.csv
+            data_twse/twse_industry_TDR.csv
+            data_twse/twse_industry_ETF.csv
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Test isolated candidate and fail-closed original preservation
+        run: node --test tests/research_mvp10_isolated_candidate_workspace.test.js
+      - name: Materialize scenario candidates in runner temporary directory
+        run: |
+          set -euo pipefail
+          node scripts/research_mvp10_isolated_candidate_workspace.js "$GITHUB_WORKSPACE" "$RUNNER_TEMP/mvp10-20261008-candidates" > "$RUNNER_TEMP/candidate-result.json"
+          node - <<'NODE'
+          const fs=require('node:fs'),path=require('node:path'),p=process.env.RUNNER_TEMP;
+          const r=JSON.parse(fs.readFileSync(path.join(p,'candidate-result.json')));
+          if(r.render_authorized!==false || r.publication_authorized!==false ||
+             JSON.stringify(r.outputs.map(x=>x.count))!=='[32,34]')
+             throw Error('CANDIDATE_UNIVERSE_UNEXPECTED');
+          for(const item of r.outputs){
+           const root=path.join(p,'mvp10-20261008-candidates',item.scenario);
+           const manifest=JSON.parse(fs.readFileSync(path.join(root,'manifest.json')));
+           if(manifest.summary_regenerated!==false || manifest.editorial_script_rebuilt!==false ||
+              manifest.all_aggregate_statistics_invalidated!==true || manifest.video_render_authorized!==false)
+              throw Error('UNSAFE_CANDIDATE_PROMOTION');
+          }
+          console.log(JSON.stringify(r,null,2));
+          NODE
+          echo "Draft row sets only. 20261008 original records unchanged. Old summaries/AI semantic claims NOT revalidated; no render allowed." >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve conditional candidate evidence only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mvp10-isolated-20261008-source-candidates
+          path: ${{ runner.temp }}/mvp10-20261008-candidates/
+          if-no-files-found: warn
+          retention-days: 14
