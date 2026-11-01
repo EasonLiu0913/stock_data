@@ -55,6 +55,7 @@ jobs:
           const fs=require('node:fs'),crypto=require('node:crypto');
           const p='research-claim-provenance/20261008-32stock-numeric-and-catalyst-evidence.json';
           const b=fs.readFileSync(p),r=JSON.parse(b);
+          if(r.matched_official_numeric_claim_count!==31||r.official_numeric_partial_missing_margin_count!==1||r.original_numeric_claim_conflict_count!==0)throw Error('SOURCE_CLAIM_PARTIAL_STATUS_MISMATCH');
           if(r.render_authorized!==false||r.publication_authorized!==false||
              r.market_summary_final!==false||r.provisional_stock_count!==32||
              r.confirmed_original_2305_name!=='全友'||r.strong_claims_count!==11)
@@ -62,6 +63,7 @@ jobs:
           console.log(JSON.stringify({date:r.target_date,stocks:r.provisional_stock_count,
             numeric_matches:r.matched_official_numeric_claim_count,
             numeric_conflicts:r.original_numeric_claim_conflict_count,
+            numeric_partial_no_margin:r.official_numeric_partial_missing_margin_count,
             conflicted_codes:r.stock_rows.filter(x=>x.official_numeric_crosscheck.status==='NUMERIC_SOURCE_CONFLICT').map(x=>({code:x.code,name:x.name,error:x.official_numeric_crosscheck.error})),
             non_dated_company_pages:r.stock_rows.flatMap(x=>x.source_quality.filter(s=>s.quality==='GENERIC_UNDATED_PROFILE').map(s=>({code:x.code,url:s.url}))),
             strong_claims:r.strong_claims_count,
