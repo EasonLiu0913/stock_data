@@ -156,3 +156,24 @@ anti_loop: do not call already-known aggregate re-computation without new eviden
 next_action: promptA
 plan_changed: no
 publication_authorized: false
+
+
+## 2026-11-01 — 9919 independently checked same-day numeric source evidence
+
+research_progress_status: PROGRESS
+phase_status: MVP10-A INCOMPLETE; MVP10-B FROZEN_NOT_ELIGIBLE
+research_progress_evidence:
+- Isolated source verifier `scripts/research_mvp10_9919_official_claim_gate.js`, tests `tests/research_mvp10_9919_official_claim_gate.test.js`, research-only workflow `.github/workflows/research-mvp10-9919-source-claims.yml`.
+- GitHub CI [#41314443932](https://github.com/EasonLiu0913/stock_data/actions/runs/41314443932), head `cdadb738b762883e7a6e3c29a09066e271552f1a`, job `124871409522`, status **SUCCESS**, **2/2 PASS**, including a deliberately date-mutated official institutional source fail-closed check.
+- Artifact #`13086905517`, ZIP sha256 `f3e6c8325b092770a9549fb7d63c6f3fc631bfbce84d19929ac413f79abe5cf6`, JSON sha256 `0f91e646028a8cf17c4ba8ed4ef5bef1ca7a2f675f2e3a23f9150d588b1d3f00`.
+- Verifier **directly** checks 20261008 original TWSE MI_INDEX price and day change for 9919 康那香 against raw/Facts, official TWSE foreign/trust/dealer net shares against per-security facts with true no-record as null (not zero), and original TWSE margin CSV previous/current amount against day delta. Frozen raw 9919 source has 16.1 close; foreign net -18,000 shares / -18 lots and margin delta -327 lots were source-matched. Checks record date, joins, nonempty input and source SHA256. This is genuinely new official-source numeric consistency evidence beyond the previous self-consistency of published/facts.
+- Check **does not** certify original market transaction-type comparability, date-effective common-stock eligibility, exchange-archive acquisition chain, or independent causation of influenza/new company orders. These remain false in output (`date_effective_ordinary_identity_verified:false`, `external_news_catalyst_verified:false`, `independent_publication_scope_verified:false`, `render_authorized:false`, `publication_authorized:false`). Do not treat this as fully verified narrative or a valid video script.
+- Production/main, YouTube, Pages, schedules and publication locks untouched. Prior 32/34 research workspaces/aggregate outputs not promoted.
+
+current_blocker: recoverable dated stock eligibility evidence and independent company catalyst/news validation, then regenerate consistent published 32-stock analysis, market summary and all affected video claims. The 9919 numeric fact source is now independently cross-checked and should not be re-tested absent new evidence.
+planned_research: next A should use 9919 independently source-checked numeric items to assemble a **guarded draft** 32-stock-only video narrative, excluding unsupported causal assertions, while validating the date-specific scope and remaining story claims. Deliver a new actual research-only date-aligned analysis/script package without bypassing canonical validators; only then initiate 1080p Render-only. If eligibility proof is unavailable, keep phase blocked with precisely identified missing evidence.
+prior_attempt: prior isolated aggregate recalculation checked published facts against each other but not original official source; this CI independently read actual quote, institutional and margin archives with date tamper rejection.
+anti_loop: do not repeat 9919 source check, percentage TTS, or 32/34 aggregation with identical inputs. Prioritize the source-bound complete editorial package and full render after hard gate.
+next_action: promptA
+plan_changed: no
+publication_authorized: false
