@@ -1,0 +1,61 @@
+name: "[Research Only] MVP10 9919 Actual Source Claims"
+on:
+  push:
+    branches:
+      - research/daily-video-mvp10-a-20261029
+    paths:
+      - .github/workflows/research-mvp10-9919-source-claims.yml
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - name: Strict branch protection
+        run: |
+          test "$GITHUB_REF_NAME" = "research/daily-video-mvp10-a-20261029"
+          test "$GITHUB_REF_TYPE" = "branch"
+      - uses: actions/checkout@v4
+        with:
+          ref: research/daily-video-mvp10-a-20261029
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/research_mvp10_9919_official_claim_gate.js
+            tests/research_mvp10_9919_official_claim_gate.test.js
+            data_daily_gain_over_5/20261008.json
+            data_daily_gain_over_5/analysis-facts/20261008.json
+            data_daily_gain_over_5/analysis/20261008.json
+            data_twse_mi_index/20261008_twse_mi_index.json
+            data_twse_foreign_investors/20261008_twse_foreign_investors.json
+            data_twse_investment_trust/20261008_twse_investment_trust.json
+            data_twse_dealers/20261008_twse_dealers.json
+            data_twse_margin_balance/20261008_twse_margin_balance.csv
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Test real official-source consistency and stale date rejection
+        run: node --test tests/research_mvp10_9919_official_claim_gate.test.js
+      - name: Save reproducible 9919 numeric evidence
+        run: |
+          mkdir -p research-9919
+          node scripts/research_mvp10_9919_official_claim_gate.js "$GITHUB_WORKSPACE" > research-9919/20261008-9919-source-crosscheck.json
+          node - <<'NODE'
+          const fs=require('node:fs'),crypto=require('node:crypto');
+          const p='research-9919/20261008-9919-source-crosscheck.json',r=JSON.parse(fs.readFileSync(p));
+          if(r.render_authorized!==false||r.publication_authorized!==false||r.margin.delta!==-327||
+             r.institutional.foreign.net_shares!==-18000)throw Error('UNSAFE_9919_RESEARCH_RESULT');
+          console.log(JSON.stringify({date:r.target_date,code:r.code,
+            original_source_count:Object.keys(r.source_sha256).length,
+            sha256:crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex'),
+            decision:r.decision},null,2));
+          NODE
+      - name: Preserve independent numeric evidence only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mvp10-20261008-9919-source-numeric-check
+          path: research-9919/
+          if-no-files-found: warn
+          retention-days: 14
