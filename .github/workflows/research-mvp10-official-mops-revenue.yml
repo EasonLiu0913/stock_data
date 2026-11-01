@@ -26,6 +26,7 @@ jobs:
           sparse-checkout-cone-mode: false
       - name: Read two original official MOPS historical archives
         run: |
+          python3 -m py_compile scripts/research_mvp10_mops_september_revenue.py
           python3 scripts/research_mvp10_mops_september_revenue.py "$RUNNER_TEMP/mvp10-official-mops"
           python3 - <<'PY'
           import json,os,pathlib
@@ -34,8 +35,12 @@ jobs:
           assert r["publication_authorized"] is False
           assert r["full_market_summary_approved"] is False
           assert r["company_event_caused_market_movement_verified"] is False
+          assert r["official_table_columns_verified"] is True
+          assert r["official_column_proof"]["3416"]["official_yoy_pct"] == 95.90
+          assert r["official_column_proof"]["2305"]["company_name"] == "全友"
+          assert r["official_column_proof"]["6672"]["revenue_thousand_ntd"] == 1020897
           print("Proof status:",r["decision"])
-          print("Official rows matched:",len(r["official_revenue_claims_validated"]))
+          print("Official field-position audited:",len(r["official_revenue_claims_validated"]))
           for p in r["pages"]:
             for code, row in p["target_rows"].items():
               print("OFFICIAL_ROW", code, json.dumps(row,ensure_ascii=False))
