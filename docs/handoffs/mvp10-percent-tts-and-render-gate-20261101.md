@@ -133,3 +133,26 @@ anti_loop: do not retry original DR-inclusive render or present 32/34 scenarios 
 next_action: promptA
 plan_changed: no
 publication_authorized: false
+
+
+## 2026-11-01 — Recomputed source-linked research aggregates from real isolated candidate rows
+
+research_progress_status: PROGRESS
+research_progress_reason: Generated fresh per-security-derived aggregate reports in runner-temp independent workspaces, instead of copying legacy 35-security market-summary or only proposing calculations.
+phase_status: MVP10-A INCOMPLETE / MVP10-B FROZEN_NOT_ELIGIBLE
+research_progress_evidence:
+- New research-only script `scripts/research_mvp10_candidate_aggregate.js`; tests `tests/research_mvp10_candidate_aggregate.test.js`; isolation workflow `.github/workflows/research-mvp10-recalculated-aggregates.yml`.
+- GitHub Actions CI [#41313328210](https://github.com/EasonLiu0913/stock_data/actions/runs/41313328210), head `f5abe2589a27b0310cad97a8392b2652c746d225`, job `124868093638`, **SUCCESS**, 4/4 regression tests PASS. Tests check real source-backed 32/34 denominators, changed source-byte rejection, per-security digest tamper refusal and non-overwriting workspace.
+- Artifact #`13085513383`, `mvp10-20261008-recalculated-aggregates-research`, archive digest `sha256:70dd9093dc61bd70ff925d7bf442c8e028e1de129aaf5bea1141ae00c8f65b79`, size 95,445 bytes.
+- Report SHA256 `stock-category-only`: `b6d516c70d2469a6c2872f8409f52405939ca4e052172c6cc972049d22a9c67e`; `innovation-conditional`: `3dcedf81118cb05df0c1c3f74c02423cfb7e02d1fb8760d95909430063e16ab4`.
+- Actual derived conditional results remain stock-only 32 / 11 direct-or-corroborated / 34.4%; innovation-conditional 34 / 12 / 35.3%. Additional independently recomputed arithmetic includes raw 5–7, 7–9.5 and ≥9.5 price bands, evidence-strength counts, theme grouping according to explicit taxonomy aliases, original published institutional/margin signals and 9919 price/flow cross-field equality to same-day facts. The report retains the upstream source receipts and candidate row file digest checks.
+- **Do not mistake arithmetic PASS for new evidence verification:** all per-security claims were carried from frozen date inputs, not independently re-researched. `semantic_evidence_reverified:false`, `institutional_external_source_reverified:false`, `date_effective_stock_type_reverified:false`, `complete_final_analysis:false`, `market_summary_final:false`, `render_authorized:false`, `publication_authorized:false`. Legacy 35-stock summary is NOT copied or promoted. No old video script or render was run.
+- No main branch writes, production, Pages, schedules, YouTube authorization, upload or release-lock changes.
+
+current_blocker: independently verified 20261008 effective common-stock eligibility (especially 6645/7740 InnovationBoard), checked individual news/AI and market-summary/scene claims under the chosen scope, final source/date gate, and audio/SRT/1080p MP4 end-to-end.
+planned_research: now perform a bounded **source-claim verification review** using existing same-day official input receipts and the 32-stock temporary candidate as baseline, then regenerate final research-only semantic/market-summary/scene claims with actual validators. Do not repeat aggregate math, DR rejection, categorical-history inventories or TTS smoke. Stop with precise unsupported claims if primary evidence is absent. Full render remains prohibited until all original acceptance gates pass.
+prior_attempt: physically created 32/34 per-security candidate workspaces; now separately recomputed new aggregate arithmetic and checked cross-source consistency with CI.
+anti_loop: do not call already-known aggregate re-computation without new evidence; prioritize actual 1080p media, but no bypass of stock type/date/claim validity.
+next_action: promptA
+plan_changed: no
+publication_authorized: false
