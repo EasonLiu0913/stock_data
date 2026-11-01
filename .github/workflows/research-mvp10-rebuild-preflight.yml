@@ -1,0 +1,63 @@
+name: "[Research Only] MVP10 Dated Rebuild Preflight"
+on:
+  push:
+    branches:
+      - research/daily-video-mvp10-a-20261029
+    paths:
+      - .github/workflows/research-mvp10-rebuild-preflight.yml
+permissions:
+  contents: read
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Enforce isolated research branch
+        run: |
+          test "$GITHUB_REF_NAME" = "research/daily-video-mvp10-a-20261029"
+          test "$GITHUB_REF_TYPE" = "branch"
+      - uses: actions/checkout@v4
+        with:
+          ref: research/daily-video-mvp10-a-20261029
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/research_mvp10_rebuild_preflight.js
+            tests/research_mvp10_rebuild_preflight.test.js
+            data_daily_gain_over_5/20261008.json
+            data_daily_gain_over_5/analysis-news/20261008.json
+            data_daily_gain_over_5/analysis-facts/20261008.json
+            data_daily_gain_over_5/analysis-ai/20261008.json
+            data_daily_gain_over_5/analysis/20261008.json
+            data_daily_gain_over_5/market-summary/20261008.json
+            video_scripts/daily-gainers/20261008.json
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Run source preservation and failure tests
+        run: node --test tests/research_mvp10_rebuild_preflight.test.js
+      - name: Generate immutable-dependency research report
+        run: |
+          mkdir -p research-preflight
+          node scripts/research_mvp10_rebuild_preflight.js 20261008 > research-preflight/20261008-rebuild-dependency-map.json
+          node - <<'NODE'
+          const fs=require('node:fs'),crypto=require('node:crypto');
+          const f='research-preflight/20261008-rebuild-dependency-map.json';
+          const r=JSON.parse(fs.readFileSync(f,'utf8'));
+          if(r.decision!=='BLOCKED_SOURCE_RECONCILIATION_REQUIRED'||r.publication_authorized!==false||
+             r.original_stock_count!==35||r.explicit_stock_scope_verified!==false||
+             !r.affected_video_scenes.some(x=>x.explicit_excluded_stock_codes.includes('9103')))
+             throw Error('REBUILD_GATE_INCORRECT');
+          console.log(JSON.stringify({date:r.target_date,decision:r.decision,
+            source_count:Object.keys(r.input_files).length,affected_scenes:r.affected_video_scenes.map(x=>x.scene),
+            report_sha256:crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex')},null,2));
+          NODE
+          echo "No production source rewrite or render; source classification and editorial rebuild still required." >> "$GITHUB_STEP_SUMMARY"
+      - name: Save research dependency map
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mvp10-20261008-rebuild-preflight
+          path: research-preflight/
+          if-no-files-found: warn
+          retention-days: 30
