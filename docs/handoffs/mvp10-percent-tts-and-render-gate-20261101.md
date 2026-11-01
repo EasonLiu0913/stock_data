@@ -88,3 +88,24 @@ anti_loop: do not repeat TTS smoke, DR rejection or archive roster audits with u
 next_action: promptA
 plan_changed: no
 publication_authorized: false
+
+
+## 2026-11-01 — Conditional date-bound editorial rewrite draft produced
+
+research_progress_status: PROGRESS
+phase_status: MVP10-A INCOMPLETE / MVP10-B FROZEN_NOT_ELIGIBLE
+research_progress_evidence:
+- Source-preserving `scripts/research_mvp10_conditional_editorial_drafts.js`, `tests/research_mvp10_conditional_editorial_drafts.test.js`, and isolated workflow `.github/workflows/research-mvp10-conditional-editorial-drafts.yml`. GitHub CI [#41312522919](https://github.com/EasonLiu0913/stock_data/actions/runs/41312522919), head `ab51eeb4e26d74d872bebee312ba5b5120ddf910`, **SUCCESS**, 3/3 Node regression tests PASS, job `124865701127`.
+- CI emitted a genuine, no-write research Artifact `13085921275` / `20261008-conditional-drafts.json`; JSON SHA256 `f838b8f1b18c343b743a9e4177652830079c10369594a9e3ad7abc69dd5eb3a2`, archive SHA256 `e51c9ef5abf249fdc7cf19ba1b9c16366b9a32c85fb753ac1d5ab072ebbdb02a`. Contains **two alternative research-only scripts** for affected scenes 1, 2, 3 and 9. Both explicitly forbid render/publication and preserve all original source JSON bytes.
+- Derived solely from dated raw + published/news analysis, NOT a freshly verified post-exclusion unified synthesis. If Stock-category only is provisionally retained: 32 candidates, 3 `biotech` cause-tagged stocks (9919, 1325, 6504), mean gain 9.89%, 11/32 direct-or-corroborated evidence (34.4%). If InnovationBoard inclusion later independently proven: 34 candidates, 4 tagged stocks (plus 6645), mean 9.86%, 12/34 such evidence (35.3%). This is conditional math, NOT a verified publishable market statistic.
+- Draft scene 3 replaces nonordinary 9103 with existing researched ordinary Stock-class candidate 9919 康那香. Frozen 20261008 published analysis supports foreign net -18 lots and margin -327 lots and warns no verified new order. These are preliminary transferred facts pending source/date verification in rebuilt facts/analysis; no unverified causation asserted.
+- Draft scenes 1,2,3,9 explicitly say conditional research and prohibit silently treating estimates as certified market claims. They are **not** installed as `video_scripts/daily-gainers/20261008.json`, and cannot be consumed by the actual video validator until all raw/news/facts/AI/published/summary and stock eligibility evidence are reconciled.
+- No main edits, no YouTube/Pages/cron actions, no released flags.
+
+current_blocker: date-effective TWSE common-stock type/InnovationBoard inclusion decision plus complete source/claim-preserving regeneration of raw, news, facts, AI, published analysis and market summary; editorial rewrites alone cannot clear those gates.
+planned_research: focus next A on building an isolated candidate workspace from original actual-date inputs, with strict classification proof and independent validation of 32/34 scenario choice. Recalculate source-linked semantic analysis before promoting even research Render-only. Do not do additional generic TTS or historical roster scans.
+prior_attempt: after original DR candidate rejection and 7-input dependency preflight, now source-derived affected-scene alternate drafts have passed isolated GitHub CI.
+anti_loop: do not repeat conditional math or rerun original invalid render; go to actual non-destructive end-to-end source regeneration / explicit honest BLOCKED.
+next_action: promptA
+plan_changed: no
+publication_authorized: false
