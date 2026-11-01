@@ -62,6 +62,8 @@ jobs:
           console.log(JSON.stringify({date:r.target_date,stocks:r.provisional_stock_count,
             numeric_matches:r.matched_official_numeric_claim_count,
             numeric_conflicts:r.original_numeric_claim_conflict_count,
+            conflicted_codes:r.stock_rows.filter(x=>x.official_numeric_crosscheck.status==='NUMERIC_SOURCE_CONFLICT').map(x=>({code:x.code,name:x.name,error:x.official_numeric_crosscheck.error})),
+            non_dated_company_pages:r.stock_rows.flatMap(x=>x.source_quality.filter(s=>s.quality==='GENERIC_UNDATED_PROFILE').map(s=>({code:x.code,url:s.url}))),
             strong_claims:r.strong_claims_count,
             unread_secondary_or_generic:r.strong_claims_with_only_unread_secondary_or_generic_links,
             verified_primary_company_filings:r.primary_company_disclosure_document_content_verified_count,
