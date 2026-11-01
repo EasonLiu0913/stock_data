@@ -6,6 +6,8 @@ on:
       - research/daily-video-mvp10-a-20261029
     paths:
       - .github/workflows/research-mvp10-real-date-ordinary-gate.yml
+      - scripts/generate_daily_gainers_over_5.js
+      - tests/daily_gainers_mvp10_candidate_generator.test.js
 
 permissions:
   contents: read
@@ -28,6 +30,7 @@ jobs:
           sparse-checkout: |
             scripts
             tests/daily_gainers_mvp10_ordinary_scope_gate.test.js
+            tests/daily_gainers_mvp10_candidate_generator.test.js
             data_daily_gain_over_5/20261008.json
             data_daily_gain_over_5/analysis-ai/20261008.json
             data_daily_gain_over_5/market-summary/20261008.json
@@ -39,6 +42,10 @@ jobs:
           node-version: '24'
       - name: Test DR exclusion with honest classification limits
         run: node --test tests/daily_gainers_mvp10_ordinary_scope_gate.test.js
+      - name: Verify producer DR fail-closed at source
+        run: |
+          node --check scripts/generate_daily_gainers_over_5.js
+          node --test tests/daily_gainers_mvp10_candidate_generator.test.js
       - name: Confirm real dated script validator fails only for the genuine DR
         shell: bash
         run: |
