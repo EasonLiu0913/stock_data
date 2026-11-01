@@ -75,7 +75,7 @@ function audit(root){
   primary_company_disclosure_document_content_verified_count:0,
   source_strength_conflict_count:auditRows.filter(x=>x.source_strength_conflict).length,
   confirmed_original_2305_name:input.raw.value.stocks.find(s=>s.code==='2305')?.name,
-  2305_name_match:'全友',
+  expected_2305_name:'全友',
   source_sha256:Object.fromEntries(Object.entries(input).map(([k,x])=>[k,x.sha256])),
   stock_rows:auditRows,
   historical_stock_type_verified:false,
