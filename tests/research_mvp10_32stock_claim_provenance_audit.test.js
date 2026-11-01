@@ -17,16 +17,22 @@ test('32 stock full batch audit keeps unverified company filings and correct 230
  assert(p.source_quality.some(x=>x.quality==='GENERIC_UNDATED_PROFILE'));
  assert(!j.stock_rows.some(x=>x.code==='9103'));
  assert.equal(j.source_strength_conflict_count,0);
+ assert.equal(j.matched_official_numeric_claim_count,31);
+ assert.equal(j.official_numeric_partial_missing_margin_count,1);
+ assert.equal(j.original_numeric_claim_conflict_count,0);
+ const pending=j.stock_rows.find(x=>x.code==='4178');
+ assert.equal(pending.official_numeric_crosscheck.status,'NUMERIC_SOURCE_PARTIAL_NO_MARGIN_ROW');
+ assert.equal(pending.official_numeric_crosscheck.margin_delta,null);
+ assert.equal(pending.official_numeric_crosscheck.margin_record_status,'no_record');
 });
 test('exchange/date official claim conflicts are recorded, never silently converted to verified',()=>{
  const j=audit(process.cwd());
- assert.equal(j.matched_official_numeric_claim_count+j.original_numeric_claim_conflict_count,32);
+ assert.equal(j.matched_official_numeric_claim_count+j.official_numeric_partial_missing_margin_count+j.original_numeric_claim_conflict_count,32);
  for(const item of j.stock_rows){
   assert.equal(item.event_caused_price_rise_verified,false);
   assert.equal(item.company_event_primary_filing_verified,false);
   assert.equal(item.publisher_historical_security_category_effective_on_date_verified,false);
-  assert(item.official_numeric_crosscheck.status==='NUMERIC_SOURCE_RECONCILED'||
-   (item.official_numeric_crosscheck.status==='NUMERIC_SOURCE_CONFLICT'&&typeof item.official_numeric_crosscheck.error==='string'));
+  assert(['NUMERIC_SOURCE_RECONCILED','NUMERIC_SOURCE_PARTIAL_NO_MARGIN_ROW','NUMERIC_SOURCE_CONFLICT'].includes(item.official_numeric_crosscheck.status));
  }
 });
 test('frozen original source untouched and no main/canonical mutation',()=>{
