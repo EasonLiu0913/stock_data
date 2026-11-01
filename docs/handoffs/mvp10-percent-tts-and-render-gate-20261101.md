@@ -23,3 +23,23 @@ prior_attempt: smoke CI now green; Render-only CI fails before TTS due to ordina
 anti_loop: Do not retry the identical Render-only input without reconciliation or repeat standalone percentage smoke tests without new evidence.
 plan_changed: no
 publication_authorized: false
+
+
+## MVP10-A next bounded Prompt A — upstream ordinary-stock DR root cause and regression (2026-11-01)
+
+research_progress_status: PROGRESS
+phase_status: MVP10-A INCOMPLETE; original preregistered MVP10-B frozen/not eligible.
+- Verified direct cause: `scripts/generate_daily_gainers_over_5.js` previously selected all `data_fubon` SMA symbols satisfying the >=5% price arithmetic without a security-type gate. Frozen 20261008 raw includes `9103 美德醫療-DR` with 9.91% gain; `analysis-facts` and `analysis-ai` include this security and script scene 2 references it while scene 3 is devoted to it. Market headline/breadth/sector counts and narrative also depend on the uncorrected 35-stock scope. Silently deleting one row or altering the stock_count would invalidate multiple dated artifacts and editorial claims.
+- Research-only upstream producer `scripts/generate_daily_gainers_over_5.js` now fails closed on recognized `-DR/－DR` suffixed candidates, without filtering or writing a new date payload. This is a **minimum known-DR exclusion guard only**, NOT complete common-stock classification; do not classify `-KY`, `-創` or other instruments without evidence. Original 20261008 source evidence remains unchanged.
+- New test `tests/daily_gainers_mvp10_candidate_generator.test.js` covers known DR, actual frozen 20261008 snapshot preservation, missing universe and non-DR naming exceptions.
+- Independent isolated CI [#41311100419](https://github.com/EasonLiu0913/stock_data/actions/runs/41311100419), job `124861467951`, head `54b25d320aa0222c66d9cb13bf87c6ad03fbf4fc`, **SUCCESS**. Logs: original scope tests 4/4 PASS, new generator tests 5/5 PASS, original dated validation rejects 9103 in scenes 2 and 3, original dated video builder refuses to write a plan/slides. Research push-only workflow with `contents:read`, no YouTube, Pages or main writer.
+- Available frozen dated ChatGPT scripts on this research branch: `20261008.json` and `20261013.json` only. Both associated raw universes contain `9103 美德醫療-DR`; simply switching date is not a verified path to a complete MP4.
+- A/B scope unchanged: original dated raw, fact/AI, summary and script must be rebuilt/revalidated together from date-bound ordinary-stock evidence before running Render-only. All mandatory official-source/date/claim gates remain active. No authentic ordinary-only replacements are claimed; no full MP4, YouTube or owner publishing authorization.
+
+current_blocker: no complete provenance-checked ordinary-stock-only daily analysis/script bundle for either available dated video script; required source/date/claim cross-field reconciliation.
+planned_research: build an isolated explicit, reversible 20261008 ordinary-stock regeneration candidate with valid dated security classification and recompute all dependent facts, AI, summary and narration, then run validators and the existing no-upload render workflow; do not mutate frozen source files or invent AI causal claims.
+prior_attempt: upstream generator previously lacked a security-type guard; now a reproducible real-date fail-closed regression passes CI.
+anti_loop: do not rerun either original DR-inclusive video script unchanged, and do not spend another turn proving the already-confirmed DR rejection. Move to independently supported regeneration only.
+next_action: `promptA` for focused source classification and complete dated source/analysis/script regeneration with tested evidence; stop if required source cannot be proven.
+plan_changed: no
+publication_authorized: false
