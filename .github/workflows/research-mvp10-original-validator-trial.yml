@@ -1,0 +1,88 @@
+name: "[Research Only] MVP10 Original Validators Temporary 32-Stock Trial"
+on:
+  push:
+    branches:
+      - research/daily-video-mvp10-a-20261029
+    paths:
+      - .github/workflows/research-mvp10-original-validator-trial.yml
+permissions:
+  contents: read
+jobs:
+  trial:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Research branch only
+        run: |
+          test "$GITHUB_REF_NAME" = "research/daily-video-mvp10-a-20261029"
+          test "$GITHUB_REF_TYPE" = "branch"
+      - uses: actions/checkout@v4
+        with:
+          ref: research/daily-video-mvp10-a-20261029
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/research_mvp10_trial_original_validators.js
+            scripts/research_mvp10_evidence_safe_nine_scene_script.js
+            scripts/research_mvp10_multi_security_source_claims.js
+            scripts/research_mvp10_full_editorial_storyboard.js
+            scripts/research_mvp10_candidate_aggregate.js
+            scripts/research_mvp10_isolated_candidate_workspace.js
+            scripts/research_mvp10_dated_universe_classification.js
+            scripts/research_mvp10_conditional_editorial_drafts.js
+            scripts/research_mvp10_9919_official_claim_gate.js
+            scripts/daily_gainers_brand_opening.js
+            scripts/daily_gainers_presentation_contract.js
+            scripts/daily_gainers_mvp10_ordinary_scope_gate.js
+            scripts/build_daily_gainers_market_summary.js
+            scripts/validate_daily_gainers_market_summary.js
+            scripts/validate_daily_gainers_video_script.js
+            scripts/lib/daily_gainers_ai_contract.js
+            tests/research_mvp10_trial_original_validators.test.js
+            video_scripts/daily-gainers/20261008.json
+            config/daily-gainers-theme-taxonomy.json
+            config/daily-gainers-ai-contract.json
+            data_daily_gain_over_5/20261007.json
+            data_daily_gain_over_5/20261008.json
+            data_daily_gain_over_5/analysis-facts/20261008.json
+            data_daily_gain_over_5/analysis-news/20261008.json
+            data_daily_gain_over_5/analysis-ai/20261008.json
+            data_daily_gain_over_5/analysis/20261008.json
+            data_daily_gain_over_5/market-summary/20261008.json
+            data_twse/twse_industry_Stock.csv
+            data_twse/twse_industry_InnovationBoard.csv
+            data_twse/twse_industry_TDR.csv
+            data_twse/twse_industry_ETF.csv
+            data_twse_mi_index/20261008_twse_mi_index.json
+            data_twse_foreign_investors/20261008_twse_foreign_investors.json
+            data_twse_investment_trust/20261008_twse_investment_trust.json
+            data_twse_dealers/20261008_twse_dealers.json
+            data_twse_margin_balance/20261008_twse_margin_balance.csv
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Test original validator expected fail-closed on preliminary analysis
+        run: node --test tests/research_mvp10_trial_original_validators.test.js
+      - name: Materialize original validator report in isolated runner temp
+        run: |
+          node scripts/research_mvp10_trial_original_validators.js "$GITHUB_WORKSPACE" "$RUNNER_TEMP/mvp10-original-validator-trial" > "$RUNNER_TEMP/validator-trial-result.json"
+          node - <<'NODE'
+          const fs=require('fs'),path=require('path'),crypto=require('crypto');
+          const p=path.join(process.env.RUNNER_TEMP,'mvp10-original-validator-trial','strict-original-validators-report.json');
+          const buf=fs.readFileSync(p),r=JSON.parse(buf);
+          if(r.summary_status!=='preliminary'||r.original_summary_validator.exit_code!==0||
+             r.original_video_validator.exit_code===0||r.original_final_analysis_generated!==false||
+             r.render_authorized!==false||r.mp4_generated!==false)throw Error('WRONG_VALIDATOR_TRIAL_RESULT');
+          console.log(JSON.stringify({summary:r.summary_status,summary_validator:'PASS',
+            video_validator:'EXPECTED_BLOCK',reason:r.original_video_validator.stderr.match(/summary not final\/complete/)?.[0],
+            report_sha256:crypto.createHash('sha256').update(buf).digest('hex')},null,2));
+          NODE
+          echo "Real original summary validator PASSED with preliminary non-publishable data. Real video validator correctly BLOCKED absent final/complete analysis. No MP4." >> "$GITHUB_STEP_SUMMARY"
+      - name: Retain original validator trial evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mvp10-original-validator-20261008-32stock-trial
+          path: ${{ runner.temp }}/mvp10-original-validator-trial/strict-original-validators-report.json
+          if-no-files-found: warn
+          retention-days: 14
