@@ -48,6 +48,21 @@ function round(value, digits = 2) {
   return Math.round((value + Number.EPSILON) * scale) / scale;
 }
 
+// An identified depositary receipt is not a TWSE ordinary common stock.
+ // Fail closed instead of deleting it from an otherwise still-unreconciled
+ // raw/analysis/script chain. Other categories require independent evidence.
+function assertNoDepositaryReceiptsInCandidates(stocks) {
+  if (!Array.isArray(stocks)) throw new Error('MVP10_CANDIDATE_UNIVERSE_MISSING');
+  const excluded = stocks.filter(stock =>
+    typeof stock?.name === 'string' && /[-－]DR\s*$/i.test(stock.name));
+  if (excluded.length) {
+    throw new Error('MVP10_NON_ORDINARY_DR_CANDIDATES: ' +
+      excluded.map(stock => String(stock.code) + ' ' + stock.name).join('; ') +
+      '; regenerate date-matched raw, facts, AI and video script together');
+  }
+  return stocks;
+}
+
 function buildForDate(targetDate) {
   const dates = listSmaDates();
   const index = dates.indexOf(targetDate);
@@ -88,6 +103,7 @@ function buildForDate(targetDate) {
   }
 
   stocks.sort((a, b) => b.change_pct - a.change_pct || a.code.localeCompare(b.code));
+  assertNoDepositaryReceiptsInCandidates(stocks);
 
   return {
     schema_version: 1,
@@ -157,4 +173,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { buildForDate, compactToSlash, listSmaDates, numeric, round };
+module.exports = { buildForDate, compactToSlash, listSmaDates, numeric, round, assertNoDepositaryReceiptsInCandidates };
