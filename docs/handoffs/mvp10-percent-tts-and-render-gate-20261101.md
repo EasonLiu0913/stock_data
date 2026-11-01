@@ -43,3 +43,26 @@ anti_loop: do not rerun either original DR-inclusive video script unchanged, and
 next_action: `promptA` for focused source classification and complete dated source/analysis/script regeneration with tested evidence; stop if required source cannot be proven.
 plan_changed: no
 publication_authorized: false
+
+
+## 2026-11-01 — Pre-date TWSE classification inventory + same-date quote evidence
+
+research_progress_status: PROGRESS
+phase_status: MVP10-A INCOMPLETE
+research_progress_evidence:
+- Research category CI [#41311638487](https://github.com/EasonLiu0913/stock_data/actions/runs/41311638487) SUCCESS, 4/4 regression tests, Artifact #13086180087.
+- Pinned pre-date category CI [#41311796623](https://github.com/EasonLiu0913/stock_data/actions/runs/41311796623) SUCCESS, integrity checks against pinned Git blobs, Artifact #13085314000.
+- Same-date official quote cross-check CI [#41311913862](https://github.com/EasonLiu0913/stock_data/actions/runs/41311913862) SUCCESS, source quote SHA256 `c93be0a5fae5a9aa4ee9a02c83e7a7354fb1a3e715a09cc0f2d3cfe7e76709a5`, 35/35 raw candidate codes found in `20261008` TWSE MI_INDEX table. This is **quote-presence**, NOT a security-type or complete equity-identity certification. Artifacts #13086125663 and #13085184969.
+- GitHub snapshots predating 20261008 used by CI: Stock commit `8ec4711cac2ac570218f4d57b5c078a06a59b7cc` (2026-09-04), InnovationBoard `496c52cd2d5da9e8e9672f9ff55811eecd7bb2b3` (2026-09-22), TDR `9e65f777b89eccf1fb4bd192966aed5541a66293` (2026-01-24), ETF `b9501de8b08b0732d47b2e13bcac28705a8dc89c` (2026-10-05). Original CSV blobs match existing pinned checksums in `scripts/audit_twse_isin_category_snapshot.js`. These are **pre-date archive snapshots only**, not proof that the official issuer roster remained unchanged through 20261008.
+- Every one of the 35 frozen 20261008 raw candidates matches exactly one pinned category with an exact matching code and name: Stock=32, InnovationBoard=2 (6645 金萬林-創; 7740 熙特爾-創), TDR=1 (9103 美德醫療-DR), ETF=0, mismatch=0. Do **not** call all 34 non-TDR names automatically certified eligible ordinary common shares; InnovationBoard needs a specific eligibility check and date verification. No legacy raw/AI/facts/summary/script was overwritten.
+- Scoped read-only research implementation: `scripts/research_mvp10_dated_universe_classification.js` and `tests/research_mvp10_dated_universe_classification.test.js`. Tests refuse duplicate, absent and conflicting classifications, and do not authorize rendering.
+- Existing main production code and all release locks remain unchanged. No upload / publication authorization.
+
+current_blocker: Need an editorially consistent 20261008 ordinary-common candidate bundle with exclusions/eligibility justified by dated source evidence; remove DR references from scene 2/3 and recompute market/sector/catalyst statistics in source AI/facts/summary/script, not simply edit 35 to 34. Current exchange quote proves trade presence only.
+
+planned_research: next Prompt A should make a **bounded isolated non-destructive regeneration plan**, identify complete dependencies and actual regeneration commands. Prioritize a real valid renderable dated script over further master classification research. For InnovationBoard, establish eligible ordinary-equity classification and original-date basis, otherwise keep unknown as a BLOCKER. Fail closed if missing, rather than assume eligibility. Next only after evidence: derive/revalidate raw, facts, analysis, market-summary and new editorial script together in a separate research output directory, run original gates and then original research Render-only workflow.
+prior_attempt: old 20261008 and 20261013 both include DR. Now independent GitHub history and dated quote evidence distinguish known TDR from unresolved innovation/common-stock eligibility.
+anti_loop: do not rerun old invalid full Render-only video; do not recertify historic full-roster master endlessly; use evidence to reconstruct narrow dated production bundle or stop with precise source gap.
+next_action: promptA — bounded dated candidate/claims dependency mapping and non-destructive regeneration without release effects.
+plan_changed: no
+publication_authorized: false
