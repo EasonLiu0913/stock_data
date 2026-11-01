@@ -36,6 +36,9 @@ jobs:
           assert r["company_event_caused_market_movement_verified"] is False
           print("Proof status:",r["decision"])
           print("Official rows matched:",len(r["official_revenue_claims_validated"]))
+          for p in r["pages"]:
+            for code, row in p["target_rows"].items():
+              print("OFFICIAL_ROW", code, json.dumps(row,ensure_ascii=False))
           PY
           echo "Official MOPS original receipts may be blocked by upstream. Media/event causation and final video gates remain OFF." >> "$GITHUB_STEP_SUMMARY"
       - name: Upload original HTTP receipt and any directly matching rows
