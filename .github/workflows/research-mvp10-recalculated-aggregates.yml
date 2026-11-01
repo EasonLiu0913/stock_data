@@ -1,0 +1,63 @@
+name: "[Research Only] MVP10 Recalculated Candidate Aggregates"
+on:
+  push:
+    branches:
+      - research/daily-video-mvp10-a-20261029
+    paths:
+      - .github/workflows/research-mvp10-recalculated-aggregates.yml
+permissions:
+  contents: read
+jobs:
+  aggregate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Enforce isolated branch
+        run: |
+          test "$GITHUB_REF_NAME" = "research/daily-video-mvp10-a-20261029"
+          test "$GITHUB_REF_TYPE" = "branch"
+      - uses: actions/checkout@v4
+        with:
+          ref: research/daily-video-mvp10-a-20261029
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/research_mvp10_candidate_aggregate.js
+            scripts/research_mvp10_isolated_candidate_workspace.js
+            scripts/research_mvp10_dated_universe_classification.js
+            tests/research_mvp10_candidate_aggregate.test.js
+            data_daily_gain_over_5/20261008.json
+            data_daily_gain_over_5/analysis-facts/20261008.json
+            data_daily_gain_over_5/analysis-news/20261008.json
+            data_daily_gain_over_5/analysis-ai/20261008.json
+            data_daily_gain_over_5/analysis/20261008.json
+            data_twse/twse_industry_Stock.csv
+            data_twse/twse_industry_InnovationBoard.csv
+            data_twse/twse_industry_TDR.csv
+            data_twse/twse_industry_ETF.csv
+            config/daily-gainers-theme-taxonomy.json
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate source-bound denominators and tamper resistance
+        run: node --test tests/research_mvp10_candidate_aggregate.test.js
+      - name: Generate no-publish aggregated research artifact
+        run: |
+          node scripts/research_mvp10_candidate_aggregate.js "$GITHUB_WORKSPACE" "$RUNNER_TEMP/mvp10-recalculated-aggregates" > "$RUNNER_TEMP/aggregate-result.json"
+          node - <<'NODE'
+          const fs=require('node:fs'),path=require('node:path');
+          const r=JSON.parse(fs.readFileSync(path.join(process.env.RUNNER_TEMP,'aggregate-result.json')));
+          if(JSON.stringify(r.map(x=>x.stock_count))!=='[32,34]' ||
+             JSON.stringify(r.map(x=>x.evidence_count))!=='[11,12]' ||
+             r.some(x=>x.render_authorized!==false))throw Error('RESEARCH_AGGREGATE_UNSAFE');
+          console.log(JSON.stringify(r,null,2));
+          NODE
+          echo "Research aggregates only: source semantic claims not revalidated; no official market-summary or video render permitted." >> "$GITHUB_STEP_SUMMARY"
+      - name: Save provisional source-linked aggregates
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mvp10-20261008-recalculated-aggregates-research
+          path: ${{ runner.temp }}/mvp10-recalculated-aggregates/
+          if-no-files-found: warn
+          retention-days: 14
