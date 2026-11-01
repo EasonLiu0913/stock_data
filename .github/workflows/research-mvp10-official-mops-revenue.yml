@@ -1,0 +1,48 @@
+name: "[Research Only] MVP10 Official MOPS Historical September Revenue"
+on:
+  push:
+    branches:
+      - research/daily-video-mvp10-a-20261029
+    paths:
+      - .github/workflows/research-mvp10-official-mops-revenue.yml
+      - scripts/research_mvp10_mops_september_revenue.py
+permissions:
+  contents: read
+jobs:
+  historical:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Assert isolated research branch
+        run: |
+          test "$GITHUB_REF_NAME" = "research/daily-video-mvp10-a-20261029"
+          test "$GITHUB_REF_TYPE" = "branch"
+      - uses: actions/checkout@v4
+        with:
+          ref: research/daily-video-mvp10-a-20261029
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/research_mvp10_mops_september_revenue.py
+          sparse-checkout-cone-mode: false
+      - name: Read two original official MOPS historical archives
+        run: |
+          python3 scripts/research_mvp10_mops_september_revenue.py "$RUNNER_TEMP/mvp10-official-mops"
+          python3 - <<'PY'
+          import json,os,pathlib
+          r=json.loads((pathlib.Path(os.environ["RUNNER_TEMP"])/"mvp10-official-mops"/"20261008-mops-revenue-original-receipt.json").read_text())
+          assert r["research_only"] is True and r["render_authorized"] is False
+          assert r["publication_authorized"] is False
+          assert r["full_market_summary_approved"] is False
+          assert r["company_event_caused_market_movement_verified"] is False
+          print("Proof status:",r["decision"])
+          print("Official rows matched:",len(r["official_revenue_claims_validated"]))
+          PY
+          echo "Official MOPS original receipts may be blocked by upstream. Media/event causation and final video gates remain OFF." >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload original HTTP receipt and any directly matching rows
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mvp10-official-mops-september-2026-source-receipts
+          path: ${{ runner.temp }}/mvp10-official-mops/
+          if-no-files-found: warn
+          retention-days: 14
