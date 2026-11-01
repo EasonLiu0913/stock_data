@@ -240,3 +240,25 @@ anti_loop: no repeating DR/name scope, percentage TTS, six-stock numeric checks,
 next_action: promptA
 plan_changed: no
 publication_authorized: false
+
+
+## 2026-11-01 — FULL provisional 32-stock numerical/source audit, corrected missing margin semantics
+
+research_progress_status: PROGRESS
+phase_status: MVP10-A INCOMPLETE / MVP10-B FROZEN_NOT_ELIGIBLE
+research_progress_evidence:
+- `scripts/research_mvp10_32stock_claim_provenance_audit.js` executes **all 32 Stock-category candidate** same-day 20261008 original TWSE MI_INDEX quote, institutional source row and TWSE margin CSV checks via `scripts/research_mvp10_multi_security_source_claims.js`; records company/event-source links separately from numeric facts, with per-source code/date and checksum receipts.
+- CI [#41317861690](https://github.com/EasonLiu0913/stock_data/actions/runs/41317861690), commit `633d8184139bc4cd59594b0619c6fce961ca5522`, job `124881629141`, **SUCCESS**, Node tests **3/3 PASS**. Report artifact #`13088012325` (ZIP SHA256 `d253e87fa31c6ab199c7a880fb74fa7cb4fde8e2a9baff4e0a09e95a367d434f`; JSON SHA256 `0e256d64d80ee9911ae6f36476647be523273658a14eba8b82622e7b37548ec6`). This replaces the previous research audit #41317693208 because the latter was overly coarse about absent margin rows.
+- **Correct final numeric outcome**: 31/32 stock codes fully cross-matched for price, official institutional entries and margin balances; 1/32 code `4178 永笙-KY` has **no margin row** in the actual 20261008 TWSE margin CSV, while facts holds `margin_prev/now/delta=null` (and short balances null). This is an explicitly preserved `no_record` / partial numerical validation, NOT 0 lots, NOT a contrary number. Numeric source contradictions: **0/32**. The strict checker was patched to reject missing margin rows if any facts margin amount is non-null.
+- **Critical identity correction**: `2305` is `全友` in the actual 20261008 raw/Stock classification/published evidence, NOT `全漢` (which is 3015). Previous assistant narrative mislabeled 2305. Research storyboard intentionally references stock code 2305 without the incorrect name, but any on-screen name mappings MUST use `全友`.
+- Of 32 records, 11 carry `direct/corroborated` evidence-strength flags from the **legacy analysis**. **All 11** currently rely on secondary media articles or an undated generic stock-profile URL and **none** have independently fetched and verified company/official stock-disclosure content in this audit. No historical source content was fetched here; the result says URL metadata checked, NOT article veracity or independent semantic certification. Particularly `2305` uses `https://www.nstock.tw/2305` (generic undated company page) alongside a dated media summary; `3591` similarly uses `https://www.nstock.tw/3591`. These should not be represented as dated primary company-revenue announcements. The remaining securities have various weaker/no company-specific catalyst claims and should not be converted into false positive evidence.
+- Strict script and genuine original builder trial #41317225841 previously produced valid preliminary summary and then correctly rejected `summary not final/complete`. This full 32-stock audit identifies factual and source-provenance reasons **not** to fake or auto-promote final status. A CI PASS is a PASS for the fact-finding/research audit, not a PASS for final source completeness.
+- `main`, original 35-stock historical raw/news/facts/AI/analysis/video scripts, official datasets, scheduled jobs, Pages, YouTube and all release locks unchanged. No actual Render-only, MP4, upload or publication.
+
+current_blocker: resolve date-effective ordinary-equity Stock classification for 20261008, establish independently verified primary company disclosures or downgrade legacy 11 strong evidence claims, and regenerate honest claim-scoped 32-stock AI/published analysis and final market summary under the original validator. Then video validator and real Render-only. Financial source no_record for 4178 must remain null, not zero.
+planned_research: next distinct A work should focus on **bounded official company-disclosure evidence for high-impact remaining stock-specific business claims** (6672,2305 全友,3416 and selected other 11), then reconcile legacy strong evidence category to what sources actually support. Avoid repeated whole-universe quote/margin checks; those have now been independently audited. If sources cannot be fetched or dated, downgrade unsupported causal/event claims and preserve strict final gate. A/B and all publishing locks stay shut.
+prior_attempt: six headline securities were checked; now all 32 original source numeric securities and 11 supporting-article link qualities have been surveyed, with missing-margin semantics corrected rather than calling a harmless absent row contradictory.
+anti_loop: no more 32-stock numeric audits with identical source snapshots; do not repeat 9919/6 stocks or rebuild conditional 32/34 aggregates absent new evidence. Work next on genuine original dated disclosures or explicit blocker.
+next_action: promptA
+plan_changed: no
+publication_authorized: false
