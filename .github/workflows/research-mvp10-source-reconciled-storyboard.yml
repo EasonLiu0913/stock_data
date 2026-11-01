@@ -1,0 +1,81 @@
+name: "[Research Only] MVP10 Source-Reconciled 9-Scene Storyboard"
+on:
+  push:
+    branches:
+      - research/daily-video-mvp10-a-20261029
+    paths:
+      - .github/workflows/research-mvp10-source-reconciled-storyboard.yml
+permissions:
+  contents: read
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Guard research branch
+        run: |
+          test "$GITHUB_REF_NAME" = "research/daily-video-mvp10-a-20261029"
+          test "$GITHUB_REF_TYPE" = "branch"
+      - uses: actions/checkout@v4
+        with:
+          ref: research/daily-video-mvp10-a-20261029
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/research_mvp10_evidence_safe_nine_scene_script.js
+            scripts/research_mvp10_multi_security_source_claims.js
+            scripts/research_mvp10_full_editorial_storyboard.js
+            scripts/research_mvp10_candidate_aggregate.js
+            scripts/research_mvp10_isolated_candidate_workspace.js
+            scripts/research_mvp10_dated_universe_classification.js
+            scripts/research_mvp10_conditional_editorial_drafts.js
+            scripts/research_mvp10_9919_official_claim_gate.js
+            scripts/daily_gainers_brand_opening.js
+            scripts/daily_gainers_presentation_contract.js
+            tests/research_mvp10_evidence_safe_nine_scene_script.test.js
+            video_scripts/daily-gainers/20261008.json
+            config/daily-gainers-theme-taxonomy.json
+            data_daily_gain_over_5/20261008.json
+            data_daily_gain_over_5/analysis-facts/20261008.json
+            data_daily_gain_over_5/analysis-news/20261008.json
+            data_daily_gain_over_5/analysis-ai/20261008.json
+            data_daily_gain_over_5/analysis/20261008.json
+            data_twse/twse_industry_Stock.csv
+            data_twse/twse_industry_InnovationBoard.csv
+            data_twse/twse_industry_TDR.csv
+            data_twse/twse_industry_ETF.csv
+            data_twse_mi_index/20261008_twse_mi_index.json
+            data_twse_foreign_investors/20261008_twse_foreign_investors.json
+            data_twse_investment_trust/20261008_twse_investment_trust.json
+            data_twse_dealers/20261008_twse_dealers.json
+            data_twse_margin_balance/20261008_twse_margin_balance.csv
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Validate source-grounded nine-scene draft and immutable originals
+        run: node --test tests/research_mvp10_evidence_safe_nine_scene_script.test.js
+      - name: Materialize complete research storyboard without release side effects
+        run: |
+          node scripts/research_mvp10_evidence_safe_nine_scene_script.js "$GITHUB_WORKSPACE" "$RUNNER_TEMP/mvp10-source-reconciled-nine-scenes" > "$RUNNER_TEMP/mvp10-reconciled-result.json"
+          node - <<'NODE'
+          const fs=require('node:fs'),crypto=require('node:crypto'),path=require('node:path');
+          const r=JSON.parse(fs.readFileSync(path.join(process.env.RUNNER_TEMP,'mvp10-reconciled-result.json'),'utf8'));
+          const b=fs.readFileSync(r.path),j=JSON.parse(b);
+          if(j.scenes.length!==9||j.stock_count!==32||j.render_authorized!==false||
+             j.market_summary_final!==false||j.publication_authorized!==false||
+             j.independent_numeric_original_source_verified_codes.length!==6||
+             j.remaining_legacy_prose_unverified_scenes.length!==0)
+             throw Error('UNSAFE_RESEARCH_SCRIPT_PROMOTION');
+          console.log(JSON.stringify({scene_count:9,source_verified_codes:j.independent_numeric_original_source_verified_codes,
+            narration_chars:j.narration_chars,sha256:crypto.createHash('sha256').update(b).digest('hex'),
+            eligible_stock_identity_verified:j.eligible_stock_identity_verified,render_authorized:false},null,2));
+          NODE
+          echo "Full nine-scene source-numeric reconciled RESEARCH ONLY. Historical ordinary scope, news causality, and final market summary still unverified. No MP4/YouTube." >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload research-only storyboard package
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mvp10-source-reconciled-nine-scene-research-draft
+          path: ${{ runner.temp }}/mvp10-source-reconciled-nine-scenes/
+          if-no-files-found: warn
+          retention-days: 14
