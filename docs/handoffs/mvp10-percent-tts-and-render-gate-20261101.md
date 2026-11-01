@@ -219,3 +219,24 @@ anti_loop: No new isolated CI for already-verified percentages, DR guards, scena
 next_action: promptA
 plan_changed: no
 publication_authorized: false
+
+
+## 2026-11-01 — Actual original summary and video validator trial on ephemeral 32-stock provisional data
+
+research_progress_status: PROGRESS
+phase_status: MVP10-A INCOMPLETE; MVP10-B FROZEN_NOT_ELIGIBLE
+research_progress_evidence:
+- Research-only `scripts/research_mvp10_trial_original_validators.js`, tests `tests/research_mvp10_trial_original_validators.test.js`, read-only isolated CI `.github/workflows/research-mvp10-original-validator-trial.yml`.
+- GitHub CI [#41317225841](https://github.com/EasonLiu0913/stock_data/actions/runs/41317225841), head `c8c7af115b76cb2b6463996490733426b90fa68a`, job `124879727691`, **SUCCESS**, **3/3 PASS**. Tests exercise the repo's **actual original** `build_daily_gainers_market_summary.js`, `validate_daily_gainers_market_summary.js` and `validate_daily_gainers_video_script.js` in an isolated runner-temp checkout, preserving all frozen 20261008 canonical source files.
+- New Artifact #`13087399529` (`mvp10-original-validator-20261008-32stock-trial`), ZIP SHA256 `780d39739c716332f682d629a9f46a5a88819ab8ec83b31dc09410a64a8994ad`, report SHA256 `339c949452c3a87fea389ba7e745f60cd812fcc3874bbcab7d52f3ab5d1efa63`, contains exact original validator command, exit code, stdout/stderr and explicit permission flags.
+- Candidate 32 stock ordinary-category records were staged as canonical-format **temporary preliminary test inputs**, with 32-stock raw, facts, news, AI and full nine-scene research storyboard. Crucially **no final published analysis was staged** because the carried legacy 35-stock company causality/market summary was not independently revalidated; no fake final status or externally authorized final source was written.
+- Running the genuine market-summary builder yielded `status=preliminary` and NOT `coverage.overall=complete`. The genuine `validate_daily_gainers_market_summary.js --date 20261008` returned EXIT 0. The genuine `validate_daily_gainers_video_script.js 20261008` returned nonzero with exact expected reason `summary not final/complete` — **successful demonstration of the original fail-closed gate**, NOT successful full video script clearance. All original source files untouched and main unchanged.
+- This proof distinguishes a formally valid **preliminary summary** from missing final-source/semantic legitimacy. No 1080p MP4, TTS, SRT, video render, upload, authorized publication or release-lock change occurred.
+
+current_blocker: the original final/complete gate needs independently supportable date-effective ordinary-stock identity and complete reconciled 32-stock published analysis/AI/news/facts, not another isolated script/parser/stock-count formatting change.
+planned_research: next distinct Prompt A should concentrate on verified date-effective security type and **actual semantic/claim-level eligibility of the surviving 32-stock published analysis**, using retained company primary sources and original official source receipts. If sufficient, create separately isolated fully reconciled final published analysis and re-run original market-summary builder and original video validator. If not, report precise missing evidence and preserve preliminary fail-closed rather than spoof final status.
+prior_attempt: full nine-scene research draft passed structure and six-stock official numerical source checks, but had never entered original market-summary/script validation pipeline. This trial did enter and establishes exact final/complete source blocker.
+anti_loop: no repeating DR/name scope, percentage TTS, six-stock numeric checks, provisional aggregate counts, or this same original preliminary trial without new source/semantic evidence. Do not run full Render-only until original video validator actually passes without setting fake final/complete markers. Optimize for actual MVP end-to-end media while retaining immutable A/B.
+next_action: promptA
+plan_changed: no
+publication_authorized: false
