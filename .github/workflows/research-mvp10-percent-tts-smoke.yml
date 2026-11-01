@@ -50,29 +50,46 @@ jobs:
           assert spoken == '跌幅百分之1.95', repr(spoken)
           assert '%' not in spoken and 'percent' not in spoken.lower()
           out = Path('percent-tts-smoke')
-          target = out / 'yunzhe-1.95.mp3'
-          async def main():
-              await edge_tts.Communicate(text=spoken, voice=os.environ['TTS_VOICE'], rate=os.environ['TTS_RATE']).save(str(target))
-          asyncio.run(main())
-          data = target.read_bytes()
-          if len(data) < 1000:
-              raise RuntimeError('TTS_AUDIO_EMPTY_OR_TRUNCATED')
           evidence = {
               'input_text': original,
               'tts_text': spoken,
               'voice': os.environ['TTS_VOICE'],
               'rate': os.environ['TTS_RATE'],
-              'audio_file': target.name,
-              'audio_size_bytes': len(data),
-              'audio_sha256': hashlib.sha256(data).hexdigest(),
               'github_sha': os.environ['GITHUB_SHA'],
               'acoustic_manual_review': False,
               'publication_authorized': False,
+              'checks': {},
           }
+          async def try_audio(key, text):
+              target = out / (key + '.mp3')
+              errors = []
+              for attempt in range(1, 3):
+                  target.unlink(missing_ok=True)
+                  try:
+                      await edge_tts.Communicate(text=text, voice=os.environ['TTS_VOICE'], rate=os.environ['TTS_RATE']).save(str(target))
+                      data = target.read_bytes()
+                      if len(data) < 1000:
+                          raise RuntimeError('TTS_AUDIO_EMPTY_OR_TRUNCATED')
+                      evidence['checks'][key] = {
+                          'status': 'PASS', 'attempt': attempt, 'text': text,
+                          'audio_file': target.name, 'audio_size_bytes': len(data),
+                          'audio_sha256': hashlib.sha256(data).hexdigest()
+                      }
+                      return
+                  except Exception as exc:
+                      errors.append(type(exc).__name__ + ': ' + str(exc)[:200])
+                      await asyncio.sleep(1)
+              evidence['checks'][key] = {'status': 'FAIL', 'text': text, 'errors': errors}
+          async def main():
+              await try_audio('control-zh', '大家好，今天台股收盤。')
+              await try_audio('yunzhe-percent-1.95', spoken)
+          asyncio.run(main())
           (out / 'evidence.json').write_text(json.dumps(evidence, ensure_ascii=False, indent=2) + '\n')
           print(json.dumps(evidence, ensure_ascii=False))
+          if any(item['status'] != 'PASS' for item in evidence['checks'].values()):
+              raise RuntimeError('EDGE_TTS_NO_AUDIO_DIAGNOSTIC_FAILED')
           PY
-          ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1 percent-tts-smoke/yunzhe-1.95.mp3
+          ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1 percent-tts-smoke/yunzhe-percent-1.95.mp3
       - uses: actions/upload-artifact@v4
         if: always()
         with:
