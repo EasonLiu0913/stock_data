@@ -38,6 +38,25 @@ def normalize_spoken_dates(text):
     return _DATE.sub(replace, str(text or ""))
 
 
+# Only TTS receives the spoken representation; display/caption source stays intact.
+# Consume repeated English/symbol percentage suffixes in one pass.
+_PERCENT = re.compile(
+    r"(?<![0-9A-Za-z./])(?P<prefix>(?:百分之\\s*)*)"
+    r"(?P<value>-?[0-9]+(?:\\.[0-9]+)?)"
+    r"(?P<suffix>(?:\\s*(?:%|％|percent(?![A-Za-z])))+)",
+    re.IGNORECASE,
+)
+
+
+def normalize_spoken_percentages(text):
+    """Use just 百分之 + numeric digits as the Edge TTS input, never percent."""
+    def replace(match):
+        value = match.group("value")
+        return ("負" if value.startswith("-") else "") + "百分之" + value.lstrip("-")
+
+    return _PERCENT.sub(replace, str(text or ""))
+
+
 # A slash joining two Chinese concepts means a spoken conjunction, not punctuation.
 # Do not rewrite slashes in dates, ratios, stock codes, URLs, or identifiers.
 _HAN_SLASH = re.compile(r"(?<=[\u3400-\u9fff])\s*/\s*(?=[\u3400-\u9fff])")
@@ -50,7 +69,7 @@ _SPOKEN_PHRASES = {
 
 def normalize_spoken_text(text):
     """Prepare spoken narration; keep plan narration unchanged for captions."""
-    spoken = normalize_spoken_dates(text)
+    spoken = normalize_spoken_percentages(normalize_spoken_dates(text))
     for source, replacement in _SPOKEN_PHRASES.items():
         spoken = spoken.replace(source, replacement)
     return _HAN_SLASH.sub("與", spoken)
