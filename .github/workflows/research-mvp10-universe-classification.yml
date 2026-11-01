@@ -31,12 +31,38 @@ jobs:
             data_twse/twse_industry_TDR.csv
             data_twse/twse_industry_ETF.csv
             data_daily_gain_over_5/20261008.json
+            data_twse_mi_index/20261008_twse_mi_index.json
           sparse-checkout-cone-mode: false
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
       - name: Verify categories and adversarial cases
         run: node --test tests/research_mvp10_dated_universe_classification.test.js
+      - name: Check real 20261008 TWSE quote date and candidate presence
+        run: |
+          node - <<'NODE'
+          const fs=require('fs'),c=require('crypto');
+          const f='data_twse_mi_index/20261008_twse_mi_index.json';
+          const b=fs.readFileSync(f), digest=c.createHash('sha256').update(b).digest('hex');
+          if(digest!=='c93be0a5fae5a9aa4ee9a02c83e7a7354fb1a3e715a09cc0f2d3cfe7e76709a5')
+            throw Error('TWSE_QUOTE_SHA256_MISMATCH');
+          const payload=JSON.parse(b),raw=JSON.parse(fs.readFileSync('data_daily_gain_over_5/20261008.json'));
+          if(payload.date!=='20261008'||payload.stat!=='OK'||raw.target_date!==payload.date)
+            throw Error('TWSE_QUOTE_DATE_OR_STATUS_MISMATCH');
+          const table=(payload.tables||[]).find(t=>['證券代號','收盤價','漲跌價差'].every(k=>t.fields?.includes(k)));
+          if(!table)throw Error('TWSE_QUOTES_TABLE_MISSING');
+          const i=table.fields.indexOf('證券代號'),codes=new Set();
+          for(const row of table.data){
+            const code=String(row[i]??'').replace(/<[^>]*>/g,'').trim();
+            if(!code)continue;
+            if(codes.has(code))throw Error('TWSE_QUOTE_DUPLICATE_CODE:'+code);
+            codes.add(code);
+          }
+          const missing=raw.stocks.filter(x=>!codes.has(String(x.code))).map(x=>x.code);
+          if(missing.length)throw Error('CANDIDATES_MISSING_FROM_SAME_DAY_QUOTE:'+missing.join(','));
+          console.log(JSON.stringify({date:payload.date,quote_sha256:digest,quote_rows:table.data.length,
+            candidate_quotes_matched:raw.stocks.length,status:'QUOTE_EXISTENCE_ONLY_NOT_CLASSIFICATION'},null,2));
+          NODE
       - name: Verify pre-date archived category snapshots (read-only)
         shell: bash
         env:
