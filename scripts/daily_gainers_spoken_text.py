@@ -41,9 +41,9 @@ def normalize_spoken_dates(text):
 # Only TTS receives the spoken representation; display/caption source stays intact.
 # Consume repeated English/symbol percentage suffixes in one pass.
 _PERCENT = re.compile(
-    r"(?<![0-9A-Za-z./])(?P<prefix>(?:百分之\\s*)*)"
-    r"(?P<value>-?[0-9]+(?:\\.[0-9]+)?)"
-    r"(?P<suffix>(?:\\s*(?:%|％|percent(?![A-Za-z])))+)",
+    r"(?<![0-9A-Za-z./])(?P<prefix>(?:百分之\s*)*)"
+    r"(?P<value>-?[0-9]+(?:\.[0-9]+)?)"
+    r"(?P<suffix>(?:\s*(?:%|％|percent(?![A-Za-z])))+)",
     re.IGNORECASE,
 )
 
