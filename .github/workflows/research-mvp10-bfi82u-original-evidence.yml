@@ -1,0 +1,74 @@
+name: "[Research Only] MVP10 BFI82U 20261013 original dated money"
+# Run only on isolated research branch; no dispatch/upload/video/Pages/main side effects.
+on:
+  push:
+    branches:
+      - research/daily-video-mvp10-a-20261029
+    paths:
+      - .github/workflows/research-mvp10-bfi82u-original-evidence.yml
+      - scripts/research_mvp10_fetch_bfi82u_20261013.py
+permissions:
+  contents: read
+concurrency:
+  group: research-mvp10-bfi82u-original-evidence
+  cancel-in-progress: true
+jobs:
+  verify-bfi82u:
+    if: github.ref == 'refs/heads/research/daily-video-mvp10-a-20261029'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Fail closed on nonresearch ref
+        run: |
+          test "$GITHUB_REF_NAME" = "research/daily-video-mvp10-a-20261029"
+          test "$GITHUB_REF_TYPE" = branch
+      - name: Checkout only the isolated fetcher
+        uses: actions/checkout@v4
+        with:
+          ref: research/daily-video-mvp10-a-20261029
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/research_mvp10_fetch_bfi82u_20261013.py
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate negative date/monetary cases without external dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile scripts/research_mvp10_fetch_bfi82u_20261013.py
+          python - <<'PY'
+          import importlib.util, json
+          spec = importlib.util.spec_from_file_location("bfi", "scripts/research_mvp10_fetch_bfi82u_20261013.py")
+          m = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(m)
+          types = list(m.REQUIRED)
+          nets = [2, -1, 3, -4, 0, 0]
+          data = [[t, str(max(n, 0)), str(max(-n, 0)), str(n)] for t, n in zip(types, nets)]
+          sample = {"stat":"OK", "title":"115年10月13日 三大法人買賣金額統計表",
+                    "fields":["單位名稱","買進金額","賣出金額","買賣差額"], "data":data}
+          assert m.validate(json.dumps(sample).encode())["rows"]["合計"]["net_twd"] == 0
+          for edit in ("date", "net", "missing", "total"):
+            obj = json.loads(json.dumps(sample))
+            if edit == "date": obj["title"] = "115年10月12日 三大法人買賣金額統計表"
+            if edit == "net": obj["data"][0][3] = "999"
+            if edit == "missing": obj["data"].pop()
+            if edit == "total": obj["data"][-1][2] = "999"
+            try:
+              m.validate(json.dumps(obj).encode())
+            except ValueError:
+              continue
+            raise AssertionError("FAIL-OPEN: " + edit)
+          print("OFFLINE_BFI82U_NEGATIVE_TESTS_PASS: 4/4")
+          PY
+      - name: Fetch exactly dated TWSE source and verify all monetary rows
+        run: python scripts/research_mvp10_fetch_bfi82u_20261013.py output/research-bfi82u
+      - name: Save evidence or explicit failure receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mvp10-20261013-bfi82u-original-research-only
+          path: output/research-bfi82u/
+          if-no-files-found: warn
+          retention-days: 14
