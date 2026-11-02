@@ -31,11 +31,11 @@ test('newest date raw and facts ready but missing news blocks dependent AI/rende
  const f=fixture();t.after(f.cleanup);
  const p=plan({root:f.root,date:DATE,sourceCommit:'a'.repeat(40)});
  assert.equal(p.stages.find(s=>s.id==='raw').status,'VERIFIED');
- assert.equal(p.stages.find(s=>s.id==='facts').status,'VERIFIED');
+ assert.equal(p.stages.find(s=>s.id==='facts').status,'VALIDATION_REQUIRED');
  assert.equal(p.stages.find(s=>s.id==='news').status,'MISSING');
  assert.equal(p.stages.find(s=>s.id==='ai_pending').status,'BLOCKED');
  assert.equal(p.stages.find(s=>s.id==='render').status,'BLOCKED');
- assert.equal(p.first_blocked_stage,'news');
+ assert.equal(p.first_blocked_stage,'facts');
  assert.deepEqual(p.auto_dispatch_allowlist,[]);
  assert.equal(p.publication_authorized,false);
  assert.equal(p.stages.filter(s=>s.dispatch_requested).length,0);
@@ -64,7 +64,7 @@ test('all required files never trigger YouTube and still require separate render
  assert.equal(p.stages.find(s=>s.id==='ai_pending').status,'BLOCKED');
  assert.equal(p.stages.find(s=>s.id==='script').status,'BLOCKED');
  assert.equal(p.stages.find(s=>s.id==='render').status,'BLOCKED');
- assert.equal(p.first_blocked_stage,'news');
+ assert.equal(p.first_blocked_stage,'facts');
  assert.equal(p.youtube_upload_authorized,false);
  assert.equal(p.pages_deploy_authorized,false);
 });
@@ -118,13 +118,13 @@ test('validated source SHA and main commit may unblock dependencies, never rende
  f.write(f.files.news,f.news);f.write(f.files.ai_pending,f.ai);f.write(f.files.ai,f.ai);
  f.write(f.files.summary,f.summary);f.write(f.files.script,f.script);
  const sha='a'.repeat(40),pre=plan({root:f.root,date:DATE,sourceCommit:sha});
- const checks=['news','ai_pending','ai','summary','script'].map(id=>{
+ const checks=['facts','news','ai_pending','ai','summary','script'].map(id=>{
   const s=pre.stages.find(x=>x.id===id);
   return {stage:id,status:'ORIGINAL_VALIDATOR_PASS',input:s.source_path,source_sha256:s.sha256};
  });
  const receipt={target_date:DATE,main_sha:sha,checks};
  const result=plan({root:f.root,date:DATE,sourceCommit:sha,validatorEvidence:receipt});
- for(const id of ['news','ai_pending','ai','summary','script'])
+ for(const id of ['facts','news','ai_pending','ai','summary','script'])
   assert.equal(result.stages.find(x=>x.id===id).status,'VERIFIED',id);
  assert.equal(result.stages.find(x=>x.id==='render').status,'BLOCKED');
  assert.equal(result.first_blocked_stage,'render');
@@ -145,4 +145,12 @@ test('wrong main SHA, date, stale source digest or missing validator proof fail 
  assert.equal(stale.stages.find(x=>x.id==='ai_pending').status,'BLOCKED');
  const missing=plan({root:f.root,date:DATE,sourceCommit:sha});
  assert.equal(missing.stages.find(x=>x.id==='news').status,'VALIDATION_REQUIRED');
+});
+
+test('facts availability flags without original validator receipt cannot unblock AI',t=>{
+ const f=fixture();t.after(f.cleanup);
+ const p=plan({root:f.root,date:DATE});
+ assert.equal(p.stages.find(x=>x.id==='facts').status,'VALIDATION_REQUIRED');
+ assert.equal(p.stages.find(x=>x.id==='ai_pending').status,'BLOCKED');
+ assert.equal(p.first_blocked_stage,'facts');
 });
