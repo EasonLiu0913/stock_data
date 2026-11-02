@@ -56,3 +56,30 @@ next_action: promptA
 plan_changed: NO
 publication_authorized: false
 youtube_upload_authorized: false
+
+## 2026-11-03 — Exact existing publishing workflows and live facts arrival
+
+Research-only current-main inspection; prior dated checkpoints above remain historical:
+- Latest main observed `fe96ef952816a3ca377f29751634dd5878c2d766`, commit message `analysis: refresh 5% AI facts 20261102` at 2026-11-02 16:24:04 UTC. Verified `data_daily_gain_over_5/analysis-facts/20261102.json` now exists, blob `cb59b77f9f4ffff611ee07429e89f24b026709ba`, schema v3, target_date 20261102, generated_at 2026-11-02T16:24:03.067Z, and named date-specific margin, broker, MI_INDEX, foreign, trust and dealer input paths. This **supersedes** earlier "facts missing" finding. Complete per-source row-level readiness was not independently validated.
+- Main `analysis/20261102.json` exists (blob `70a89aeffc73f282c8b118359c0946b1daf4b07a`), 29 retrospective analyses; legacy/mixed status does not imply AI-final.
+- Latest checked `analysis-news/20261102.json` and `analysis-ai/20261102.json`: 404; `market-summary/20261102.json` (blob `e8a8498ec52092057861bbf29d915fe86acdfd79`) remains `status:preliminary`, its embedded old coverage reports facts/analysis missing because it predates the recent source commits. `video_scripts/daily-gainers/20261102.json` not available on main at check.
+- Found canonical `docs/architecture/daily-data-recovery-agent-dispatch-v1.md`; **explicitly DESIGN/REFERENCE ONLY**, not an installed daily recovery dispatcher. It mandates separate exact workflow/inputs and side-effect audit, and expressly warns that publishing workflows are NOT generic crawlers.
+- Inspected `.github/workflows/publish-daily-gainers-news-summary.yml` blob `8c0c979d5a22d0f7d2e910976e8febbe65567330`: `workflow_dispatch` date input, main writer, `contents:write`, `pages:write`, `id-token:write`; builds and pushes `analysis-news` and `market-summary` and then calls `deploy-pages.yml`. Not a safe research-only missing-news crawler; it expects validated news input or a specific legacy migration path.
+- Inspected `.github/workflows/publish-daily-gainers-ai-analysis.yml` blob `cd17379e04d5d5371fcd10deab9f8df7f46593a3`: `workflow_dispatch` date input, schedule, main writes to AI/unified/summary; `contents:write`, `pages:write`, `id-token:write`, calls `deploy-pages.yml`. Uses `research_pending/daily-gainers-ai/DATE.json` pending approval file; it is not guaranteed to generate a missing AI draft from nothing.
+- Inspected `.github/workflows/publish-daily-gainers-unified-analysis.yml` blob `b26307276a76d04988341ece99a303baaa6406a2`: workflow_dispatch/date, main writer, `contents:write/pages:write/id-token:write`, pushes unified and market-summary and calls `deploy-pages.yml`. Requires valid AI input; does not repair absent news/facts itself.
+- Separate `.github/workflows/daily-gainers-video-upload-orchestrator.yml` explicitly dispatches upload workflows from `main`; forbidden research entrypoint. No existing safe-only callable workflow was yet independently identified.
+- Connector provides no native workflow_dispatch for a new run (only PR-filtered commit-runs and existing-run retry); no dispatch was invoked. No extra unapproved GitHub push used to provoke main-side effects.
+- Next focused A task is identifying upstream **draft producer** for `analysis-news/20261102.json` and `research_pending/daily-gainers-ai/20261102.json` by repository docs/commit lineage. If missing, report dependency and do not manufacture filler content or dispatch publication. Once genuine same-day AI/news and final summary exist, use locked 20261102 table-led Dashboard through research-only Render-only with independently reviewed final source.
+- Preserved only `TAIWAN_STOCK_TABLE_LIST_20261102_V1`, no old quadrants, no edits to main, Pages, YouTube, scheduled flows or release locks; MVP10-A INCOMPLETE, original B NOT_ELIGIBLE.
+
+research_progress_status: PROGRESS
+phase_status: MVP10-A INCOMPLETE
+research_progress_reason: actual 20261102 facts newly committed and three real production publish workflows classified as unsafe for isolated data recovery
+current_blocker: missing 20261102 news and AI draft plus original gated market summary/script; safe existing draft producer/invocation not yet verified
+planned_research: find upstream draft-producer entrypoints through commit history and inspect exact no-upload/no-Pages trigger before any bounded isolated recovery
+prior_attempt: prior readiness checkpoint lacked facts, and guessed workflow names did not resolve
+anti_loop: do not dispatch any of the three publishing workflows or video orchestrator; do not repeat BFI82U HTTP loop
+next_action: promptA
+plan_changed: NO
+publication_authorized: false
+youtube_upload_authorized: false
