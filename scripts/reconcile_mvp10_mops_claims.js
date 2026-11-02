@@ -57,8 +57,21 @@ function reconcile(receipt,published){
       historical_market_price_causation_verified:false,
       original_legacy_evidence_strength:original.evidence_strength});
   }
+  // Frozen 35-entry legacy publication includes two innovation-board stocks and a DR.
+  // These are excluded only from the provisional 32-stock research comparison.
+  // This hard-coded frozen exclusion is NOT date-effective security certification.
+  const excluded={
+    '9103':'美德醫療-DR',
+    '6645':'金萬林-創',
+    '7740':'熙特爾-創'
+  };
+  for(const [code,name] of Object.entries(excluded)){
+    assert.equal(byCode.get(code)?.name,name,'unexpected legacy excluded category: '+code);
+  }
+  const provisional=published.analyses.filter(x=>!Object.hasOwn(excluded,String(x.code)));
+  assert.equal(provisional.length,32,'provisional research universe changed');
   // No legacy direct/corroborated strength is inherited. All must be re-reviewed.
-  const strong=published.analyses.filter(x=>['direct','corroborated'].includes(x.evidence_strength));
+  const strong=provisional.filter(x=>['direct','corroborated'].includes(x.evidence_strength));
   assert.equal(strong.length,11,'frozen review scope changed');
   const unresolved=strong.filter(x=>!CODES[String(x.code)]).map(x=>({
     code:String(x.code),name:x.name,
@@ -71,6 +84,8 @@ function reconcile(receipt,published){
     research_only:true,primary_revenue_facts:allowed,
     unresolved_legacy_strong_claims:unresolved,
     reviewed_legacy_strong_claim_count:strong.length,
+    provisional_ordinary_scope_certified:false,
+    excluded_frozen_nonordinary_codes:Object.keys(excluded),
     source_fact_validated_count:allowed.length,
     legacy_claims_remaining_review_count:unresolved.length,
     issuer_revenue_facts_are_price_catalysts:false,
