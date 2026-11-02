@@ -8,6 +8,8 @@ on:
       - .github/workflows/research-mvp10-20261013-preview.yml
       - scripts/research_mvp10_20261013_preview_plan.js
       - tests/research_mvp10_20261013_preview_plan.test.js
+      - scripts/research_mvp10_20261013_caption_display.js
+      - tests/research_mvp10_20261013_caption_display.test.js
       - data_research/m5/mvp10-20261013-research/20stock-analysis-candidate.json
       - data_research/m5/mvp10-20261013-research/20stock-seven-scene-script-draft.json
 permissions:
@@ -34,6 +36,7 @@ jobs:
           sparse-checkout: |
             scripts
             tests/research_mvp10_20261013_preview_plan.test.js
+            tests/research_mvp10_20261013_caption_display.test.js
             assets/daily-gainers-vtuber-sprite.webp
             data_research/m5/mvp10-20261013-research/20stock-analysis-candidate.json
             data_research/m5/mvp10-20261013-research/20stock-seven-scene-script-draft.json
@@ -127,6 +130,27 @@ jobs:
         run: |
           set -euo pipefail
           python scripts/build_daily_gainers_srt.py output/daily-gainers-video/20261013/plan.json
+      - name: Preserve spoken percentages while converting SRT to Arabic display units
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test tests/research_mvp10_20261013_caption_display.test.js
+          node scripts/research_mvp10_20261013_caption_display.js output/daily-gainers-video/20261013
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const p='output/daily-gainers-video/20261013/';
+          const x=JSON.parse(fs.readFileSync(p+'research-caption-display-evidence.json'));
+          const m=JSON.parse(fs.readFileSync(p+'subtitle-manifest.json'));
+          const t=JSON.parse(fs.readFileSync(p+'tts-manifest.json'));
+          const s=fs.readFileSync(p+'daily-gainers-20261013.zh-TW.srt','utf8');
+          if(x.percent_cues_changed<1||x.timings_preserved!==true||
+             x.speech_text_modified!==false||x.publication_authorized!==false||
+             m.display_format!=='arabic_number_with_percent_sign_research_preview_only'||
+             /百分之\s*\d/.test(s)||!/\d+(?:\.\d+)?%/.test(s)||
+             t.scenes.length!==7||t.voice!=='zh-TW-YunJheNeural'||t.rate!=='+15%')
+            throw Error('SPOKEN_AND_DISPLAY_PERCENTAGES_NOT_SEPARATED');
+          console.log('ORAL_PERCENT_CHINESE_DISPLAY_PERCENT_ARABIC_SRT_TIMINGS_UNCHANGED');
+          NODE
       - name: Burn Traditional Chinese captions into research preview MP4
         shell: bash
         run: |
@@ -204,6 +228,7 @@ jobs:
             output/daily-gainers-video/20261013/lipsync.json
             output/daily-gainers-video/20261013/render-timings.json
             output/daily-gainers-video/20261013/subtitle-manifest.json
+            output/daily-gainers-video/20261013/research-caption-display-evidence.json
             output/daily-gainers-video/20261013/subtitle-burn-evidence.json
             output/daily-gainers-video/20261013/qa.json
             output/daily-gainers-video/20261013/research-preview-thumbnail.jpg
