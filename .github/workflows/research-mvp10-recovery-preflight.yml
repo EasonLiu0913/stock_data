@@ -85,7 +85,7 @@ jobs:
         run: |
           set -euo pipefail
           node - <<'NODE'
-          const fs=require('node:fs'),path=require('node:path'),cp=require('node:child_process');
+          const fs=require('node:fs'),path=require('node:path'),cp=require('node:child_process'),crypto=require('node:crypto');
           const date='20261102',root=path.resolve('inputs');
           const checks=[
             ['facts','data_daily_gain_over_5/analysis-facts/'+date+'.json',
@@ -113,7 +113,8 @@ jobs:
             }
             const p=cp.spawnSync(process.execPath,args,{cwd:root,encoding:'utf8',timeout:90000});
             const status=p.status===0?'ORIGINAL_VALIDATOR_PASS':'ORIGINAL_VALIDATOR_FAIL';
-            results.checks.push({stage,status,input,exit_code:p.status,error_excerpt:String(p.stderr||p.error||'').slice(0,450)});
+            const source_sha256=crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+            results.checks.push({stage,status,input,source_sha256,exit_code:p.status,error_excerpt:String(p.stderr||p.error||'').slice(0,450)});
             if(status==='ORIGINAL_VALIDATOR_FAIL')failed=true;
           }
           fs.writeFileSync('output/mvp10-recovery/original-validator-results.json',JSON.stringify(results,null,2)+'\n');
