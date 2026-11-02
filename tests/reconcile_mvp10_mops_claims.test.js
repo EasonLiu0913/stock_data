@@ -62,3 +62,12 @@ test('legacy claim scope drift or wrong 2305 name reject',()=>{
  const u=fixture();u.published.analyses[4].evidence_strength='none';
  assert.throws(()=>reconcile(u.receipt,u.published));
 });
+
+test('excluded nonordinary legacy stocks never inflate provisional strong count',()=>{
+ const f=fixture();
+ const r=reconcile(f.receipt,f.published);
+ assert.deepEqual(r.excluded_frozen_nonordinary_codes.sort(),['6645','7740','9103'].sort());
+ assert.equal(r.reviewed_legacy_strong_claim_count,11);
+ const bad=fixture();bad.published.analyses.find(x=>x.code==='9103').name='unverified DR';
+ assert.throws(()=>reconcile(bad.receipt,bad.published));
+});
