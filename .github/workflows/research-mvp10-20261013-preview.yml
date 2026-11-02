@@ -91,6 +91,29 @@ jobs:
               raise SystemExit('EDGE_WORD_BOUNDARIES_MISSING')
           print('REAL_EDGE_TTS_PASS: YunJhe +15%; 7 scenes; timestamp boundaries')
           PY
+      - name: Check real YunJhe MP3 durations before expensive 1080p rendering
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from mutagen.mp3 import MP3
+          p=Path('output/daily-gainers-video/20261013')
+          m=json.loads((p/'tts-manifest.json').read_text(encoding='utf-8'))
+          durations=[float(MP3(p/'audio'/f'{i:02}.mp3').info.length) for i in range(1,8)]
+          total=sum(durations)+0.15*len(durations)
+          receipt={'target_date':'20261013','voice':m.get('voice'),'rate':m.get('rate'),
+           'scene_audio_seconds':[round(x,3) for x in durations],
+           'estimated_render_seconds':round(total,3),
+           'required_min_seconds':300,'required_max_seconds':600,
+           'research_only':True,'publication_authorized':False,
+           'pre_render_duration_pass':300<=total<=600}
+          (p/'tts-duration-preflight.json').write_text(json.dumps(receipt,indent=2)+'\n',encoding='utf-8')
+          print('AUDIO_DURATION_PREFLIGHT',json.dumps(receipt))
+          if not receipt['pre_render_duration_pass']:
+              raise SystemExit('ACTUAL_TTS_DURATION_OUTSIDE_ORIGINAL_5_TO_10_MIN_REQUIREMENT')
+          PY
       - name: Build presenter mouth intervals and render 1080p MP4
         env:
           YOUTUBE_VTUBER_ENABLED: "1"
@@ -176,6 +199,8 @@ jobs:
             output/daily-gainers-video/20261013/research-preview-boundary.json
             output/daily-gainers-video/20261013/slides/*.svg
             output/daily-gainers-video/20261013/tts-manifest.json
+            output/daily-gainers-video/20261013/tts-duration-preflight.json
+            output/daily-gainers-video/20261013/audio/*.mp3
             output/daily-gainers-video/20261013/lipsync.json
             output/daily-gainers-video/20261013/render-timings.json
             output/daily-gainers-video/20261013/subtitle-manifest.json
