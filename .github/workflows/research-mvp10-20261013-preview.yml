@@ -30,19 +30,6 @@ jobs:
           set -euo pipefail
           test "$GITHUB_REF_NAME" = research/daily-video-mvp10-a-20261029
           test "$GITHUB_REF_TYPE" = branch
-      - name: Record actual runner identity for independent evidence review
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p output/research-mvp10-run-evidence
-          jq -n --arg run_id "$GITHUB_RUN_ID" --arg attempt "$GITHUB_RUN_ATTEMPT" \
-            --arg sha "$GITHUB_SHA" --arg ref "$GITHUB_REF_NAME" \
-            --arg workflow "research-mvp10-20261013-preview.yml" \
-            '{run_id:$run_id,attempt:$attempt,sha:$sha,ref:$ref,workflow:$workflow,
-            research_only:true,publication_authorized:false,youtube_upload_authorized:false}' \
-            > output/research-mvp10-run-evidence/runner.json
-          echo "Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Commit: ${GITHUB_SHA}; run attempt: ${GITHUB_RUN_ATTEMPT}; research only, no upload." >> "$GITHUB_STEP_SUMMARY"
       - name: Checkout research video code and two dated source JSON artifacts
         uses: actions/checkout@v4
         with:
@@ -57,6 +44,19 @@ jobs:
             data_research/m5/mvp10-20261013-research/20stock-analysis-candidate.json
             data_research/m5/mvp10-20261013-research/20stock-seven-scene-script-draft.json
           sparse-checkout-cone-mode: false
+      - name: Record actual runner identity for independent evidence review
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p output/research-mvp10-run-evidence
+          jq -n --arg run_id "$GITHUB_RUN_ID" --arg attempt "$GITHUB_RUN_ATTEMPT" \
+            --arg sha "$GITHUB_SHA" --arg ref "$GITHUB_REF_NAME" \
+            --arg workflow "research-mvp10-20261013-preview.yml" \
+            '{run_id:$run_id,attempt:$attempt,sha:$sha,ref:$ref,workflow:$workflow,
+            research_only:true,publication_authorized:false,youtube_upload_authorized:false}' \
+            > output/research-mvp10-run-evidence/runner.json
+          echo "Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Commit: ${GITHUB_SHA}; run attempt: ${GITHUB_RUN_ATTEMPT}; research only, no upload." >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
