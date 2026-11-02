@@ -152,3 +152,21 @@ phase_status=MVP10-A INCOMPLETE
 next_action=verify actual 20-stock candidate CI and complete final source certification before original positive video validation and full render
 plan_changed=NO
 publication_authorized=false
+
+## 2026-11-02 Prompt A — actual preserved source-tied 20-stock candidate JSON, not merely generator
+
+At this invocation current remote `main` = `3077d25c814bb03bc456d23b227814f034224d59`; pinned original source remains `f0fb2e44e00e3141a2673a4f6955af47768e5ce9`. Owner-approved `goal-v3/MVP-10DAY-v1` active task, A INCOMPLETE, B NOT_ELIGIBLE. Web Actions page and API URL not accessible. `fetch_commit_workflow_runs` only checks PR-associated runs and returned none; `get_commit_combined_status` returned empty. **No post-change push-run ID/log or CI PASS can be asserted.**
+
+Substantive advancement: **source-derived outputs committed to the RESEARCH branch for immediate review**, not just a code generator:
+- `data_research/m5/mvp10-20261013-research/20stock-analysis-candidate.json` commit `6e5a0f99d8b9879f70fe24758f11f7a61f080ebe`; 20 fully populated deterministic analysis entries (date-tied prices, foreign/trust/dealer, financing, broker, technical; no inherited issuer causes, all `cause_type=unknown`, `evidence_strength=none`, `sources=[]`, `editorial_approval=false`, `render_authorized=false`, `publication_authorized=false`). It is NOT `data_daily_gain_over_5/analysis/20261013.json`, NOT `final`, and does not certify 20261013-effective ordinary-share type.
+- `data_research/m5/mvp10-20261013-research/20stock-seven-scene-script-draft.json` commit `aaa125a795acadee4481b69be456baf41f0fa30a`; seven complete research narration scenes based on the same 20-stock staged facts, `editorial_approved=false`, media/release flags false, NOT official video script path. All seven oral segments remain subject to independent editing and original validator; no TTS/MP4 produced.
+- Commit `9c30195958ee9c695af257940b91f11cd6bad8bd` modified isolated read-only `.github/workflows/research-mvp10-20261013-stage.yml`: sparse-checkout both committed research JSONs, re-generate both from pinned sources, and run byte-level `cmp` against the committed artifacts, fail closed on drift, in addition to existing original summary and video-validator preliminary rejection checks. Paths now also trigger the research CI on research-only commits. No main, upload, Pages, credential, or release side effect.
+- **Independent current-turn in-memory V8 execution** of both exact remote generator functions using the actual frozen 20261013 raw/facts (20 eligible entries after exclusion) and simulated Node fs confirmed JSON `JSON.stringify` identical to **both actual newly committed remote JSON files**, counts 20 and 7 respectively. They were re-fetched via GitHub Connector: analysis blob `9b08d1feee81d80387c160532c44e1c4eecd1fad`, scenes blob `d7478e0acf6d6e83cd47f6121f98518250c479e0`; workflow blob `36dfd72dae566e08390b73362b50a5d4a032bb49`. This is a substantive reproducibility check with *in-memory mocked file IO*, **NOT** actual Actions CI `cmp` or real SHA256/provenance certification.
+
+NEXT: Access real research CI run/job logs via user's Actions workflow view if connector does not expose push runs; then review 20-stock source/issuer claims and establish accurate date-effective common-share classification. Produce approved coherent `final/complete` for 20-stock path only after review; pass unchanged original video validator positively; render genuinely new complete 1080p YunJhe +15%, Dashboard/V4, VTuber, burned Arabic display subtitles/SRT, QA and thumbnail. Do not present existing 25-security prior 1080p MP4 as the 20-stock accepted full movie. No Youtube upload until separately authorized. Keep frozen B, no original A/B lowering; 2026-11-08 MVP remains at risk.
+
+research_progress_status=PROGRESS
+phase_status=MVP10-A INCOMPLETE
+next_action=check actual isolated CI and pursue approved final 20-stock semantic source followed by full video
+plan_changed=NO
+publication_authorized=false
