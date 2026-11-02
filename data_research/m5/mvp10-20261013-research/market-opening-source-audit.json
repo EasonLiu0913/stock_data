@@ -4,7 +4,7 @@
   "purpose": "research_only_official_market_opening_source_triage",
   "publication_authorized": false,
   "dashboard_version": "TAIWAN_STOCK_TABLE_LIST_20261102_V1",
-  "evidence_status": "PARTIAL_NOT_EDITORIAL_FINAL",
+  "evidence_status": "MI_INDEX_STOCK_BREADTH_RECONCILED_INSTITUTIONS_PARTIAL",
   "source_refs": {
     "twse_market_chart": {
       "file": "data_twse_market_chart/market_chart.json",
@@ -18,6 +18,22 @@
     "market_environment": {
       "file": "data_market_environment/20261013/actual_market_environment.json",
       "blob_sha": "25af8096ea3a21a7e7715b807f27f9f5f1d2be76"
+    },
+    "twse_mi_index": {
+      "file": "data_twse_mi_index/20261013_twse_mi_index.json",
+      "git_blob_sha": "99fe6857069978699de47f08a3f212868828e9e5",
+      "record_date": "20261013",
+      "stat": "OK",
+      "action": "MI_INDEX",
+      "breadth_table": "漲跌證券數合計",
+      "breadth_fields": [
+        "類型",
+        "整體市場",
+        "股票"
+      ],
+      "turnover_table": "115年10月13日 大盤統計資訊",
+      "index_table": "115年10月13日 價格指數(臺灣證券交易所)",
+      "source_status": "repository_persisted_original_schema_verified_no_independent_original_http_receipt"
     }
   },
   "index": {
@@ -30,22 +46,44 @@
   },
   "turnover": {
     "value_twd": 1201861264942,
-    "status": "dated_snapshot_crosscheck_not_original_http_receipt"
+    "status": "dated_Mi_INDEX_total_matches_chart_but_original_HTTP_receipt_missing",
+    "mi_index_total_twd": 1201861264942,
+    "mi_index_stock_securities_subtotal_twd": 1061039068703,
+    "mi_index_title": "115年10月13日 大盤統計資訊"
   },
   "foreign": {
     "net_twd": -165290508085,
     "source": "BFI82U foreign_and_mainland_excluding_foreign_dealers",
-    "status": "one_institution_only_not_three_institution_total"
+    "status": "chart_BFI82U_labeled_foreign_net_DIFFERS_from_public_BFI82U_1653_42_rounded_not_verified_http",
+    "crosscheck_note": "TWSE market-chart foreign net -165290508085 TWD does not equal contemporaneously reported BFI82U foreign net around -1653.42 hundred-million TWD; do not silently equate these datasets or claim same scope."
   },
   "breadth": {
+    "stock_column": {
+      "up": 269,
+      "limit_up": 13,
+      "down": 730,
+      "limit_down": 5,
+      "flat": 78,
+      "no_trade": 2,
+      "no_reference": 4,
+      "total": 1083
+    },
+    "whole_securities_column": {
+      "up": 3142,
+      "limit_up": 49,
+      "down": 13037,
+      "limit_down": 122,
+      "flat": 535,
+      "no_trade": 16810,
+      "no_reference": 3625,
+      "total": 37149
+    },
+    "classification": "MI_INDEX stock column is NOT certified date-effective ordinary-share-only; whole is all securities including warrants",
+    "status": "MI_INDEX_PERSISTED_ORIGINAL_TABLE_RECONCILED_NOT_HTTP_CERTIFIED",
     "sample_count": 1047,
     "sample_up_ratio_pct": 25.21,
     "sample_down_ratio_pct": 67.24,
-    "status": "sample_not_full_TWSE_market",
-    "market_rising_count": null,
-    "market_falling_count": null,
-    "market_flat_count": null,
-    "limit_up_count": null
+    "sample_status": "SEPARATE_ANALYTICS_SAMPLE_DO_NOT_CONVERT_TO_COUNTS"
   },
   "institutions": {
     "foreign_amount_twd": null,
@@ -55,9 +93,8 @@
     "status": "original_BFI82U_3_entity_rows_not_verified"
   },
   "missing_for_editorial_final": [
-    "TWSE dated full-universe market rising/falling/flat/limit-up counts",
-    "TWSE BFI82U dated foreign/trust/dealer official buy/sell/net details and sum",
-    "original HTTP status/URL/date/response SHA for FMTQIK, MI_INDEX, BFI82U",
-    "date-effective TWSE ordinary-share universe and original positive A/B"
+    "TWSE BFI82U official foreign/trust/dealer dated monetary totals and reconciliation (not T86 per-stock shares)",
+    "official original HTTP status/URL/time/raw-response SHA for FMTQIK, MI_INDEX, BFI82U",
+    "date-effective ordinary-share universe and original positive A/B"
   ]
 }
