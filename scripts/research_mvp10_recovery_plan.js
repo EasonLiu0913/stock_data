@@ -79,11 +79,28 @@ function previousRuns(old,date){
  }
  return map;
 }
-function plan({root='.',date,previous=null,sourceCommit=null}){
+function validatorProofs(document,date,sourceCommit){
+ if(!document)return {};
+ assert(document.target_date===date,'VALIDATION_DATE_MISMATCH');
+ assert(typeof sourceCommit==='string' && sourceCommit.length===40 &&
+   document.main_sha===sourceCommit,'VALIDATION_MAIN_SHA_MISMATCH');
+ const result={};
+ for(const x of document.checks||[]){
+  if(!STAGES.some(s=>s.id===x.stage))continue;
+  if(x.status==='ORIGINAL_VALIDATOR_PASS'){
+   assert(typeof x.source_sha256==='string' && /^[a-f0-9]{64}$/.test(x.source_sha256),
+    'VALIDATION_INVALID_SOURCE_HASH');
+   result[x.stage]={sha256:x.source_sha256,input:x.input};
+  }
+ }
+ return result;
+}
+function plan({root='.',date,previous=null,sourceCommit=null,validatorEvidence=null}){
  assert(/^20\d{6}$/.test(date||''),'INVALID_DATE');
  const d=new Date(date.slice(0,4)+'-'+date.slice(4,6)+'-'+date.slice(6,8)+'T00:00:00Z');
  assert(!isNaN(+d)&&d.toISOString().slice(0,10).replace(/-/g,'')===date,'IMPOSSIBLE_DATE');
- const prev=previousRuns(previous,date),states={},records={},items=[];
+ const prev=previousRuns(previous,date),validated=validatorProofs(validatorEvidence,date,sourceCommit),
+   states={},records={},items=[];
  const raw=read(root,STAGES[0].file(date));
  const rawBad=raw.body?validate('raw',raw.body,date,[]):raw.error;
  const rawCodes=rawBad?[]:codes(raw.body);
@@ -96,10 +113,14 @@ function plan({root='.',date,previous=null,sourceCommit=null}){
   else if(deps.length){status='BLOCKED';reason='dependencies_not_verified:'+deps.join(',');}
   else if(bad){status=obj?.exists?'INVALID':'MISSING';reason=bad;}
   else if(['news','ai_pending','ai','summary','script'].includes(st.id)){
-   // A file that only satisfies date/shape is not an editorial or source PASS.
-   // Require existing original per-stage validators; never silently promote drafts.
-   status='VALIDATION_REQUIRED';
-   reason='original_contract_validator_and_editorial_evidence_required';
+   // Original validation proof must match date, main SHA, stage file and exact raw bytes.
+   const proof=validated[st.id];
+   if(proof && proof.input===rel && proof.sha256===obj.sha256){
+    status='VERIFIED';reason='date_and_exact_source_original_validator_pass';
+   }else{
+    status='VALIDATION_REQUIRED';
+    reason='original_contract_validator_and_editorial_evidence_required';
+   }
   }
   else {status='VERIFIED';reason='date_arithmetic_or_facts_source_status_pass_structure_only';}
   states[st.id]=status;
@@ -130,10 +151,11 @@ function main(){
  const date=get('--date'),root=get('--root')||'.',out=get('--output');
  assert(date&&out,'Usage: --date YYYYMMDD --root DIRECTORY --output RECEIPT [--previous OLD_RECEIPT]');
  const previous=get('--previous')?JSON.parse(fs.readFileSync(get('--previous'),'utf8')):null;
- const result=plan({root,date,previous,sourceCommit:get('--source-commit')});
+ const validatorEvidence=get('--validators')?JSON.parse(fs.readFileSync(get('--validators'),'utf8')):null;
+ const result=plan({root,date,previous,sourceCommit:get('--source-commit'),validatorEvidence});
  fs.mkdirSync(path.dirname(out),{recursive:true});
  fs.writeFileSync(out,JSON.stringify(result,null,2)+'\n');
  console.log(JSON.stringify({date,first_blocked_stage:result.first_blocked_stage,dispatches:0,output:out}));
 }
 if(require.main===module){try{main();}catch(e){console.error(e.message);process.exit(1);}}
-module.exports={plan,validate,previousRuns,STAGES,APPROVED_AUTO_DISPATCH,BLOCKED_PUBLISH_WORKFLOWS};
+module.exports={plan,validate,previousRuns,validatorProofs,STAGES,APPROVED_AUTO_DISPATCH,BLOCKED_PUBLISH_WORKFLOWS};
