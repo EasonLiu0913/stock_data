@@ -121,6 +121,27 @@ jobs:
           console.log('ORIGINAL_VALIDATOR_PRECHECK',JSON.stringify(results.checks.map(x=>({stage:x.stage,status:x.status}))));
           if(failed)process.exitCode=1;
           NODE
+      - name: Recheck exact-date recovery state with original validator SHA receipts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node research/scripts/research_mvp10_recovery_plan.js \
+            --date 20261102 --root inputs \
+            --source-commit "$(cat output/mvp10-recovery/source-main-sha.txt)" \
+            --previous output/mvp10-recovery/20261102-plan.json \
+            --validators output/mvp10-recovery/original-validator-results.json \
+            --output output/mvp10-recovery/20261102-rechecked-plan.json
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const p=JSON.parse(fs.readFileSync('output/mvp10-recovery/20261102-rechecked-plan.json'));
+          if(p.auto_dispatch_allowlist.length!==0||p.stages.some(x=>x.dispatch_requested)||
+             p.publication_authorized!==false||p.youtube_upload_authorized!==false||
+             p.pages_deploy_authorized!==false||p.stages.find(x=>x.id==='render').status!=='BLOCKED')
+            throw Error('RECHECK_MUST_REMAIN_NO_RELEASE');
+          console.log('RECOVERY_SECOND_CYCLE_PASS',JSON.stringify({
+             first_blocked:p.first_blocked_stage,
+             statuses:p.stages.map(x=>[x.id,x.status]),dispatches:0}));
+          NODE
       - name: Record real CI Run ID for the next research-only review
         if: always()
         shell: bash
