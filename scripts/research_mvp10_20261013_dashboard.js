@@ -73,7 +73,6 @@ function renderDashboard(scene,i,n,analyses){
   cards.map((v,j)=>card(76+j*347,v[0],v[1],v[2])).join('')+
   tab+
   '<rect x="0" y="704" width="1920" height="107" fill="#07101e" fill-opacity="0.97"/>'+
-  t(92,727,'內嵌中文字幕專用區｜不遮擋數據、進度或剩餘時間',17,'#64748b')+
   '<rect x="0" y="929" width="1920" height="151" fill="#0f172a"/>'+
   watermark+
   t(45,1031,'TAIWAN STOCK｜20 檔研究候選｜非全市場統計',23,'#94a3b8')+
