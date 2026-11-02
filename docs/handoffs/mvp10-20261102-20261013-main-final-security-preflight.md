@@ -68,3 +68,22 @@ b_eligibility=NOT_ELIGIBLE
 next_action=verify coherent-stage isolated CI and complete reauthored 20-stock semantic source for actual full render
 plan_changed=NO
 publication_authorized=false
+
+## 2026-11-02 Prompt A — actual 7-scene 20-stock research narration draft wired into read-only CI
+
+Fresh GitHub governance/routing and original market-summary builder reviewed; current known main `79df47fbdd08ea8351e12329bc0c1bbb8d375208`, pinned actual 20261013 main data `f0fb2e44e00e3141a2673a4f6955af47768e5ce9`. Original market-summary builder computes `preliminary` absent exact date-correct final published analysis and is intentionally unchanged. Original raw/news/facts/AI ordering (25/25 identical before filtering) confirmed by four independent file reads.
+
+Research branch commits:
+- `277969c9998fe42df9ab89c0d6418b5bda4670ed`: added `scripts/draft_mvp10_20261013_20stock_script.js`. This is a substantive, evidence-bounded, **seven-scene dated spoken narration draft** created solely from the 20-stock isolated staged raw and facts; describes cross-checked foreign/investment-trust/margin/broker direction for selected stocks (天二科技, 國喬, 台塑化, 東聯, 玉晶光, 中揚光, 南亞, 閎暉), and replaces unsupported company-causation narration with explicit uncertainty. Explicitly uses **20 candidate** count and re-derived gain buckets, not legacy 25. Output is separate research draft script and editorial-review JSON, both require source/editorial and historical security-type review. It does **not** mark `final`, pass the original video validator, claim new TTS/SRT/MP4, or authorize upload.
+- `d34edd351c0155bd7d2ca8cd5f799057a0cbae93`: tests guard missing source, wrong/false staged permission and reject invalid input.
+- `a17bcafc6d8438319700b21a5bb2db08d9ddb1fb`: wire draft generation/tests and date-relevant review artifact into `.github/workflows/research-mvp10-20261013-stage.yml` (read-only on isolated branch, pinned immutable upstream, no YouTube or public actions). Validate source count, 7 scenes, 1100–5500 draft narration characters and release flags. Retain the research JSON draft and review report. Research workflow still runs original market-summary builder/validator on separate 20-stock stage and insists **preliminary**, not fake final.
+- Remote GitHub file blobs independently re-fetched and confirmed: draft code `1ef46fff4dec9c127ac50f50531974591eaaff01`, test `ce3f8c37335733f2c6817462b500c6949a0c416d`, workflow `3e700b6913e628c9eb4d9ea133dd57bbd33bddc6`.
+
+**Validation caveat:** GitHub Connector exposes PR-linked workflow lookup but not push-run listing; combined-status API did not return checks. The CI job/log/artifact and actual runtime output for this new 7-scene stage remain **UNVERIFIED**, and no new artifact is asserted as generated. The draft code may still need fixing from actual CI. Previous 25-stock local full movie is not a newly generated, historically classified, current 20-stock output.
+
+**Immediate next action:** retrieve real isolated research CI Job Log/ZIP for the new 20-stock stage and original validator; fix actual failure if present. Then conduct source/editorial review of all 7 candidate scenes, approve a truthful 20-stock complete unified analysis rather than relabeling the original 25-stock analysis, independently meet original unchanged market-summary and video validator, and generate/QA complete 1080p YunJhe +15% two-track TTS, Dashboard, VTuber, hardburned zh-TW subtitles, SRT, thumbnail and manifest. The 2026-11-08 owner goal remains at risk; prioritize media output, not unrelated Receipt micro-research. Prompt B NOT_ELIGIBLE, formal publication and YouTube upload locked, main unchanged, plan_changed=NO.
+
+research_progress_status=PROGRESS
+phase_status=MVP10-A INCOMPLETE
+next_action=validate actual seven-scene draft CI then source-certified final analysis and full isolated render
+publication_authorized=false
