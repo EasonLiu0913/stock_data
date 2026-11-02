@@ -1,0 +1,65 @@
+name: "[Research Only] MVP10 official MI_INDEX market-opening evidence"
+# Does not create/render/upload a video, alter main, or authorize editorial/publishing.
+on:
+  push:
+    branches:
+      - research/daily-video-mvp10-a-20261029
+    paths:
+      - .github/workflows/research-mvp10-mi-index-evidence.yml
+      - scripts/research_mvp10_verify_mi_index_breadth.js
+      - tests/research_mvp10_verify_mi_index_breadth.test.js
+      - data_research/m5/mvp10-20261013-research/market-opening-source-audit.json
+permissions:
+  contents: read
+concurrency:
+  group: research-mvp10-mi-index-evidence
+  cancel-in-progress: true
+jobs:
+  verify-breadth:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Confirm research-only branch and immutable publishing boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = research/daily-video-mvp10-a-20261029
+          test "$GITHUB_REF_TYPE" = branch
+      - name: Checkout dated original MI_INDEX and research verifier only
+        uses: actions/checkout@v4
+        with:
+          ref: research/daily-video-mvp10-a-20261029
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/research_mvp10_verify_mi_index_breadth.js
+            tests/research_mvp10_verify_mi_index_breadth.test.js
+            data_twse_mi_index/20261013_twse_mi_index.json
+            data_research/m5/mvp10-20261013-research/market-opening-source-audit.json
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Independently test source date, statistical universe and fail-closed safeguards
+        run: node --test tests/research_mvp10_verify_mi_index_breadth.test.js
+      - name: Compute actual MI_INDEX raw SHA-256 and strict receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p output/research-market-opening
+          node scripts/research_mvp10_verify_mi_index_breadth.js \
+            data_twse_mi_index/20261013_twse_mi_index.json \
+            data_research/m5/mvp10-20261013-research/market-opening-source-audit.json \
+            output/research-market-opening/mi-index-verified-receipt.json
+          jq -e '.source_http_receipt_verified == false and .institutional_BFI82U_amounts_verified == false and .publication_authorized == false' \
+            output/research-market-opening/mi-index-verified-receipt.json
+          jq -n --arg run_id "$GITHUB_RUN_ID" --arg sha "$GITHUB_SHA" \
+            '{run_id:$run_id,git_sha:$sha,research_only:true,publication_authorized:false,youtube_upload_authorized:false}' \
+            > output/research-market-opening/runner.json
+      - name: Save bounded source verification receipt only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: research-mvp10-20261013-mi-index-evidence-only
+          path: output/research-market-opening/
+          if-no-files-found: error
+          retention-days: 14
