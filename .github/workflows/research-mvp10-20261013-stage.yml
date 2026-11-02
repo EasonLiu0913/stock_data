@@ -13,6 +13,8 @@ on:
       - tests/draft_mvp10_20261013_20stock_script.test.js
       - scripts/draft_mvp10_20261013_20stock_analysis.js
       - tests/draft_mvp10_20261013_20stock_analysis.test.js
+      - data_research/m5/mvp10-20261013-research/20stock-analysis-candidate.json
+      - data_research/m5/mvp10-20261013-research/20stock-seven-scene-script-draft.json
 permissions:
   contents: read
 jobs:
@@ -38,6 +40,8 @@ jobs:
             tests/draft_mvp10_20261013_20stock_script.test.js
             scripts/draft_mvp10_20261013_20stock_analysis.js
             tests/draft_mvp10_20261013_20stock_analysis.test.js
+            data_research/m5/mvp10-20261013-research/20stock-analysis-candidate.json
+            data_research/m5/mvp10-20261013-research/20stock-seven-scene-script-draft.json
             scripts/validate_daily_gainers_video_script.js
             scripts/daily_gainers_brand_opening.js
             scripts/daily_gainers_mvp10_ordinary_scope_gate.js
@@ -104,6 +108,12 @@ jobs:
             throw Error('UNVERIFIED_COMPANY_CAUSE_LEAKED_TO_20_STOCK_CANDIDATE');
           console.log('20_STOCK_DETERMINISTIC_ANALYSIS_CANDIDATE_PASS causal_claims_promoted=0 final=false');
           NODE
+          cmp "$GITHUB_WORKSPACE/research/data_research/m5/mvp10-20261013-research/20stock-analysis-candidate.json" \
+              "$RUNNER_TEMP/mvp10-20261013-20-analysis-review/20261013-20stock-analysis-candidate.json" || {
+            echo "COMMITTED_ANALYSIS_NOT_REPRODUCIBLE" >&2
+            exit 1
+          }
+          echo "COMMITTED_20_STOCK_ANALYSIS_REPRODUCIBLE=true"
           mkdir -p "$RUNNER_TEMP/mvp10-20261013-20-script-review"
           node research/scripts/draft_mvp10_20261013_20stock_script.js \
             "$RUNNER_TEMP/mvp10-20261013-20-candidates" \
@@ -132,6 +142,12 @@ jobs:
           console.log('DRAFT_DATED_FACTS_INVARIANTS verified=6834_margin,1312_margin,6668_foreign,6505_trust; percent_chinese_only=true');
           console.log('RESEARCH_SEVEN_SCENE_DRAFT_GENERATED source_count=20 media=false');
           NODE
+          cmp "$GITHUB_WORKSPACE/research/data_research/m5/mvp10-20261013-research/20stock-seven-scene-script-draft.json" \
+              "$RUNNER_TEMP/mvp10-20261013-20-script-review/20261013-20stock-draft-script.json" || {
+            echo "COMMITTED_SCRIPT_NOT_REPRODUCIBLE" >&2
+            exit 1
+          }
+          echo "COMMITTED_20_STOCK_SEVEN_SCENE_SCRIPT_REPRODUCIBLE=true"
           cd "$RUNNER_TEMP/mvp10-20261013-20-candidates"
           node scripts/build_daily_gainers_market_summary.js --date 20261013
           node scripts/validate_daily_gainers_market_summary.js --date 20261013
