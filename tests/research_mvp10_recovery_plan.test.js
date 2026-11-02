@@ -112,3 +112,37 @@ test('structurally matching news or AI may not bypass original evidence validato
  assert.equal(p.stages.find(x=>x.id==='render').status,'BLOCKED');
  assert.equal(p.stages.some(x=>x.dispatch_requested),false);
 });
+
+test('validated source SHA and main commit may unblock dependencies, never render',t=>{
+ const f=fixture();t.after(f.cleanup);
+ f.write(f.files.news,f.news);f.write(f.files.ai_pending,f.ai);f.write(f.files.ai,f.ai);
+ f.write(f.files.summary,f.summary);f.write(f.files.script,f.script);
+ const sha='a'.repeat(40),pre=plan({root:f.root,date:DATE,sourceCommit:sha});
+ const checks=['news','ai_pending','ai','summary','script'].map(id=>{
+  const s=pre.stages.find(x=>x.id===id);
+  return {stage:id,status:'ORIGINAL_VALIDATOR_PASS',input:s.source_path,source_sha256:s.sha256};
+ });
+ const receipt={target_date:DATE,main_sha:sha,checks};
+ const result=plan({root:f.root,date:DATE,sourceCommit:sha,validatorEvidence:receipt});
+ for(const id of ['news','ai_pending','ai','summary','script'])
+  assert.equal(result.stages.find(x=>x.id===id).status,'VERIFIED',id);
+ assert.equal(result.stages.find(x=>x.id==='render').status,'BLOCKED');
+ assert.equal(result.first_blocked_stage,'render');
+ assert.equal(result.stages.some(x=>x.dispatch_authorized),false);
+});
+test('wrong main SHA, date, stale source digest or missing validator proof fail closed',t=>{
+ const f=fixture();t.after(f.cleanup);
+ f.write(f.files.news,f.news);
+ const sha='b'.repeat(40),pre=plan({root:f.root,date:DATE,sourceCommit:sha});
+ const news=pre.stages.find(x=>x.id==='news');
+ const good={target_date:DATE,main_sha:sha,
+  checks:[{stage:'news',status:'ORIGINAL_VALIDATOR_PASS',input:news.source_path,source_sha256:news.sha256}]};
+ assert.throws(()=>plan({root:f.root,date:DATE,sourceCommit:'c'.repeat(40),validatorEvidence:good}),/VALIDATION_MAIN_SHA_MISMATCH/);
+ assert.throws(()=>plan({root:f.root,date:DATE,sourceCommit:sha,validatorEvidence:{...good,target_date:'20261030'}}),/VALIDATION_DATE_MISMATCH/);
+ f.write(f.files.news,{...f.news,generated_at:'new-version'});
+ const stale=plan({root:f.root,date:DATE,sourceCommit:sha,validatorEvidence:good});
+ assert.equal(stale.stages.find(x=>x.id==='news').status,'VALIDATION_REQUIRED');
+ assert.equal(stale.stages.find(x=>x.id==='ai_pending').status,'BLOCKED');
+ const missing=plan({root:f.root,date:DATE,sourceCommit:sha});
+ assert.equal(missing.stages.find(x=>x.id==='news').status,'VALIDATION_REQUIRED');
+});
