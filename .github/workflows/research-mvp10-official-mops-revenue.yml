@@ -6,6 +6,8 @@ on:
     paths:
       - .github/workflows/research-mvp10-official-mops-revenue.yml
       - scripts/research_mvp10_mops_september_revenue.py
+      - scripts/reconcile_mvp10_mops_claims.js
+      - tests/reconcile_mvp10_mops_claims.test.js
 permissions:
   contents: read
 jobs:
@@ -23,6 +25,9 @@ jobs:
           persist-credentials: false
           sparse-checkout: |
             scripts/research_mvp10_mops_september_revenue.py
+            scripts/reconcile_mvp10_mops_claims.js
+            tests/reconcile_mvp10_mops_claims.test.js
+            data_daily_gain_over_5/analysis/20261008.json
           sparse-checkout-cone-mode: false
       - name: Read two original official MOPS historical archives
         run: |
@@ -46,6 +51,24 @@ jobs:
               print("OFFICIAL_ROW", code, json.dumps(row,ensure_ascii=False))
           PY
           echo "Official MOPS original receipts may be blocked by upstream. Media/event causation and final video gates remain OFF." >> "$GITHUB_STEP_SUMMARY"
+      - name: Verify primary-revenue-only semantic bindings
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test tests/reconcile_mvp10_mops_claims.test.js
+          node scripts/reconcile_mvp10_mops_claims.js \
+            "$RUNNER_TEMP/mvp10-official-mops/20261008-mops-revenue-original-receipt.json" \
+            "data_daily_gain_over_5/analysis/20261008.json" \
+            "$RUNNER_TEMP/mvp10-official-mops/20261008-primary-revenue-claim-boundary.json"
+          node - <<'NODE'
+          const fs=require('node:fs'),path=require('node:path');
+          const d=JSON.parse(fs.readFileSync(path.join(process.env.RUNNER_TEMP,'mvp10-official-mops/20261008-primary-revenue-claim-boundary.json'),'utf8'));
+          if(d.primary_revenue_facts.length!==3||d.unresolved_legacy_strong_claims.length!==8||
+            d.render_authorized!==false||d.summary_final!==false||d.publication_authorized!==false)
+            throw Error('PREMATURE_FINAL_SOURCE_PROMOTION');
+          console.log('OFFICIAL_MOPS_FACT_BOUNDARY_PASS sources=3 unresolved_strong=8 render=false');
+          NODE
+          echo "3 primary revenue facts validated; 8 legacy strong claims need independent review. No price causation or final video authorized." >> "$GITHUB_STEP_SUMMARY"
       - name: Upload original HTTP receipt and any directly matching rows
         if: always()
         uses: actions/upload-artifact@v4
