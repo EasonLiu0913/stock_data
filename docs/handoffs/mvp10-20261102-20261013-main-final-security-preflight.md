@@ -250,3 +250,20 @@ phase_status=MVP10-A INCOMPLETE
 next_action=observe actual research preview Actions run, final burned mp4 receipt and media; fix any real runner error
 plan_changed=NO
 publication_authorized=false
+
+## 2026-11-02 Prompt A — first actual historical Actions job log retrieved, runner receipt fixed
+
+Current main observed at `0bfaa4cc1447719e5df42658fb899f0894508a96`; active goal `goal-v3/MVP-10DAY-v1`, A INCOMPLETE, B not eligible. The available `fetch_commit_workflow_runs` connector searches PR-triggered runs only; no actual **new** `research-mvp10-20261013-preview.yml` push-run ID/QA artifact was found. Do not mistake older workflows for latest preview success.
+
+Obtained authenticated GitHub browser tab text from an already-open **older** `research-mvp10-render-only.yml` workflow page, and fetched true GitHub Connector Actions data for:
+- **Old run `41309775842`**, 2026-11-01 21:08 Taiwan time, job **`124857519758`**. `fetch_workflow_run_jobs` confirmed status `completed` conclusion `failure`; first failing step was `Validate ChatGPT script against final analysis`. `fetch_workflow_job_logs` explicitly reports `Error: Non-ordinary DR security in TWSE common-stock candidate: 9103 美德醫療-DR; referenced_scene_numbers=2,3; regenerate date-aligned raw/analysis/script, do not silently filter` and exit code 1. No MP4 from this run; later render steps skipped. That is concrete evidence historical 25-stock input was unsafe, while newest 20-candidate research data intentionally excludes 9103 + four others. This is **not** a PASS or log of the new 20-stock workflow.
+- A separate older `research-mvp10-render-only.yml` run **`41182709089`** showed success on 2026-10-31. It belongs to the earlier golden-date research workflow, **not** current 20-stock artifact.
+- The newer workflow `.github/workflows/research-mvp10-20261013-preview.yml` had been saving `output/research-mvp10-run-evidence/runner.json` **before** `actions/checkout@v4`, creating a real artifact reliability bug: checkout cleaning worktree can delete the untracked file and lose the genuine host Run ID. Commit `f9bfb117f04c44d2e0d77791419d53a82ec894d9` moved the host-run evidence write step **after** checkout and before media execution, preserving `GITHUB_RUN_ID`, `GITHUB_SHA`, attempt and release flags through final upload-artifact `if: always()`. Same workflow and unchanged safe branch-only scope; no main writes/YouTube.
+
+Newer 20-stock workflow can run independently of the old source scope gate, but **new CI job results, true YunJhe MP3, caption-burned 1080p MP4 and postburn independent QA remain UNVERIFIED**. Fix actual new runner errors based on current logs when available, prioritize playable evidence-backed preview then source/date-effective editorial certification and original final positive gates. Do not relax original A/B, alter production schedule/YouTube credentials, or claim MVP done.
+
+research_progress_status=PROGRESS
+phase_status=MVP10-A INCOMPLETE
+next_action=obtain latest research-mvp10-20261013-preview.yml push Run ID and inspect step logs/real 1080p media artifact
+plan_changed=NO
+publication_authorized=false
