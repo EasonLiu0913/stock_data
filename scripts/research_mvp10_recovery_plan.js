@@ -95,13 +95,20 @@ function plan({root='.',date,previous=null,sourceCommit=null}){
   if(st.id==='render'){status='BLOCKED';reason='research_only_no_render_dispatch';}
   else if(deps.length){status='BLOCKED';reason='dependencies_not_verified:'+deps.join(',');}
   else if(bad){status=obj?.exists?'INVALID':'MISSING';reason=bad;}
-  else {status='VERIFIED';reason='exact_date_schema_and_dependencies_pass';}
+  else if(['news','ai_pending','ai','summary','script'].includes(st.id)){
+   // A file that only satisfies date/shape is not an editorial or source PASS.
+   // Require existing original per-stage validators; never silently promote drafts.
+   status='VALIDATION_REQUIRED';
+   reason='original_contract_validator_and_editorial_evidence_required';
+  }
+  else {status='VERIFIED';reason='date_arithmetic_or_facts_source_status_pass_structure_only';}
   states[st.id]=status;
   const run=prev[st.id]||null;
   const item={id:st.id,source_path:rel,status,reason,dependencies:st.deps,
    sha256:obj?.sha256||null,run_id:run?.run_id||null,run_url:run?.run_url||null,
    dedup_key:date+':'+st.id,dispatch_authorized:false,dispatch_requested:false,
-   next_action:status==='VERIFIED'?'continue':status==='BLOCKED'?'wait_for_dependencies':'needs_approved_producer'};
+   next_action:status==='VERIFIED'?'continue':status==='BLOCKED'?'wait_for_dependencies':
+     status==='VALIDATION_REQUIRED'?'run_original_validator':'needs_approved_producer'};
   items.push(item);
   if(item.sha256)records[st.id]=item.sha256;
  }
