@@ -1,6 +1,7 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path');
 const {make,slide}=require('../scripts/research_mvp10_20261013_preview_plan');
+const {OPENING_TEXT}=require('../scripts/daily_gainers_brand_opening');
 const original=()=>({target_date:'20261013',stock_count:20,
   editorial_approved:false,render_authorized:false,publication_authorized:false,
   scenes:Array.from({length:7},(_,i)=>({title:'研究場景'+i,subtitle:'財務資料',
@@ -21,6 +22,9 @@ test('renders seven 1080p research scene slides and explicit release false',()=>
  try{
   x.write(original(),analysis());const r=make(x.root);
   assert.equal(r.plan.scene_count,7);
+  assert.ok(r.plan.scenes[0].narration.startsWith(OPENING_TEXT));
+  assert.equal(r.plan.scenes[0].narration.split(OPENING_TEXT).length-1,1);
+  assert.equal(r.plan.scenes[0].speech_text,r.plan.scenes[0].caption_text);
   const p=JSON.parse(fs.readFileSync(path.join(r.out,'research-preview-boundary.json')));
   assert.equal(p.publication_authorized,false);
   assert.equal(p.source_final_complete,false);
