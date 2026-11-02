@@ -1,0 +1,88 @@
+name: "[Research Only] MVP10 20261013 20-stock coherent-stage trial"
+on:
+  push:
+    branches:
+      - research/daily-video-mvp10-a-20261029
+    paths:
+      - .github/workflows/research-mvp10-20261013-stage.yml
+      - scripts/stage_mvp10_20261013_candidates.js
+      - tests/stage_mvp10_20261013_candidates.test.js
+permissions:
+  contents: read
+jobs:
+  original-summary-trial:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Assert strictly isolated branch
+        run: |
+          test "$GITHUB_REF_TYPE" = branch
+          test "$GITHUB_REF_NAME" = research/daily-video-mvp10-a-20261029
+      - uses: actions/checkout@v4
+        with:
+          ref: research/daily-video-mvp10-a-20261029
+          path: research
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/stage_mvp10_20261013_candidates.js
+            tests/stage_mvp10_20261013_candidates.test.js
+          sparse-checkout-cone-mode: false
+      - uses: actions/checkout@v4
+        with:
+          ref: f0fb2e44e00e3141a2673a4f6955af47768e5ce9
+          path: original
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/build_daily_gainers_market_summary.js
+            scripts/validate_daily_gainers_market_summary.js
+            scripts/lib/daily_gainers_ai_contract.js
+            config/daily-gainers-ai-contract.json
+            config/daily-gainers-theme-taxonomy.json
+            data_daily_gain_over_5/20261013.json
+            data_daily_gain_over_5/analysis-news/20261013.json
+            data_daily_gain_over_5/analysis-facts/20261013.json
+            data_daily_gain_over_5/analysis-ai/20261013.json
+            data_twse/twse_industry_Stock.csv
+            data_twse/twse_industry_InnovationBoard.csv
+            data_twse/twse_industry_TDR.csv
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Test isolated staging failure cases
+        run: node --test research/tests/stage_mvp10_20261013_candidates.test.js
+      - name: Stage 20 research stock rows from immutable published date source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C original rev-parse HEAD)" = f0fb2e44e00e3141a2673a4f6955af47768e5ce9
+          node research/scripts/stage_mvp10_20261013_candidates.js original "$RUNNER_TEMP/mvp10-20261013-20-candidates" > "$RUNNER_TEMP/mvp10-20261013-research-stage-result.json"
+          cd "$RUNNER_TEMP/mvp10-20261013-20-candidates"
+          node scripts/build_daily_gainers_market_summary.js --date 20261013
+          node scripts/validate_daily_gainers_market_summary.js 20261013
+          node - <<'NODE'
+          const fs=require('node:fs'),path=require('node:path');
+          const m=JSON.parse(fs.readFileSync('research-mvp10-20261013-staging.json'));
+          const s=JSON.parse(fs.readFileSync('data_daily_gain_over_5/market-summary/20261013.json'));
+          const expected=['1312A','6645','6924','7730','9103'].sort();
+          if(m.provisional_stock_count!==20||JSON.stringify(m.excluded_original_codes.sort())!==JSON.stringify(expected)||
+             m.analysis_final_rebuilt!==false||m.render_authorized!==false||m.publication_authorized!==false||
+             s.status!=='preliminary'||s.coverage?.overall==='complete'||
+             s.breadth.stock_count!==20)
+            throw Error('RESEARCH_STAGING_PREMATURE_FINAL_OR_STOCK_COUNT_MISMATCH');
+          console.log(JSON.stringify({decision:m.decision,source_rows:m.provisional_stock_count,
+            actual_summary_status:s.status,original_builder_applied:true,original_summary_validator_pass:true,
+            render_authorized:false},null,2));
+          NODE
+          echo "20 coherent provisional input rows staged and original summary builder+validator applied. No fabricated final analysis or video claim; no MP4/YouTube." >> "$GITHUB_STEP_SUMMARY"
+      - name: Retain auditable staged inputs and original summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mvp10-20261013-20-stock-preliminary-stage
+          path: |
+            ${{ runner.temp }}/mvp10-20261013-research-stage-result.json
+            ${{ runner.temp }}/mvp10-20261013-20-candidates/research-mvp10-20261013-staging.json
+            ${{ runner.temp }}/mvp10-20261013-20-candidates/data_daily_gain_over_5/market-summary/20261013.json
+          if-no-files-found: warn
+          retention-days: 14
