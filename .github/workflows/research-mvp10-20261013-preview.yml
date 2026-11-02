@@ -8,6 +8,7 @@ on:
       - .github/workflows/research-mvp10-20261013-preview.yml
       - scripts/research_mvp10_20261013_preview_plan.js
       - scripts/research_mvp10_20261013_dashboard.js
+      - scripts/verify_research_mvp10_caption_visual.py
       - scripts/synthesize_daily_gainers_tts.py
       - tests/test_mvp10_research_tts_resume.py
       - tests/research_mvp10_20261013_preview_plan.test.js
@@ -205,8 +206,9 @@ jobs:
           burned="$folder/preview-captions-burned.mp4"
           test -s "$input"
           test -s "$srt"
-          ffmpeg -y -loglevel error -i "$input" -vf "subtitles=${srt}:force_style='FontName=Noto Sans CJK TC,FontSize=34,Alignment=2,MarginV=300,Outline=3,Shadow=0'" -c:v libx264 -preset veryfast -crf 23 -pix_fmt yuv420p -c:a copy "$burned"
+          ffmpeg -y -loglevel error -i "$input" -vf "subtitles=${srt}:force_style='FontName=Noto Sans CJK TC,FontSize=22,Alignment=2,MarginV=75,MarginL=12,MarginR=75,Outline=2,Shadow=0'" -c:v libx264 -preset veryfast -crf 23 -pix_fmt yuv420p -c:a copy "$burned"
           test -s "$burned"
+          python scripts/verify_research_mvp10_caption_visual.py "$input" "$burned" "$srt" "$folder/caption-visual-qa.json"
           python - <<'PY'
           import json, hashlib, subprocess
           from pathlib import Path
@@ -245,6 +247,7 @@ jobs:
           node --test tests/research_mvp10_verify_final_burn.test.js
           node scripts/research_mvp10_verify_final_burn.js "$folder"
           test -s "$folder/final-burned-preview-qa.json"
+          test -s "$folder/caption-visual-qa.json"
           ffmpeg -y -loglevel error -ss 2 -i "$video" -frames:v 1 "$folder/research-preview-thumbnail.jpg"
           python - <<'PY'
           import json
@@ -280,6 +283,7 @@ jobs:
             output/daily-gainers-video/20261013/subtitle-burn-evidence.json
             output/daily-gainers-video/20261013/qa.json
             output/daily-gainers-video/20261013/final-burned-preview-qa.json
+            output/daily-gainers-video/20261013/caption-visual-qa.json
             output/daily-gainers-video/20261013/research-preview-thumbnail.jpg
             output/daily-gainers-video/20261013/daily-gainers-20261013.zh-TW.srt
             output/daily-gainers-video/20261013/daily-gainers-20261013.mp4
