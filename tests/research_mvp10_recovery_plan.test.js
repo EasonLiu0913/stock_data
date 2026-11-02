@@ -1,7 +1,7 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs');
 const os=require('node:os'),path=require('node:path');
-const {plan,previousRuns,APPROVED_AUTO_DISPATCH,BLOCKED_PUBLISH_WORKFLOWS}=require('../scripts/research_mvp10_recovery_plan');
+const {plan,validate,previousRuns,APPROVED_AUTO_DISPATCH,BLOCKED_PUBLISH_WORKFLOWS}=require('../scripts/research_mvp10_recovery_plan');
 const DATE='20261102';
 function fixture(){
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'mvp10-recovery-'));
@@ -51,8 +51,8 @@ test('next cycle re-reads source and does not confuse old run ID with complete o
  assert.equal(still.stages.find(s=>s.id==='news').run_id,12345);
  f.write(f.files.news,f.news);
  const next=plan({root:f.root,date:DATE,previous:still});
- assert.equal(next.stages.find(s=>s.id==='news').status,'VERIFIED');
- assert.equal(next.stages.find(s=>s.id==='ai_pending').status,'MISSING');
+ assert.equal(next.stages.find(s=>s.id==='news').status,'VALIDATION_REQUIRED');
+ assert.equal(next.stages.find(s=>s.id==='ai_pending').status,'BLOCKED');
  assert.equal(next.stages.find(s=>s.id==='news').dedup_key,DATE+':news');
 });
 test('all required files never trigger YouTube and still require separate render gate',t=>{
@@ -60,9 +60,11 @@ test('all required files never trigger YouTube and still require separate render
  f.write(f.files.news,f.news);f.write(f.files.ai_pending,f.ai);f.write(f.files.ai,f.ai);
  f.write(f.files.summary,f.summary);f.write(f.files.script,f.script);
  const p=plan({root:f.root,date:DATE});
- assert.equal(p.stages.find(s=>s.id==='script').status,'VERIFIED');
+ assert.equal(p.stages.find(s=>s.id==='news').status,'VALIDATION_REQUIRED');
+ assert.equal(p.stages.find(s=>s.id==='ai_pending').status,'BLOCKED');
+ assert.equal(p.stages.find(s=>s.id==='script').status,'BLOCKED');
  assert.equal(p.stages.find(s=>s.id==='render').status,'BLOCKED');
- assert.equal(p.first_blocked_stage,'render');
+ assert.equal(p.first_blocked_stage,'news');
  assert.equal(p.youtube_upload_authorized,false);
  assert.equal(p.pages_deploy_authorized,false);
 });
@@ -78,7 +80,7 @@ test('wrong dates, incomplete facts and preliminary summaries fail closed',t=>{
  f.write(f.files.facts,f.facts);f.write(f.files.ai_pending,f.ai);f.write(f.files.ai,f.ai);
  f.write(f.files.summary,{...f.summary,status:'preliminary'});
  p=plan({root:f.root,date:DATE});
- assert.equal(p.stages.find(s=>s.id==='summary').status,'INVALID');
+ assert.equal(validate('summary',{...f.summary,status:'preliminary'},DATE,['2491','4720']), 'summary_not_final_complete');
 });
 test('strict date and run receipts, no fallback from wrong-day previous',t=>{
  const f=fixture();t.after(f.cleanup);
@@ -92,4 +94,21 @@ test('false stock arithmetic and duplicated codes are not accepted',t=>{
  f.write(f.files.raw,bad);assert.equal(plan({root:f.root,date:DATE}).stages[0].status,'INVALID');
  f.write(f.files.raw,{...f.raw,stocks:f.raw.stocks.map((s,i)=>i===1?{...s,code:'2491'}:s)});
  assert.equal(plan({root:f.root,date:DATE}).stages[0].status,'INVALID');
+});
+
+test('structurally matching news or AI may not bypass original evidence validator',t=>{
+ const f=fixture();t.after(f.cleanup);
+ f.write(f.files.news,f.news);
+ f.write(f.files.ai_pending,f.ai);
+ f.write(f.files.ai,f.ai);
+ f.write(f.files.summary,f.summary);
+ f.write(f.files.script,f.script);
+ const p=plan({root:f.root,date:DATE});
+ assert.equal(p.stages.find(x=>x.id==='news').status,'VALIDATION_REQUIRED');
+ assert.equal(p.stages.find(x=>x.id==='news').next_action,'run_original_validator');
+ assert.equal(p.stages.find(x=>x.id==='ai_pending').status,'BLOCKED');
+ assert.equal(p.stages.find(x=>x.id==='summary').status,'BLOCKED');
+ assert.equal(p.stages.find(x=>x.id==='script').status,'BLOCKED');
+ assert.equal(p.stages.find(x=>x.id==='render').status,'BLOCKED');
+ assert.equal(p.stages.some(x=>x.dispatch_requested),false);
 });
