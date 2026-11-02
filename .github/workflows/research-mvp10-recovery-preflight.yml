@@ -42,6 +42,8 @@ jobs:
           path: inputs
           persist-credentials: false
           sparse-checkout: |
+            scripts
+            config
             data_daily_gain_over_5
             research_pending/daily-gainers-ai
             video_scripts/daily-gainers
@@ -49,7 +51,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Run six offline negative and resumption tests
+      - name: Run seven offline negative and resumption tests
         working-directory: research
         run: |
           set -euo pipefail
@@ -77,6 +79,46 @@ jobs:
             main:p.source_commit,stage_statuses:p.stages.map(s=>[s.id,s.status]),
             requested_dispatches:0,first_blocked_stage:p.first_blocked_stage
           }));
+          NODE
+      - name: Independently run original per-stage validators without publishing
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs=require('node:fs'),path=require('node:path'),cp=require('node:child_process');
+          const date='20261102',root=path.resolve('inputs');
+          const checks=[
+            ['facts','data_daily_gain_over_5/analysis-facts/'+date+'.json',
+              ['scripts/daily_gainers_ai_contract_cli.js','assert-facts','data_daily_gain_over_5/analysis-facts/'+date+'.json']],
+            ['news','data_daily_gain_over_5/analysis-news/'+date+'.json',
+              ['scripts/validate_daily_gainers_news_analysis.js',date]],
+            ['ai_pending','research_pending/daily-gainers-ai/'+date+'.json',
+              ['scripts/validate_daily_gainers_ai_analysis.js',date,'research_pending/daily-gainers-ai/'+date+'.json']],
+            ['ai','data_daily_gain_over_5/analysis-ai/'+date+'.json',
+              ['scripts/validate_daily_gainers_ai_analysis.js',date,'data_daily_gain_over_5/analysis-ai/'+date+'.json']],
+            ['summary','data_daily_gain_over_5/market-summary/'+date+'.json',
+              ['scripts/validate_daily_gainers_market_summary.js','--date',date]],
+            ['script','video_scripts/daily-gainers/'+date+'.json',
+              ['scripts/validate_daily_gainers_video_script.js',date]]
+          ];
+          const results={target_date:date,main_sha:fs.readFileSync('output/mvp10-recovery/source-main-sha.txt','utf8').trim(),
+            read_only:true,publication_authorized:false,youtube_upload_authorized:false,checks:[]};
+          let failed=false;
+          for(const [stage,input,args] of checks){
+            const file=path.join(root,input);
+            if(!fs.existsSync(file)){results.checks.push({stage,status:'MISSING_INPUT',input});continue;}
+            if(stage==='summary'){
+              const summary=JSON.parse(fs.readFileSync(file,'utf8'));
+              if(summary.status!=='final'){results.checks.push({stage,status:'PRELIMINARY_NOT_FINAL',input});continue;}
+            }
+            const p=cp.spawnSync(process.execPath,args,{cwd:root,encoding:'utf8',timeout:90000});
+            const status=p.status===0?'ORIGINAL_VALIDATOR_PASS':'ORIGINAL_VALIDATOR_FAIL';
+            results.checks.push({stage,status,input,exit_code:p.status,error_excerpt:String(p.stderr||p.error||'').slice(0,450)});
+            if(status==='ORIGINAL_VALIDATOR_FAIL')failed=true;
+          }
+          fs.writeFileSync('output/mvp10-recovery/original-validator-results.json',JSON.stringify(results,null,2)+'\n');
+          console.log('ORIGINAL_VALIDATOR_PRECHECK',JSON.stringify(results.checks.map(x=>({stage:x.stage,status:x.status}))));
+          if(failed)process.exitCode=1;
           NODE
       - name: Record real CI Run ID for the next research-only review
         if: always()
