@@ -25,3 +25,14 @@ Workflow read-only `contents:read`, exact research push branch, sparse checkout,
 4. Owner-only separate authorization required for private pilot, and original Prompt B remains frozen.
 
 research_progress_status: PROGRESS; phase_status: MVP10-A INCOMPLETE; MVP10-B FROZEN_NOT_ELIGIBLE; publication_authorized=false; automatic_continuation=no; plan_changed=no.
+
+## 2026-11-02 — Corrected genuine 35-to-32 claim-scope defect
+
+The first reconciliation version had a real error discovered by independently fetching and parsing frozen `data_daily_gain_over_5/analysis/20261008.json`: there are **13** legacy direct/corroborated claims across all **35** original entries, not 11. Two such claims are in excluded nonordinary securities `9103 美德醫療-DR` and `6645 金萬林-創`; the third excluded innovation-board entry is `7740 熙特爾-創` (not strong). Therefore the provisional `Stock` category research universe contains **32** entries with **11** strong legacy claims, of which 3 are newly bounded official MOPS revenue facts and 8 remain unresolved. The initial 35-stock assertion would have incorrectly failed CI; it was NOT correct to assert the original 35-stock publication had only 11 strong claims.
+
+Minimal isolated updates:
+- `scripts/reconcile_mvp10_mops_claims.js` commit `8c500f7509a40318e29debf2526c14692211cc79` now compares frozen legacy exclusions explicitly before computing provisional 32-stock strengths, and emits `provisional_ordinary_scope_certified=false` (these exclusions are research-only and are not proof of date-effective ordinary classification).
+- Tests adapted to authentic 35-entry/13-strong shape in commit `b72e9cd521e6d20d2f0ea2c3c84e25e336c90d80`; negative check for excluded securities in commit `d0a1e1dde3a52fc876db768cde0d77bd0b17201e`.
+- No source, analysis status, publishability, original validator, main, YouTube, production or release-lock change. The new research CI job/log/artifact acceptance still **PENDING** because push-run listing is not exposed by the current GitHub connector endpoint. Empty PR-filtered `fetch_commit_workflow_runs` and empty combined-status list do not imply that a push workflow did not execute.
+
+research_progress_status=PROGRESS (identified and repaired real scope inconsistency); phase_status=MVP10-A INCOMPLETE / MVP10-B NOT_ELIGIBLE; next_action=confirm newest isolated MOPS research CI and fix any new job-log issue, then draft claim-bounded 32-stock analysis in temp and run original strict validators; plan_changed=NO.
