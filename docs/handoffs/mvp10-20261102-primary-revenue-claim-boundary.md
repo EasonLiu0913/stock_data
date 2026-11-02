@@ -36,3 +36,24 @@ Minimal isolated updates:
 - No source, analysis status, publishability, original validator, main, YouTube, production or release-lock change. The new research CI job/log/artifact acceptance still **PENDING** because push-run listing is not exposed by the current GitHub connector endpoint. Empty PR-filtered `fetch_commit_workflow_runs` and empty combined-status list do not imply that a push workflow did not execute.
 
 research_progress_status=PROGRESS (identified and repaired real scope inconsistency); phase_status=MVP10-A INCOMPLETE / MVP10-B NOT_ELIGIBLE; next_action=confirm newest isolated MOPS research CI and fix any new job-log issue, then draft claim-bounded 32-stock analysis in temp and run original strict validators; plan_changed=NO.
+
+## 2026-11-02 — Next Prompt A: 32-row editorial-claim ledger and run evidence check
+
+An independent fresh remote-main check keeps the same sole active project and frozen `MVP10-A/B`. Latest observed main SHA at startup `5c0f49518e10ed29c7f56857fa8261fc97a7eabb`; main changed separately for market data only. The isolated research branch was at earlier checkpoint `d94e52b1`; this invocation made research-only changes, no main write.
+
+### Workflow/run evidence
+- Prior full official MOPS source workflow #41318622206 at SHA `a1a5ee2900f909f864f810242214268488367354` was independently re-read: completed SUCCESS, job `124883901900`, artifact `13088561218`. The actual job logs confirm exactly three official issuer September revenue rows, no inferred stock price causation. This is **historical source evidence**, not latest source-claim-bridge CI success.
+- Latest connector `fetch_commit_workflow_runs` only reports PR-triggered runs and `get_commit_combined_status` gave no status records for new pushes. The current GitHub workflow push-run ID/job/log is **NOT CONFIRMED**; do not claim the new reconciliation CI executed, passed, or failed. No speculative retry of old jobs at old code SHAs.
+
+### New bounded implementation
+- Commit `280dc50b27925766644a49e8880eecabc8e86042`: `scripts/reconcile_mvp10_mops_claims.js` adds a 32-entry provisional **editorial claim ledger**, with 3 exact issuer-reported revenue facts, date/unit attribution, and 29 no-verified-issuer-revenue rows. Every one carries `supported_stock_price_cause=false`, and original legacy causal narration is not copied. Ledger is not AI-authored final published content, stock-type certification, or render authorization.
+- Commit `bf96399cd5706db6659d5f4958e4936afeeff210`, corrected test-string assertion `dc0f8c84079658964f6ad4e743a5c3c5274e2cc9`: added an isolated test ensuring 32 rows, three official 2026-09 revenue statements, exact 3416 95.90%, and zero claimed price causation or release flags.
+- Commit `a628b933cb6d82345259aa81f9cae5d1bb1c87fa`: extended the existing read-only source CI's output validation to the 32-row ledger. No new workflow trigger, privileged permissions, production listener or YouTube action introduced. Same limited research push paths; permissions `contents:read`.
+- Independently fetched and parsed the actual original `data_daily_gain_over_5/analysis/20261008.json` through the GitHub connector in this turn, confirmed **35 original entries**, **32 provisional Stock-scope candidates**, **13 original direct/corroborated entries**, **11 among 32**, **8 unresolved after 3 official revenue facts**, and explicit exclusions 9103/6645/7740. This is an independent **static data audit** of the classification totals, not execution of Node tests or full date-effective official security classification.
+
+### Actual remaining gate
+1. Verify actual newest research MOPS CI for commit `a628b933cb6d82345259aa81f9cae5d1bb1c87fa` or a later head, inspect job logs/retained ZIP; if failed repair minimally (do not declare success from commit or old run).
+2. Complete actual source-supported non-templated 32-stock AI published analysis. Only then use isolated temp source with original builder/validator and preserve strict fail-closed final/complete gate; never force status.
+3. Once source eligibility and editorial script truly pass, generate current full 1080p MP4 + SRT + thumbnail + source manifest using isolated Render-only. Still no YouTube or main changes. Private pilot is separately owner-gated; B remains frozen.
+
+research_progress_status=PROGRESS (bounded, newly durable 32-stock claim preparation); phase_status=MVP10-A INCOMPLETE; b_status=FROZEN_NOT_ELIGIBLE; next_action=check actual updated MOPS CI then continue source-certified full analysis; publication_authorized=false; plan_changed=no.
