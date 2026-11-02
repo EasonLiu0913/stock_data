@@ -1,0 +1,151 @@
+name: "[Research Only] MVP10 20261013 20-stock preview rough-cut"
+# Strictly isolated, research-only, unpublished preview. Never replace canonical A/B.
+on:
+  push:
+    branches:
+      - research/daily-video-mvp10-a-20261029
+    paths:
+      - .github/workflows/research-mvp10-20261013-preview.yml
+      - scripts/research_mvp10_20261013_preview_plan.js
+      - tests/research_mvp10_20261013_preview_plan.test.js
+      - data_research/m5/mvp10-20261013-research/20stock-analysis-candidate.json
+      - data_research/m5/mvp10-20261013-research/20stock-seven-scene-script-draft.json
+permissions:
+  contents: read
+concurrency:
+  group: research-mvp10-20261013-preview
+  cancel-in-progress: true
+jobs:
+  research-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Refuse production refs and any release credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = research/daily-video-mvp10-a-20261029
+          test "$GITHUB_REF_TYPE" = branch
+      - name: Checkout research video code and two dated source JSON artifacts
+        uses: actions/checkout@v4
+        with:
+          ref: research/daily-video-mvp10-a-20261029
+          persist-credentials: false
+          sparse-checkout: |
+            scripts
+            tests/research_mvp10_20261013_preview_plan.test.js
+            assets/daily-gainers-vtuber-sprite.webp
+            data_research/m5/mvp10-20261013-research/20stock-analysis-candidate.json
+            data_research/m5/mvp10-20261013-research/20stock-seven-scene-script-draft.json
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate preview-only source and explicit locks
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test tests/research_mvp10_20261013_preview_plan.test.js
+          node scripts/research_mvp10_20261013_preview_plan.js .
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const base='output/daily-gainers-video/20261013/';
+          const plan=JSON.parse(fs.readFileSync(base+'plan.json'));
+          const lock=JSON.parse(fs.readFileSync(base+'research-preview-boundary.json'));
+          if(plan.scene_count!==7||plan.target_date!=='20261013'||
+             plan.narration_chars<1100||plan.narration_chars>5500||
+             plan.source_final_approved!==false||plan.publication_authorized!==false||
+             lock.not_a_substitute_for_original_AB!==true||
+             lock.youtube_upload_authorized!==false||lock.video_release_approved!==false||
+             plan.scenes.some(s=>s.stock_codes.some(x=>['1312A','6645','6924','7730','9103'].includes(x))))
+            throw Error('RESEARCH_PREVIEW_GATE_BROKEN');
+          console.log('7_SCENE_PREVIEW_PLAN_PASS source_count=20 FINAL_NOT_APPROVED');
+          NODE
+      - name: Setup media stack
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg librsvg2-bin fonts-noto-cjk espeak-ng
+          python -m pip install --disable-pip-version-check --no-cache-dir --retries 3 edge-tts==7.3.1 mutagen pypinyin gTTS
+          ffmpeg -version | head -1
+      - name: Synthesize 7-scene real Chinese narration from research draft
+        env:
+          YOUTUBE_TTS_VOICE: zh-TW-YunJheNeural
+          YOUTUBE_TTS_RATE: "+15%"
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/synthesize_daily_gainers_tts.py output/daily-gainers-video/20261013/plan.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          f=Path('output/daily-gainers-video/20261013/tts-manifest.json')
+          m=json.loads(f.read_text())
+          if (m.get('voice'),m.get('rate'),m.get('engine')) != ('zh-TW-YunJheNeural','+15%','edge-tts') or len(m.get('scenes',[]))!=7:
+              raise SystemExit('EDGE_YUNJHE_PLUS15_TTS_NOT_VERIFIED')
+          if any(not x.get('word_boundaries') for x in m['scenes']):
+              raise SystemExit('EDGE_WORD_BOUNDARIES_MISSING')
+          print('REAL_EDGE_TTS_PASS: YunJhe +15%; 7 scenes; timestamp boundaries')
+          PY
+      - name: Build presenter mouth intervals and render 1080p MP4
+        env:
+          YOUTUBE_VTUBER_ENABLED: "1"
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/build_daily_gainers_lipsync.py output/daily-gainers-video/20261013/plan.json
+          node scripts/render_daily_gainers_video.js 20261013
+      - name: Generate Mandarin display SRT from actual speech timings
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/build_daily_gainers_srt.py output/daily-gainers-video/20261013/plan.json
+      - name: Video evidence QA and frame-based preview thumbnail
+        shell: bash
+        run: |
+          set -euo pipefail
+          folder=output/daily-gainers-video/20261013
+          video="$folder/daily-gainers-20261013.mp4"
+          test -s "$video"
+          test -s "$folder/daily-gainers-20261013.zh-TW.srt"
+          test -s "$folder/qa.json"
+          test -s "$folder/tts-manifest.json"
+          test -s "$folder/lipsync.json"
+          ffmpeg -y -loglevel error -ss 2 -i "$video" -frames:v 1 "$folder/research-preview-thumbnail.jpg"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('output/daily-gainers-video/20261013')
+          qa=json.loads((p/'qa.json').read_text())
+          b=json.loads((p/'research-preview-boundary.json').read_text())
+          t=json.loads((p/'tts-manifest.json').read_text())
+          assert 300 <= qa['duration_seconds'] <= 600, 'DURATION_OUT_OF_ACCEPTANCE'
+          assert qa.get('vtuber_enabled') is True, 'VTUBER_REQUIRED'
+          assert t['engine']=='edge-tts' and t['voice']=='zh-TW-YunJheNeural' and t['rate']=='+15%', 'TTS_NOT_VERIFIED'
+          assert b['publication_authorized'] is False and b['source_final_complete'] is False, 'PREVIEW_RELEASE_LOCK_BROKEN'
+          print('MEDIA_PREVIEW_QA_PASS',json.dumps({'duration':qa['duration_seconds'],'scene_count':qa['scene_count'],'vtuber':qa['vtuber_enabled']},ensure_ascii=False))
+          PY
+          echo "Research preview is NOT final, does NOT satisfy original A/B, and was NOT uploaded to YouTube." >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve preview and evidence even when later media stage fails
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mvp10-20261013-20stock-research-preview-only
+          path: |
+            output/daily-gainers-video/20261013/plan.json
+            output/daily-gainers-video/20261013/research-preview-boundary.json
+            output/daily-gainers-video/20261013/slides/*.svg
+            output/daily-gainers-video/20261013/tts-manifest.json
+            output/daily-gainers-video/20261013/lipsync.json
+            output/daily-gainers-video/20261013/render-timings.json
+            output/daily-gainers-video/20261013/subtitle-manifest.json
+            output/daily-gainers-video/20261013/qa.json
+            output/daily-gainers-video/20261013/research-preview-thumbnail.jpg
+            output/daily-gainers-video/20261013/daily-gainers-20261013.zh-TW.srt
+            output/daily-gainers-video/20261013/daily-gainers-20261013.mp4
+          if-no-files-found: warn
+          retention-days: 14
