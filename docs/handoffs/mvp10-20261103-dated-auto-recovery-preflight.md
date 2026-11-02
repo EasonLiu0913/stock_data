@@ -89,3 +89,20 @@ next_action: promptA when a distinct executable CI or provider integration step 
 plan_changed: NO
 publication_authorized: false
 youtube_upload_authorized: false
+
+## 2026-11-03 subsequent Prompt A — per-date previous Run observation and dedup
+- Remote main `713b92102e997709cc6fa8dfed283cc5fd6f68af`, active routing unchanged. Nov 2 news and pending AI remained 404; main facts and raw exist. Research preflight GitHub Push Run ID still inaccessible through PR-only commit-run tool; no false claim of no run or CI PASS.
+- Found a real defect in previous-date recovery state: Planner preserved old `run_id` but did not distinguish queued, in-progress and completed execution or determine whether to check the same run versus retry. Existing auto-dispatch list remains empty: no workflow was actually invoked.
+- `863bb59cdd5d962a7f593641da66980d6e2a9de7`: Planner now explicitly preserves `run_observed_status` (`unknown|queued|in_progress|completed`) and `run_conclusion` (`unknown|success|failure|cancelled|skipped|timed_out`) from previous receipts, rejects mismatched statuses, and yields `check_existing_run_before_dispatch` for queued/in-progress; for completed yields `recheck_artifact_and_job_log_before_retry`, regardless of nominal success. A run record alone never changes date-matched source validation state.
+- `e06048f8135d50af1787b5fa6fdd39b996364717`: three more negative tests for running and queued no-duplicate behavior, completed-success-without-output refusal, invalid status/conclusion rejection; 15 tests total committed.
+- `c0a1162c67f99fafdf58445d9b78a1f982e4f248`: branch-only, read-only CI now names fifteen tests. No independently available new Run ID, Job Log or 15-test output yet, so CI acceptance remains **UNKNOWN**.
+- This is a **research-only planning and observation contract**. It does not poll GitHub Actions to substantiate the prior status in a previous receipt, dispatch jobs, perform persistent daily scheduling, run an Agent, or render a video. Real safe Workflow/Agent producer discovery and a live executor remain the primary blockers. Avoid extended test-only refinements without real CI/prod-facing evidence next round.
+
+research_progress_status: PROGRESS
+phase_status: MVP10-A INCOMPLETE
+b_status: FROZEN_NOT_ELIGIBLE
+ci_acceptance_verified: false
+next_action: promptA only for distinct real CI inspection or safe execution-provider integration
+plan_changed: NO
+publication_authorized: false
+youtube_upload_authorized: false
