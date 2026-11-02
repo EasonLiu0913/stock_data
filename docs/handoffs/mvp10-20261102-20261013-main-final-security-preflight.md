@@ -316,3 +316,25 @@ phase_status=MVP10-A INCOMPLETE (real unburned video exists)
 next_action=inspect workflow run after bad523df4 and validate final caption-burned 1080p MP4 artifact
 plan_changed=NO
 publication_authorized=false
+
+## 2026-11-02 Prompt A — FIRST real complete caption-burned 1080p research preview PASS
+
+**Unambiguous milestone achieved; do not revert to earlier run statuses.** Open authenticated GitHub browser Actions view identified the run after research-only subtitle quote correction `bad523df4cfedff5865dab3512306fa355604db4`. Actual **GitHub Actions Run `41448386308`**, Job `125287139406`, branch `research/daily-video-mvp10-a-20261029`, completed **SUCCESS** (elapsed 14m26s). GitHub Connector verified jobs and the *actual* job log. Offline resume tests PASS; YunJhe `zh-TW-YunJheNeural` `+15%` real Edge TTS seven scenes and WordBoundary receipts PASS; post-TTS MP3 full-length preflight 410.706 seconds PASS. Render-only 1080p 7-scene male VTuber source MP4 PASS; 107 scene-aligned Traditional Chinese SRT cues and speech/display percent split PASS; actual FFmpeg 6.1.1 hardburn with `force_style='FontName=Noto Sans CJK TC,FontSize=34,Alignment=2,MarginV=34,Outline=2,Shadow=0'` PASS, measured 409.699s; independent **postburn** verifier `scripts/research_mvp10_verify_final_burn.js` PASS; thumbnail and video QA PASS.
+
+Real final burned research file receipt from log:
+- output `output/daily-gainers-video/20261013/daily-gainers-20261013.mp4`
+- SHA256 `e7e8f54b08fb9a5f5b3164ce4ebbfb0b796b809c7b82b5e2f33ed2f5f349d2f7`
+- size **12,876,224 bytes**; 1920×1080 `h264` `yuv420p` with AAC; 409.699 seconds (**06:50**); 7 scenes; 107 SRT cues; `subtitles_burned_sha_verified:true`; `spoken_voice_verified:zh-TW-YunJheNeural`; `spoken_rate_verified:+15%`; percentage display `9.97%`.
+- expected receipt in artifact: `final-burned-preview-qa.json`, with `decision:RESEARCH_PREVIEW_FINAL_MEDIA_VERIFIED_NOT_PUBLISHABLE`; `research_only:true`, `source_final_approved:false`, `original_AB_pass:false`, `full_publication_approved:false`, `youtube_upload_authorized:false`.
+- GitHub Artifact listing verified **`mvp10-20261013-20stock-research-preview-only`**, ID `13144467533`, size **14,590,570 bytes** compressed, not expired, linked to correct successful run. Contains media/evidence as uploaded per workflow (do not claim locally inspected visual frames unless downloaded/reviewed).
+
+No YouTube upload or credential connection, production/main edits, scheduling, frozen original A/B bypass, or release lock override. This is **MVP10-A tangible render-only preview milestone PASS**, but **MVP10-A overall INCOMPLETE** until date-effective listed common stock class certification, genuine `final/complete` editorial source approval, original positive A/B, and independently owner-authorized nonpublic YouTube trial. The release deadline is 2026-11-08. New priority should be the original 20-candidate source/facts/editorial gate and image/audio inspection of actual Artifact, **not more TTS/FFmpeg pipeline work** unless there is evidence of failure.
+
+Latest main seen `7af958bb2160e25de7716e1a150b646f901c76e8`. Handoff update is documentation-only (no new research preview workflow push should trigger).
+
+research_progress_status=PROGRESS
+media_research_preview_status=PASS_VERIFIED_41448386308
+phase_status=MVP10-A INCOMPLETE
+next_action=review actual video preview and finish ordinary-share date certification plus source/editorial final gate; retain strict A/B
+plan_changed=NO
+publication_authorized=false
