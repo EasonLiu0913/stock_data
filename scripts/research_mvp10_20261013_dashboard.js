@@ -1,5 +1,9 @@
 'use strict';
 // MVP10-A only. Render verified-on-dated-source research candidate numbers, never fabricate market-wide figures.
+// Owner-locked screenshot reference: 2026-11-02 22:28 (opening + multi-stock scene).
+// The four small summary cards are ancillary to the MANDATORY multi-stock table;
+// they must never be replaced by the obsolete standalone four-quadrant Dashboard.
+const OWNER_LOCKED_DASHBOARD_VERSION='TAIWAN_STOCK_TABLE_LIST_20261102_V1';
 const xml=s=>String(s).replace(/[<>&"']/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;','\'':'&apos;'}[c]));
 const fmt=v=>v===null||v===undefined||!Number.isFinite(Number(v))?'未取得':Number(v).toLocaleString('en-US',{maximumFractionDigits:2});
 const signed=v=>v===null||v===undefined||!Number.isFinite(Number(v))?'未取得':(Number(v)>0?'+':'')+fmt(v);
@@ -65,7 +69,7 @@ function renderDashboard(scene,i,n,analyses){
    stockRows.map((v,j)=>oneRow(v,j)).join('');
  const watermark='<rect x="1100" y="24" width="792" height="69" rx="12" fill="#4a2110" stroke="#fbbf24" stroke-width="2"/>'+
   t(1120,69,'研究粗剪｜股別與編輯未驗收｜禁止發布',27,'#fef3c7',700);
- return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">'+
+ return '<svg xmlns="http://www.w3.org/2000/svg" data-dashboard-version="'+OWNER_LOCKED_DASHBOARD_VERSION+'" viewBox="0 0 1920 1080" width="1920" height="1080">'+
   '<rect width="1920" height="1080" fill="#071322"/>'+
   '<rect width="1920" height="13" fill="#38bdf8"/>'+
   t(82,122,title,48,'#f8fafc',700)+
@@ -79,4 +83,4 @@ function renderDashboard(scene,i,n,analyses){
   t(1785,1032,(i+1)+' / '+n,24,'#f8fafc')+
   '</svg>';
 }
-module.exports={renderDashboard,fmt,signed,pct};
+module.exports={renderDashboard,fmt,signed,pct,OWNER_LOCKED_DASHBOARD_VERSION};
