@@ -34,3 +34,26 @@ next_action: promptA
 plan_changed: NO
 publication_authorized: false
 youtube_upload_authorized: false
+
+## 2026-11-03 continuation — original-validator receipts and two-cycle readiness (supersedes earlier shallow planner behavior)
+- Inspected original current-main `scripts/validate_daily_gainers_news_analysis.js`, `scripts/validate_daily_gainers_ai_analysis.js`, and the video/market validators. Discovered an actual fail-open risk in initial research planner: it treated date+code/shape only as `VERIFIED` for news/AI/script, despite original validators requiring source links, evidence strength, confidence, and semantic consistency.
+- Research correction `e4d37eb31a58310603e747ac1850456d78fbaada`: those stages now `VALIDATION_REQUIRED` unless genuine original validator attestation matches same file/date/main commit; no shallow completeness or fake editorial PASS.
+- Research tests `2980c3059092d635799e4c91c033adcaa216dfc4`: adds non-promotion negative case (7 tests at this intermediate commit).
+- Read-only research workflow `5d196d584066634c49e2c1f66045761fae8f5a7b`: checkout current main original `scripts`, `config` and date-specific sources; only **execute validators**, never publisher/crawler workflows. Check AI, news, facts, summary and script when files exist; record explicit `MISSING_INPUT`, `PRELIMINARY_NOT_FINAL`, `ORIGINAL_VALIDATOR_PASS` or `ORIGINAL_VALIDATOR_FAIL`.
+- Subsequent commit `a245e9ab3ab970b7bbd5e7685f27c8a4e32ed21d`: each original-validator PASS includes raw source SHA-256. Commit `e434dd133a986be1d77e444a7ee8e6267fc0d295`: planner accepts optional `--validators` receipt only if exact date, 40-character source main SHA and input path/file SHA match. Incorrect or stale receipts never turn a stage VERIFIED. Any missing upstream dependencies still block downstream.
+- Test commit `cffe3c524e049a9f6245dffb24bcc0bc1832f446`: 9 total tests including matching receipt progression to `render` (still BLOCKED), wrong date, wrong main SHA, old digest and absent proof. These tests are **committed but real CI execution not independently verified**.
+- Research CI `679eeed07e4e57e0caf91a9447bbf468ac5ba9f8`: after the initial plan, invokes original validators, writes `original-validator-results.json` and runs a second plan with `--validators` and `--previous`, preserving `20261102-rechecked-plan.json`, the exact GitHub Runner ID and all statuses. Branch-only push, `contents:read`, `persist-credentials:false`, no `gh workflow run`, git push, Pages, YouTube or downstream listeners.
+- GitHub connector only exposes PR-filtered commit workflow runs; it did not expose actual push Run ID. Container direct GitHub networking also DNS failed. **DO NOT claim CI SUCCESS or a tested live dispatcher.** Actual GitHub Actions run/status/artifact remains the next independent proof point.
+- The auto-dispatch allowlist remains empty because no independently verified safe agent/news producer exists on main and any three `[07]` publisher workflows can write `main`/deploy Pages. This is an intentional safety hold, not implementation of end-to-end automatic recovery or background ChatGPT execution. Future integration must use a real permitted Agent runtime and actual existing data workflow, with exact per-date queued/running dedup and verified post-run artifact; explicit original A/B retained.
+
+research_progress_status: PROGRESS
+research_progress_evidence: original validator source audit; corrected fail-closed planner; 9 committed tests; source-bound validator receipts; second-cycle CI code
+phase_status: MVP10-A INCOMPLETE
+current_blocker: no independently observed new research CI run; no verified safe automated news/AI agent runtime and allowlisted producer
+planned_research: independently confirm 20261102 preflight run and its 9 tests, then implement only approved research-safe original news/AI producer
+prior_attempt: 6-test shallow planner and one-pass read-only CI
+anti_loop: do not claim pass from committed tests, no unsafe publisher dispatch, no bare-retry for missing external CI run; reuse fixed table Dashboard and old successful media proof
+next_action: promptA after checking actual CI/new source evidence
+plan_changed: NO
+publication_authorized: false
+youtube_upload_authorized: false
