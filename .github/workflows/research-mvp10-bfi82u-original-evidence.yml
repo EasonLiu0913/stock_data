@@ -50,9 +50,10 @@ jobs:
           sample = {"stat":"OK", "title":"115年10月13日 三大法人買賣金額統計表",
                     "fields":["單位名稱","買進金額","賣出金額","買賣差額"], "data":data}
           assert m.validate(json.dumps(sample).encode())["rows"]["合計"]["net_twd"] == 0
-          for edit in ("date", "net", "missing", "total"):
+          for edit in ("date", "conflicting_machine_date", "net", "missing", "total"):
             obj = json.loads(json.dumps(sample))
             if edit == "date": obj["title"] = "115年10月12日 三大法人買賣金額統計表"
+            if edit == "conflicting_machine_date": obj["date"] = "20261012"
             if edit == "net": obj["data"][0][3] = "999"
             if edit == "missing": obj["data"].pop()
             if edit == "total": obj["data"][-1][2] = "999"
@@ -61,7 +62,7 @@ jobs:
             except ValueError:
               continue
             raise AssertionError("FAIL-OPEN: " + edit)
-          print("OFFLINE_BFI82U_NEGATIVE_TESTS_PASS: 4/4")
+          print("OFFLINE_BFI82U_NEGATIVE_TESTS_PASS: 5/5")
           PY
       - name: Fetch exactly dated TWSE source and verify all monetary rows
         run: python scripts/research_mvp10_fetch_bfi82u_20261013.py output/research-bfi82u
