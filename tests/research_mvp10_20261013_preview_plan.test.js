@@ -2,6 +2,7 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path');
 const {make,slide}=require('../scripts/research_mvp10_20261013_preview_plan');
 const {OPENING_TEXT}=require('../scripts/daily_gainers_brand_opening');
+const {OWNER_LOCKED_DASHBOARD_VERSION,renderDashboard}=require('../scripts/research_mvp10_20261013_dashboard');
 const original=()=>({target_date:'20261013',stock_count:20,
   editorial_approved:false,render_authorized:false,publication_authorized:false,
   scenes:Array.from({length:7},(_,i)=>({title:'研究場景'+i,subtitle:'財務資料',
@@ -22,6 +23,16 @@ test('renders seven 1080p research scene slides and explicit release false',()=>
  try{
   x.write(original(),analysis());const r=make(x.root);
   assert.equal(r.plan.scene_count,7);
+  assert.equal(r.plan.dashboard_layout_version,OWNER_LOCKED_DASHBOARD_VERSION);
+  assert.ok(r.plan.scenes.every(sc=>sc.dashboard_layout_version===OWNER_LOCKED_DASHBOARD_VERSION));
+  for(let i=1;i<=7;i++){
+   const svg=fs.readFileSync(path.join(r.out,'slides',String(i).padStart(2,'0')+'.svg'),'utf8');
+   assert.match(svg,/data-dashboard-version="TAIWAN_STOCK_TABLE_LIST_20261102_V1"/);
+   for(const label of ['股票／代號','漲幅','外資 張','投信 張','融資 張','分點 張','量比'])
+    assert.ok(svg.includes(label),'scene '+i+' missing required table column '+label);
+   assert.ok(svg.includes('y="704"'),'must reserve burned-subtitle lane');
+   assert.ok(svg.includes('y="359"'),'must render screenshot-style full-width stock table');
+  }
   assert.ok(r.plan.scenes[0].narration.startsWith(OPENING_TEXT));
   assert.equal(r.plan.scenes[0].narration.split(OPENING_TEXT).length-1,1);
   assert.equal(r.plan.scenes[0].speech_text,r.plan.scenes[0].caption_text);
@@ -53,4 +64,19 @@ test('never accepts false permission flags or outside-source security code',()=>
   s.editorial_approved=false;s.scenes[0].stock_codes=['9103'];x.write(s,a);
   assert.throws(()=>make(x.root),/UNSAFE_PREVIEW_SCRIPT_CLAIMS_OR_STOCK_SCOPE/);
  }finally{fs.rmSync(x.root,{recursive:true,force:true});}
+});
+
+test('owner-locked screenshot layout supports multiple stock rows in EVERY scene, not four-cards only',()=>{
+ const a=analysis().analyses;
+ const scene={title:'資金結構｜法人方向和融資槓桿',subtitle:'多股比較',stock_codes:['6834','1001','1002']};
+ const svg=renderDashboard(scene,1,7,a);
+ assert.ok(svg.includes('data-dashboard-version="'+OWNER_LOCKED_DASHBOARD_VERSION+'"'));
+ for(const code of ['6834','1001','1002'])assert.ok(svg.includes(code),'missing stock '+code);
+ assert.ok(svg.includes('股票／代號')&&svg.includes('外資 張')&&svg.includes('分點 張'));
+ assert.ok(svg.includes('研究粗剪｜股別與編輯未驗收｜禁止發布'));
+ const intro=renderDashboard({...scene,stock_codes:[]},0,7,a);
+ assert.ok(intro.includes('20 檔'));
+ assert.ok(intro.includes('並非全市場上漲家數'));
+ assert.ok(intro.includes('股票／代號'),'market opening must keep same list style');
+ assert.throws(()=>renderDashboard({...scene,stock_codes:['9103']},1,7,a),/DASHBOARD_STOCK_NOT_IN_RESEARCH_SOURCE/);
 });
