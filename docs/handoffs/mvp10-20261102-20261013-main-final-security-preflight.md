@@ -44,3 +44,27 @@ New on isolated research branch:
 - Fresh GitHub Connector `get_commit_combined_status` still returns empty and GitHub Web fetch of Actions was unavailable. Neither absence proves no run. **No new run/job/artifact ID or test execution is independently confirmed yet**. Prior local full 20261013 render remains historical research evidence only; this stage does not authorize it as 20-stock final video.
 
 Next: verify current research `20261013 coherent-stage` and `20261013 Published Source Scope Preflight` workflow job+logs. If successful, produce genuinely re-reviewed 20-stock unified AI analysis with honest market totals/selected-company claims, regenerate matching narration/master, then unchanged original final/complete and video validators, then a full isolated 1080p render/QA. Never relabel preliminary as final or reuse spoken 25-stock counts. Private YouTube pilot still needs owner approval; Prompt B frozen, publication_authorized=false; `MVP10-A INCOMPLETE`. Plan changed: NO.
+
+## 2026-11-02 Prompt A — Source-row order proof and script/audio invalidation before reuse
+
+Remote current main HEAD rechecked `79df47fbdd08ea8351e12329bc0c1bbb8d375208`, active project remains `daily-gainers-market-opening-end-to-end`. Original source is pinned `f0fb2e44e00e3141a2673a4f6955af47768e5ce9`, and original A/B acceptance unchanged. The 20-stock coherent-stage research workflow remains commit `e3a6c12c274d4ef474966b9c8185b605540e529d` for original validator CLI compatibility; its push-run ID is **still not independently available**. An attempted read of GitHub Actions web page was disabled and available browser session was unavailable; do not represent combined-status empty as CI outcome.
+
+Direct GitHub Connector fetch of frozen 20261013 raw, news, facts and AI files established all four have exact **25 same-code rows in the same original source order**. This independently checks the core order precondition for provisional 20-row staging and avoids speculative sorting.
+
+Independent read of original 7-scene published `video_scripts/daily-gainers/20261013.json` revealed stock count mentions in **scene 1 and scene 2**, requiring rewritten spoken count and scene text for the 20-stock view. Scene 6 also contains “六百二十五張” (a lots count), which is not an “二十五檔” stock-universe claim. Original scenes did not reference known excluded codes in `stock_codes`; nevertheless all 7 scenes need independent editorial/source reassessment before any original media is reused.
+
+New bounded research-only implementation:
+- `scripts/audit_mvp10_20261013_script_invalidation.js` created `96a47875c53897447e8ba0210ac2fe3cc0cea214`, fixed stock-count regex `7605dc0487c6ac3bc8571b610e5fd0e95e12c7fb`, detects original stale 25-stock count phrases and excluded stock references, emits per-scene explicit TTS/SRT/MP4 invalidation with `render_authorized=false`, requires 25 original and 20 provisional identities.
+- `tests/audit_mvp10_20261013_script_invalidation.test.js` at `79499ca91d6b72ed70b02b30949ab412b1ad8def`: positive/negative cases, prevents mistaking “六百二十五張” for “二十五檔”.
+- `.github/workflows/research-mvp10-20261013-stage.yml` integrated the true pinned 20261013 script, test, per-scene audio/caption invalidation artifact at `831aa006c40b6ff17ce750f8e05f397f0da7a4b8`; then added a strict summary `[1,2]` and seven-scenes-invalidation CI assertion `f34265f4a84c59c967cfd0e3945fe715f998ab36`. Research workflow continues with `contents:read`, isolated branch only, no persisted credentials, no release/YouTube automation.
+
+These changes were pushed to **research branch only**. Test source and workflow have been fetched back. No actual post-change CI run/job ID is available through the present Github connector; no new CI PASS, no newly accepted 20-stock final/complete, and no newly rendered complete MP4 may be declared. Prior 20261013 complete 25-stock research MP4 evidence remains a historical research artifact only, not approved for reuse after changing stock coverage.
+
+**Next priority:** Obtain evidence for new read-only coherent-stage CI; then combine the 20 verified source rows with editor-reapproved non-causal AI analysis, rebuild `final/complete` via unchanged original builder/validator, regenerate matching seven-scene oral/display Master and complete 1080p video/SRT/thumbnail, check actual artifacts. Do not regress to generic classification or HTTP evidence research. Private nonpublic YouTube pilot still owner-authorization-gated.
+
+research_progress_status=PROGRESS
+phase_status=MVP10-A INCOMPLETE
+b_eligibility=NOT_ELIGIBLE
+next_action=verify coherent-stage isolated CI and complete reauthored 20-stock semantic source for actual full render
+plan_changed=NO
+publication_authorized=false
