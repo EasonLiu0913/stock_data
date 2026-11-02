@@ -20,7 +20,10 @@ function fixture(){
  const receipt={research_only:true,target_trade_date:'20261008',official_source_period:'ROC115/09',official_table_columns_verified:true,company_event_caused_market_movement_verified:false,render_authorized:false,publication_authorized:false,pages,official_column_proof:proof,official_revenue_claims_validated:Object.keys(entries)};
  const analyses=Object.entries(entries).map(([code,spec])=>({code,name:spec.name,evidence_strength:'corroborated'}));
  for(let i=0;i<8;i++)analyses.push({code:'X'+i,name:'unverified '+i,evidence_strength:'corroborated'});
- for(let i=0;i<24;i++)analyses.push({code:'Z'+i,name:'other '+i,evidence_strength:'none'});
+ for(let i=0;i<21;i++)analyses.push({code:'Z'+i,name:'other '+i,evidence_strength:'none'});
+ analyses.push({code:'9103',name:'美德醫療-DR',evidence_strength:'corroborated'});
+ analyses.push({code:'6645',name:'金萬林-創',evidence_strength:'corroborated'});
+ analyses.push({code:'7740',name:'熙特爾-創',evidence_strength:'none'});
  const published={target_date:'20261008',stock_count:35,analyses};
  return {receipt,published};
 }
@@ -28,6 +31,8 @@ test('3 official revenue facts remain distinct from 8 unresolved strong claims',
  const {receipt,published}=fixture(),r=reconcile(receipt,published);
  assert.equal(r.primary_revenue_facts.length,3);
  assert.equal(r.unresolved_legacy_strong_claims.length,8);
+ assert.equal(r.reviewed_legacy_strong_claim_count,11);
+ assert.equal(r.provisional_ordinary_scope_certified,false);
  assert.equal(r.issuer_revenue_facts_are_price_catalysts,false);
  assert.equal(r.summary_final,false);
  assert.equal(r.render_authorized,false);
