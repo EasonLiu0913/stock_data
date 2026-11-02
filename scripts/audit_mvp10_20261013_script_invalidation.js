@@ -2,7 +2,7 @@
 'use strict';
 // Research-only invalidation plan. Never edits narration/media or approves reuse.
 const fs=require('node:fs');
-const STALE_STOCK_COUNT=/(?:二十五|廿五|25)\\s*檔/g;
+const STALE_STOCK_COUNT=/(?:二十五|廿五|25)\s*檔/g;
 function audit(script,originalRaw,provisionalManifest){
  if(script.target_date!=='20261013'||originalRaw.target_date!==script.target_date||
    script.stock_count!==originalRaw.stock_count||script.stock_count!==25||
