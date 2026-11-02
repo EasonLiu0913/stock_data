@@ -356,3 +356,22 @@ phase_status=MVP10-A INCOMPLETE
 new_dashboard_caption_visual_ci=UNVERIFIED
 next_action=fetch newest run and caption-visual-qa.json
 publication_authorized=false
+
+## 2026-11-02 Prompt A — dashboard hardburn visual QA FULL CI PASS (actual artifact)
+
+Recovered actual run URL from user's live GitHub job tab. GitHub Actions research-only Run **41456187784**, Job **125313343881**, commit **adb416c584331cfcf71aa4b513ec5f653ee5b880**, succeeded; every stage including `Burn Traditional Chinese captions into research preview MP4` and `Video evidence QA and frame-based preview thumbnail` passed. Original 7-scene YunJhe +15% TTS, real WordBoundary, SRT 107 cues, hardburn H.264/AAC 1920x1080, and 409.699 s pass. Workflow artifact **13148605282**, `mvp10-20261013-20stock-research-preview-only`, 14,461,657 bytes zipped, downloaded and opened. Actual stored final file `daily-gainers-video/20261013/daily-gainers-20261013.mp4`, 13,521,421 bytes, SHA-256 **13b52100265d5a4705976be0d2153ce7ce47f5e9a6031943d2cabcec70e34bdc**, independently recomputed from downloaded bytes = exact match with final-burned-preview-qa.json. Artifact runner.json confirms Run ID, exact commit, research_only and youtube_upload_authorized:false.
+
+Actual independent Runner `caption-visual-qa.json` PASS with 3 real source-versus-burned frame samples, sampling subtitle area y705..808 vs progress y815..926 and Dashboard y200..619. `caption_in_frame_visible:true`, `progress_bar_unobstructed:true`, `dashboard_unobstructed:true`.
+- cue 1 t=1.349s, changed pixels [caption 13,758, progress 0, dashboard 0]
+- cue 54 t=209.182s, [22,515, 3, 3]
+- cue 107 t=408.397s, [10,189, 2, 7]
+All meet thresholds with no meaningful overlap. Independently decoded the artifact MP4 at these 3 timestamps and inspected composed contact sheet: subtitles readable above timeline, actual source-derived Dashboard cards and table shown, male VTuber at right, chapter progress unblocked, research-only watermark visible. This supersedes old `MarginV=300` invisible-caption state; latest code `MarginV=75` correct.
+
+**Scope caveat**: Visual media preview PASS is NOT complete user-goal MVP acceptance and NOT source/editorial `final/complete`. Full official Market Opening Master (TWSE market up/down/flat/limit-up, weighted index and volume, institutional totals), date-effective ordinary-stock certification, causal evidence editorial review and original A/B remain unverified; the current 20-stock candidate preview explicitly does not represent the whole TWSE market. Main, production schedules, Prompt B, YouTube upload authorization and publishing gate remain unchanged and locked. Prioritize verified official market opening/dashboard integration and original editorial/source A/B, not repeated TTS or subtitle tweaks without evidence.
+
+research_progress_status=PROGRESS
+media_research_preview_status=FULL_HARDBURN_DASHBOARD_VISUAL_QA_PASS_41456187784
+phase_status=MVP10-A INCOMPLETE
+next_action=integrate original official full-market opening claims with dated verified sources, preserve source/editorial release gates
+plan_changed=NO
+publication_authorized=false
