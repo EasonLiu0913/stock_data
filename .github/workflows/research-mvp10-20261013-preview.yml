@@ -56,11 +56,14 @@ jobs:
           node - <<'NODE'
           const fs=require('node:fs');
           const base='output/daily-gainers-video/20261013/';
+          const {OPENING_TEXT}=require('./scripts/daily_gainers_brand_opening');
           const plan=JSON.parse(fs.readFileSync(base+'plan.json'));
           const lock=JSON.parse(fs.readFileSync(base+'research-preview-boundary.json'));
           if(plan.scene_count!==7||plan.target_date!=='20261013'||
              plan.narration_chars<1100||plan.narration_chars>5500||
              plan.source_final_approved!==false||plan.publication_authorized!==false||
+             !plan.scenes[0].narration.startsWith(OPENING_TEXT)||
+             plan.scenes[0].narration.split(OPENING_TEXT).length!==2||
              lock.not_a_substitute_for_original_AB!==true||
              lock.youtube_upload_authorized!==false||lock.video_release_approved!==false||
              plan.scenes.some(s=>s.stock_codes.some(x=>['1312A','6645','6924','7730','9103'].includes(x))))
