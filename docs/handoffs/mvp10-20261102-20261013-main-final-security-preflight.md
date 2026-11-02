@@ -107,3 +107,27 @@ phase_status=MVP10-A INCOMPLETE
 next_action=verify newest isolated CI negative original video-validator result, then deliver 20-stock complete analysis and real media
 plan_changed=NO
 publication_authorized=false
+
+## 2026-11-02 Prompt A — real fixed-source JavaScript executions (not a claimed Actions CI pass)
+
+Repository routing, owner policy and active `goal-v3/MVP-10DAY-v1` were rechecked. The read-only public GitHub Actions URL and the GitHub API workflow-run endpoint were unavailable to the web tool; GitHub Connector `get_commit_combined_status` returned `statuses:[]` and PR-filtered workflow lookup returned no PR runs. **No new Actions run ID, job or artifact evidence was obtained. No new CI PASS is claimed.**
+
+New independent **executable V8-isolate smoke tests** in this turn, with the **exact research-branch source text fetched from GitHub** and actual frozen `f0fb2e44e00e3141a2673a4f6955af47768e5ce9` 20261013 source data, using in-memory Node filesystem/path adapters:
+1. Executed the original `stage_mvp10_20261013_candidates.js` function against all four genuine 25-row upstream files and genuine three TWSE classification CSVs. It produced **four 20-row staged files with identical 20-code order**, excluded codes **6645, 7730, 9103, 6924, 1312A**, `render_authorized=false`, and no false final status. This is function execution with mocked filesystem and stubbed hash (not a real SHA-256 receipt), not actual Node CLI or GitHub runner execution.
+2. Executed the exact original research `draft_mvp10_20261013_20stock_script.js` function with the real filtered raw/facts sources and the legitimate research staging flags. Generated **7 real populated scene texts**; narration lengths by scene `177,169,183,184,175,179,203`, total **1,270 chars**, all intended codes covered by staged facts. Result `editorial_approved=false`, `render_authorized=false`, no TTS, SRT or MP4 created.
+3. Executed the original unmodified `build_daily_gainers_market_summary.js` business function from pinned upstream main with stage payload and emulated filesystem/contract dependencies. Returned **status=`preliminary`**, `summary_stage=`news_theme`**, 20 breadth, `coverage.overall=partial`, news/facts complete, analysis missing. The original `validate_daily_gainers_market_summary.js` exported validator independently returned **true** on this generated summary. No `final` asserted, previous raw source missing in the emulated isolated checkout as expected.
+4. Executed the original unchanged research-branch `validate_daily_gainers_video_script.js` against preliminary test inputs using emulated filesystem. It correctly threw `summary not final/complete` (negative/fail-closed). The actual full 20-stock CI job will independently verify this exact failure.
+
+Durable CI regression added to `.github/workflows/research-mvp10-20261013-stage.yml`:
+- Commit `5a1e490d64007ac8ecbb09bdbbb98af9fff0e46e`: assert the authentic 20261013 draft contains exact **6834 margin decrease 1831 lots**, **1312 margin increase 9413 lots**, **6668 foreign net sell 845 lots**, **6505 trust net buy 15100 lots**, and no English `percent`, repetitive `百分之百分之` or stale `25檔強勢股` narration. Also assert original summary stage news_theme/news/facts complete, analysis missing and no source-lineage published analysis.
+- Corrected regex escaping in commit `a91eecce70a6f70624b3463938ccde55146b501c` so English `percent` token check matches words as intended.
+
+This is a substantive new **function-level runtime verification** of real source data plus stronger future CI acceptance, with an explicit distinction from a real Actions Job Log/ZIP and no fake source or release approval. No main/production/listener/YouTube writes, no original validator weakening, frozen B still ineligible.
+
+Next: Obtain GitHub runner evidence for the new research pipeline. Continue real editorial verification of the 20-stock claim source and advance to an accepted final/complete source bundle before original positive video validation or full 1080p Render-only with regenerated audio and captions. Owner's 2026-11-08 MVP goal remains at risk.
+
+research_progress_status=PROGRESS
+phase_status=MVP10-A INCOMPLETE
+next_action=verify actual research runner logs and complete source-certified final analysis for full 20-stock render
+plan_changed=NO
+publication_authorized=false
