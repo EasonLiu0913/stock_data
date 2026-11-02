@@ -8,6 +8,7 @@ on:
       - .github/workflows/research-mvp10-20261013-preview.yml
       - scripts/research_mvp10_20261013_preview_plan.js
       - scripts/synthesize_daily_gainers_tts.py
+      - tests/test_mvp10_research_tts_resume.py
       - tests/research_mvp10_20261013_preview_plan.test.js
       - scripts/research_mvp10_20261013_caption_display.js
       - tests/research_mvp10_20261013_caption_display.test.js
@@ -41,6 +42,7 @@ jobs:
             tests/research_mvp10_20261013_preview_plan.test.js
             tests/research_mvp10_20261013_caption_display.test.js
             tests/research_mvp10_verify_final_burn.test.js
+            tests/test_mvp10_research_tts_resume.py
             assets/daily-gainers-vtuber-sprite.webp
             data_research/m5/mvp10-20261013-research/20stock-analysis-candidate.json
             data_research/m5/mvp10-20261013-research/20stock-seven-scene-script-draft.json
@@ -95,6 +97,11 @@ jobs:
           sudo apt-get install -y --no-install-recommends ffmpeg librsvg2-bin fonts-noto-cjk espeak-ng
           python -m pip install --disable-pip-version-check --no-cache-dir --retries 3 edge-tts==7.3.1 mutagen pypinyin gTTS
           ffmpeg -version | head -1
+      - name: Offline simulate scene-3 TTS failure and exact resume
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m unittest discover -s tests -p 'test_mvp10_research_tts_resume.py' -v
       - name: Synthesize 7-scene real Chinese narration from research draft
         env:
           YOUTUBE_TTS_VOICE: zh-TW-YunJheNeural
