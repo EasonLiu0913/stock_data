@@ -112,7 +112,7 @@ function plan({root='.',date,previous=null,sourceCommit=null,validatorEvidence=n
   if(st.id==='render'){status='BLOCKED';reason='research_only_no_render_dispatch';}
   else if(deps.length){status='BLOCKED';reason='dependencies_not_verified:'+deps.join(',');}
   else if(bad){status=obj?.exists?'INVALID':'MISSING';reason=bad;}
-  else if(['news','ai_pending','ai','summary','script'].includes(st.id)){
+  else if(['facts','news','ai_pending','ai','summary','script'].includes(st.id)){
    // Original validation proof must match date, main SHA, stage file and exact raw bytes.
    const proof=validated[st.id];
    if(proof && proof.input===rel && proof.sha256===obj.sha256){
