@@ -30,6 +30,12 @@ test('renders seven 1080p research scene slides and explicit release false',()=>
   assert.equal(p.source_final_complete,false);
   assert.equal(p.not_a_substitute_for_original_AB,true);
   assert.ok(fs.readFileSync(path.join(r.out,'slides/01.svg'),'utf8').includes('1920 1080'));
+  const slide=fs.readFileSync(path.join(r.out,'slides/01.svg'),'utf8');
+  assert.ok(slide.includes('x="1100" y="24"'));
+  assert.ok(slide.includes('研究粗剪｜股別與編輯未驗收｜禁止發布'));
+  assert.ok(!slide.includes('y="987"'));
+  assert.ok(slide.includes('y="935"'));
+
   assert.throws(()=>make(x.root),/PREVIEW_OUTPUT_MUST_BE_NEW/);
  }finally{fs.rmSync(x.root,{recursive:true,force:true});}
 });
