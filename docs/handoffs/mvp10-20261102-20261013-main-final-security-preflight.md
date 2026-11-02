@@ -229,3 +229,24 @@ phase_status=MVP10-A INCOMPLETE
 next_action=verify actual preview Actions run logs and deliver evidence-backed media preview, then original final source acceptance
 plan_changed=NO
 publication_authorized=false
+
+## 2026-11-02 Prompt A — final caption-burned MP4 verification, no false preburn QA pass
+
+Remote main most recently observed at `7764a78b9b6de2a03de4f46663ddff8330c8f6e7`. The active goal is unchanged: `goal-v3/MVP-10DAY-v1`, A INCOMPLETE, B NOT_ELIGIBLE. GitHub Connector `fetch_commit_workflow_runs` returns PR runs only (`workflow_runs: []`) and `get_commit_combined_status` returns empty `statuses`; public Actions web URL also cannot be fetched. There is **NO verified push Run ID / Job Log / actual 1080p MP4**. Do not infer execution from research commits.
+
+Discovered an actual acceptance gap: `scripts/render_daily_gainers_video.js` wrote `qa.json` before the research workflow burned zh-TW SRT into the final MP4. Subsequent FFmpeg H.264 re-encode invalidates preburn size/codec/hash as final artifact evidence, while the previous research workflow only compared timing and SHA, not decoded final stream attributes and caption cue monotonicity.
+
+Fixed without touching original shared rendering/QA logic:
+- Research-only `scripts/research_mvp10_verify_final_burn.js`, commit `fefd7fbb534ccddbbcd3c1af52f2c2d81149b6df`. It examines **actual final burned MP4 via ffprobe** after `mv`: 1920x1080, H.264 / yuv420p, AAC audio, 300–600 seconds, size >= 1 MiB, duration continuity with original `qa.json` and burn receipt; SHA-256 must match previously recorded `burned_mp4_sha256` and differ from source. Also checks all SRT cues against modified display manifest and monotone timestamps bounded by final video, no spoken `百分之` or English `percent` in display, has Arabic display percentages; verifies that Edge TTS used exact `zh-TW-YunJheNeural` +15% with WordBoundary data for all seven scenes and that every source / publication / YouTube / original A/B flag remains locked. Outputs **new `final-burned-preview-qa.json`**, retaining `qa.json` separately and classifying decision only as `RESEARCH_PREVIEW_FINAL_MEDIA_VERIFIED_NOT_PUBLISHABLE`.
+- Research negative unit tests `tests/research_mvp10_verify_final_burn.test.js`, commit `e9c507669582cee435339128331c0f43ffe5070d`, reject missing final MP4 and altered publication permission.
+- Integration in existing isolated `.github/workflows/research-mvp10-20261013-preview.yml`, commit `e38e87411d55fe3c10c189e8713dedcc2a473bb2`: after burning and before declaring overall video QA, execute new tests and final verifier; preserve `final-burned-preview-qa.json` in artifact. Does not bypass/relax any frozen acceptance.
+- Independently executed the real remote final verifier function with in-memory mocked filesystem, SHA/ffprobe: valid mock 1920x1080 h264/AAC 420-second seven-cue source returned research-only decision and saved receipt; changing `plan.publication_authorized` to true caused `UNAPPROVED_SOURCE_OR_MEDIA_NOT_VERIFIABLE`. **This tests validator logic only; no real MP4 binary was supplied or rendered**.
+- Commit `0587b975826b807cb0dcc2f4396f266e3a22b251` adds explicit runner identity `output/research-mvp10-run-evidence/runner.json` to artifact and GitHub Actions job summary with the genuine host-supplied `GITHUB_RUN_ID`, attempt, `GITHUB_SHA`, branch and release flags. Avoids inventing IDs and makes actual execution audit visible when a GitHub job is found.
+
+Next high-priority action is not to add more governance gates: Obtain real latest research preview Actions Run/Job logs and files `final-burned-preview-qa.json`, MP4, SRT, `tts-duration-preflight.json`; fix actual failures, then complete 20-stock original positive final/complete editorial/source gate and production-quality visual Dashboard. User's 2026-11-08 private pilot goal remains at risk. No YouTube upload, credential access, main write, production schedules or publication lock changed, no Prompt B eligibility.
+
+research_progress_status=PROGRESS
+phase_status=MVP10-A INCOMPLETE
+next_action=observe actual research preview Actions run, final burned mp4 receipt and media; fix any real runner error
+plan_changed=NO
+publication_authorized=false
