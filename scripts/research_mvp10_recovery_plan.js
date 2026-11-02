@@ -133,6 +133,38 @@ function plan({root='.',date,previous=null,sourceCommit=null,validatorEvidence=n
   items.push(item);
   if(item.sha256)records[st.id]=item.sha256;
  }
+ // Agent task descriptors are non-executable proposals; the runner has NO credentials or dispatch rights.
+ const taskCatalog={
+  news:{output:STAGES.find(x=>x.id==='news').file(date),
+    required:['raw'],validator:'node scripts/validate_daily_gainers_news_analysis.js '+date,
+    work:'Investigate news, listed-company announcements and credible dated catalysts for every raw-listed stock. Distinguish no credible source from unfinished search; preserve source publication dates, uncertainty and 29-stock order.'},
+  ai_pending:{output:STAGES.find(x=>x.id==='ai_pending').file(date),
+    required:['raw','facts','news'],validator:'node scripts/validate_daily_gainers_ai_analysis.js '+date+' research_pending/daily-gainers-ai/'+date+'.json',
+    work:'Produce non-template stock-specific financial interpretations and risk notes from exact-date independently validated news and facts; never invent source URLs, claims or amounts.'},
+  script:{output:STAGES.find(x=>x.id==='script').file(date),
+    required:['summary','ai'],validator:'node scripts/validate_daily_gainers_video_script.js '+date,
+    work:'Produce one semantic source for natural Traditional Chinese TTS and numeric display captions; YunJhe +15%, approved table-led Dashboard, no stale-date fallback.'}
+ };
+ const agent_tasks=[];
+ for(const id of ['news','ai_pending','script']){
+  const st=items.find(x=>x.id===id),cat=taskCatalog[id];
+  if(st.status==='VERIFIED')continue;
+  const ready=cat.required.every(dep=>states[dep]==='VERIFIED');
+  const input_receipts=cat.required.map(dep=>{
+   const x=items.find(x=>x.id===dep);
+   return {id:dep,path:x.source_path,sha256:x.sha256,verified:x.status==='VERIFIED'};
+  });
+  agent_tasks.push({
+   id:date+':'+id,stage:id,output_path:cat.output,
+   status:ready?'READY_FOR_APPROVED_AGENT':'BLOCKED_DEPENDENCIES',
+   required_inputs:input_receipts,
+   source_main_sha:sourceCommit,validator:cat.validator,
+   task_instructions:cat.work,
+   agent_runtime_connected:false,auto_invoke_authorized:false,
+   writing_to_main_authorized:false,pages_deploy_authorized:false,
+   youtube_upload_authorized:false
+  });
+ }
  const first=items.find(x=>x.status!=='VERIFIED');
  return {schema_version:1,project_id:'daily-gainers-market-opening-end-to-end',
   goal:'goal-v3/MVP-10DAY-v1',target_date:date,source_commit:sourceCommit,
@@ -140,7 +172,7 @@ function plan({root='.',date,previous=null,sourceCommit=null,validatorEvidence=n
   read_only:true,publication_authorized:false,youtube_upload_authorized:false,
   main_write_authorized:false,pages_deploy_authorized:false,
   auto_dispatch_allowlist:APPROVED_AUTO_DISPATCH,blocked_publish_workflows:BLOCKED_PUBLISH_WORKFLOWS,
-  stages:items,source_sha256:records,phase_status:'MVP10-A INCOMPLETE',
+  stages:items,agent_tasks,source_sha256:records,phase_status:'MVP10-A INCOMPLETE',
   b_status:'NOT_ELIGIBLE',first_blocked_stage:first?.id||null,
   orchestration_status:first?'NOT_READY':'SOURCES_READY_RENDER_STILL_LOCKED',
   next_action:'RECHECK_ON_NEXT_SCHEDULE_OR_APPROVED_AGENT_ACTION',
