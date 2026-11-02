@@ -79,9 +79,33 @@ function reconcile(receipt,published){
     decision:'UNVERIFIED_COMPANY_EVENT_OR_CAUSATION_REQUIRES_REWRITE_OR_SOURCE_REVIEW'
   }));
   assert.equal(unresolved.length,8);
+  // Research editorial ledger only: build source-bounded factual claims for
+  // all 32 provisional candidates, not a publishable AI analysis or script.
+  const allowedByCode=new Map(allowed.map(x=>[x.code,x]));
+  const editorialLedger=provisional.map(original=>{
+    const code=String(original.code),fact=allowedByCode.get(code);
+    const factualSentence=fact?
+      `${fact.name} 2026 年 9 月營收為 ${fact.revenue_thousand_ntd.toLocaleString('en-US')} 千元，官方年增率 ${fact.year_on_year_percent.toFixed(2)}%。`:null;
+    return {
+      code,name:original.name,
+      claim_status:fact?'REVENUE_FACT_VERIFIED_CAUSE_UNKNOWN':'CAUSE_UNVERIFIED',
+      independently_verified_company_revenue_fact:factualSentence,
+      source_url:fact?fact.source_url:null,
+      supported_stock_price_cause:false,
+      future_editorial_action:fact?
+        'May mention exact issuer-reported revenue with month attribution; do not claim it moved stock price':
+        'Rewrite as clearly qualified observation or omit unsupported issuer-specific cause',
+      original_research_narrative_reused:false,
+      research_only:true
+    };
+  });
+  assert.equal(editorialLedger.length,32);
+  assert.equal(editorialLedger.filter(x=>x.independently_verified_company_revenue_fact).length,3);
   return {
     schema_version:1,target_trade_date:'20261008',source_period:'2026-09',
     research_only:true,primary_revenue_facts:allowed,
+    provisional_editorial_claim_ledger:editorialLedger,
+    independent_original_stock_causality_validation:false,
     unresolved_legacy_strong_claims:unresolved,
     reviewed_legacy_strong_claim_count:strong.length,
     provisional_ordinary_scope_certified:false,
