@@ -11,6 +11,8 @@ on:
       - tests/audit_mvp10_20261013_script_invalidation.test.js
       - scripts/draft_mvp10_20261013_20stock_script.js
       - tests/draft_mvp10_20261013_20stock_script.test.js
+      - scripts/draft_mvp10_20261013_20stock_analysis.js
+      - tests/draft_mvp10_20261013_20stock_analysis.test.js
 permissions:
   contents: read
 jobs:
@@ -34,6 +36,8 @@ jobs:
             tests/audit_mvp10_20261013_script_invalidation.test.js
             scripts/draft_mvp10_20261013_20stock_script.js
             tests/draft_mvp10_20261013_20stock_script.test.js
+            scripts/draft_mvp10_20261013_20stock_analysis.js
+            tests/draft_mvp10_20261013_20stock_analysis.test.js
             scripts/validate_daily_gainers_video_script.js
             scripts/daily_gainers_brand_opening.js
             scripts/daily_gainers_mvp10_ordinary_scope_gate.js
@@ -62,7 +66,7 @@ jobs:
         with:
           node-version: "24"
       - name: Test isolated staging failure cases
-        run: node --test research/tests/stage_mvp10_20261013_candidates.test.js research/tests/audit_mvp10_20261013_script_invalidation.test.js research/tests/draft_mvp10_20261013_20stock_script.test.js
+        run: node --test research/tests/stage_mvp10_20261013_candidates.test.js research/tests/audit_mvp10_20261013_script_invalidation.test.js research/tests/draft_mvp10_20261013_20stock_script.test.js research/tests/draft_mvp10_20261013_20stock_analysis.test.js
       - name: Stage 20 research stock rows from immutable published date source
         shell: bash
         run: |
@@ -82,6 +86,24 @@ jobs:
              s.original_tts_reusable!==false)||x.render_authorized!==false)
             throw Error('STALE_NARRATION_MEDIA_INVALIDATION_GATE_FAILED');
           console.log('ORIGINAL_25_STOCK_SCRIPT_INVALIDATED count_mentions_in_scenes=1,2; all_7_media=require_review');
+          NODE
+          mkdir -p "$RUNNER_TEMP/mvp10-20261013-20-analysis-review"
+          node research/scripts/draft_mvp10_20261013_20stock_analysis.js \
+            "$RUNNER_TEMP/mvp10-20261013-20-candidates" \
+            "$RUNNER_TEMP/mvp10-20261013-20-analysis-review"
+          node - <<'NODE'
+          const fs=require('node:fs'),path=require('node:path');
+          const dir=path.join(process.env.RUNNER_TEMP,'mvp10-20261013-20-analysis-review');
+          const x=JSON.parse(fs.readFileSync(path.join(dir,'20261013-20stock-analysis-candidate.json')));
+          const y=JSON.parse(fs.readFileSync(path.join(dir,'20261013-20stock-analysis-review.json')));
+          if(x.stock_count!==20||x.analyses.length!==20||
+             x.analyses.some(r=>r.cause_type!=='unknown'||r.evidence_strength!=='none'||
+               r.confidence!=='low'||r.sources.length!==0||r.independently_verified_causal_claim!==false)||
+             y.candidate_entries_without_causes!==20||y.original_25_stock_causality_transferred!==0||
+             x.editorial_approval!==false||x.summary_final!==false||
+             x.render_authorized!==false||x.publication_authorized!==false)
+            throw Error('UNVERIFIED_COMPANY_CAUSE_LEAKED_TO_20_STOCK_CANDIDATE');
+          console.log('20_STOCK_DETERMINISTIC_ANALYSIS_CANDIDATE_PASS causal_claims_promoted=0 final=false');
           NODE
           mkdir -p "$RUNNER_TEMP/mvp10-20261013-20-script-review"
           node research/scripts/draft_mvp10_20261013_20stock_script.js \
@@ -161,6 +183,7 @@ jobs:
             ${{ runner.temp }}/mvp10-20261013-original-media-invalidation.json
             ${{ runner.temp }}/mvp10-20261013-original-video-validator.log
             ${{ runner.temp }}/mvp10-20261013-20-script-review/
+            ${{ runner.temp }}/mvp10-20261013-20-analysis-review/
             ${{ runner.temp }}/mvp10-20261013-20-candidates/research-mvp10-20261013-staging.json
             ${{ runner.temp }}/mvp10-20261013-20-candidates/data_daily_gain_over_5/market-summary/20261013.json
           if-no-files-found: warn
