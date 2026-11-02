@@ -70,3 +70,22 @@ b_status: FROZEN_NOT_ELIGIBLE
 ci_acceptance_verified: false
 next_action: promptA (independently inspect real CI run; then identify an explicitly authorized safe source/agent producer)
 publication_authorized: false
+
+## 2026-11-03 01:29+08 — Agent task contracts; still no live invocation
+- Fresh main observed `713b92102e997709cc6fa8dfed283cc5fd6f68af`; unique active routing still `daily-gainers-market-opening-end-to-end`. Exact `research_pending/daily-gainers-ai/20261102.json` still 404.
+- GitHub `fetch_commit_workflow_runs` only covers pull-request runs. `get_commit_combined_status` returned empty classic status checks for research SHAs, **not** evidence of failed or absent Actions runs. Public GitHub Actions page was not accessible from current web tool. No real Run ID or 12-test PASS confirmed.
+- A new agent handoff contract has been implemented in `scripts/research_mvp10_recovery_plan.js` at commit `67270bd88b9afd084f6d9d4e84d60442f1e465f5`. Planner output now includes `agent_tasks` for `news`, `ai_pending`, `script`, each with exact target date, deterministic stage key, required verified input paths/SHA-256, observed main SHA, output file, original validator command, evidence-focused writing instructions and `auto_invoke_authorized:false`, `writing_to_main_authorized:false`, `pages_deploy_authorized:false`, `youtube_upload_authorized:false`.
+- News Agent task may be `READY_FOR_APPROVED_AGENT` when exact-date raw is ready; downstream AI must wait for genuinely validated Facts and News, and script for final summary plus AI. It is an **invocation envelope only**, not an AI runtime or an authorized dispatch. No hardcoded news claims, no generated fake AI files.
+- Research tests committed `4afa50e595a572e35ab01dbe985472c69a7fd374`: 12 authored tests including date-bound news task source receipt, dependency hold and all no-invoke flags; **test PASS still unverified**.
+- Read-only CI commit `6680df3446454414c3093c33b8bdcf2ddcab99c6` checks Agent tasks have no auto-invoke/Main/Pages/YouTube authorization in both first and second cycle. Existing `contents:read`, research-branch-only push and source attestation remain.
+- Next meaningful A work is **real CI evidence**, then review and implement a real no-release, narrowly authorized Agent execution boundary (with actual provider/credentials and audit) or a specific owner-approved event contract. No hidden automatic ChatGPT dialogue invocation is implied. Do not repeatedly add detached documentation or make artificially successful source files.
+
+research_progress_status: PROGRESS
+phase_status: MVP10-A INCOMPLETE
+ci_acceptance_verified: false
+current_blocker: no independently observed recovery CI or safe Agent execution provider; news/AI date-specific sources incomplete
+planned_research: inspect real CI Run/Job evidence; then wire task envelope to authorized safe agent provider with original source validators and no side effects
+next_action: promptA when a distinct executable CI or provider integration step is available
+plan_changed: NO
+publication_authorized: false
+youtube_upload_authorized: false
