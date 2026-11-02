@@ -1,0 +1,84 @@
+name: "[Research Only] MVP10 20261013 Published Source Scope Preflight"
+on:
+  push:
+    branches:
+      - research/daily-video-mvp10-a-20261029
+    paths:
+      - .github/workflows/research-mvp10-20261013-preflight.yml
+      - scripts/research_mvp10_20261013_preflight.js
+      - tests/research_mvp10_20261013_preflight.test.js
+permissions:
+  contents: read
+jobs:
+  source-preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Assert isolated research branch
+        run: |
+          test "$GITHUB_REF_NAME" = "research/daily-video-mvp10-a-20261029"
+          test "$GITHUB_REF_TYPE" = "branch"
+      - name: Checkout research-only checker
+        uses: actions/checkout@v4
+        with:
+          ref: research/daily-video-mvp10-a-20261029
+          path: research
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/research_mvp10_20261013_preflight.js
+            tests/research_mvp10_20261013_preflight.test.js
+          sparse-checkout-cone-mode: false
+      - name: Checkout immutable main-published date inputs
+        uses: actions/checkout@v4
+        with:
+          # 2026-11-02 published unified AI analysis and final summary for 20261013.
+          ref: f0fb2e44e00e3141a2673a4f6955af47768e5ce9
+          path: source
+          persist-credentials: false
+          sparse-checkout: |
+            data_daily_gain_over_5/20261013.json
+            data_daily_gain_over_5/analysis/20261013.json
+            data_daily_gain_over_5/analysis-ai/20261013.json
+            data_daily_gain_over_5/market-summary/20261013.json
+            video_scripts/daily-gainers/20261013.json
+            data_twse/twse_industry_Stock.csv
+            data_twse/twse_industry_InnovationBoard.csv
+            data_twse/twse_industry_TDR.csv
+          sparse-checkout-cone-mode: false
+      - name: Node test security and source-count negative cases
+        run: node --test research/tests/research_mvp10_20261013_preflight.test.js
+      - name: Independently audit real dated published inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p report
+          src_sha="$(git -C source rev-parse HEAD)"
+          test "$src_sha" = "f0fb2e44e00e3141a2673a4f6955af47768e5ce9"
+          set +e
+          node research/scripts/research_mvp10_20261013_preflight.js source 20261013 "$src_sha" > report/20261013-published-source-security-scope.json
+          exit_code=$?
+          set -e
+          # Expected block on known scope violations. A validator unexpectedly
+          # accepting incomplete ordinary scope must fail the research CI.
+          test "$exit_code" -eq 2
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const r=JSON.parse(fs.readFileSync('report/20261013-published-source-security-scope.json'));
+          const codes=r.excluded.map(x=>x.code).sort();
+          const expected=['1312A','6645','6924','7730','9103'].sort();
+          if(JSON.stringify(codes)!==JSON.stringify(expected) ||
+             r.raw_stock_count!==25||r.provisional_stock_count!==20||
+             r.original_summary_status!=='final'||r.original_summary_coverage!=='complete'||
+             r.render_authorized!==false||r.scope_snapshot_effective_on_trading_date_verified!==false)
+            throw Error('RESEARCH_SOURCE_SCOPE_EXPECTATION_DRIFT');
+          console.log('SOURCE_SCOPE_FAIL_CLOSED expected=5 excluded, candidate=20; original final is insufficient');
+          NODE
+          echo "20261013 source is final/complete at this frozen main SHA, but includes 5 nonordinary/special securities. Mandatory research preflight blocked render as designed. No media, production or upload." >> "$GITHUB_STEP_SUMMARY"
+      - name: Retain source scope evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mvp10-20261013-ordinary-scope-preflight
+          path: report/
+          if-no-files-found: warn
+          retention-days: 14
