@@ -74,7 +74,15 @@ function previousRuns(old,date){
   if(!STAGES.some(x=>x.id===row.id))continue;
   if(row.run_id!==null&&row.run_id!==undefined){
    assert(Number.isSafeInteger(row.run_id)&&row.run_id>0,'INVALID_PREVIOUS_RUN_ID');
-   map[row.id]={run_id:row.run_id,run_url:row.run_url||null};
+   // A prior run ID is a lookup hint, never verified workflow state by itself.
+   const observed=String(row.run_observed_status||'unknown');
+   assert(['unknown','queued','in_progress','completed'].includes(observed),'INVALID_PREVIOUS_RUN_STATUS');
+   const conclusion=String(row.run_conclusion||'unknown');
+   assert(['unknown','success','failure','cancelled','skipped','timed_out'].includes(conclusion),'INVALID_PREVIOUS_RUN_CONCLUSION');
+   if(observed!=='completed')assert(conclusion==='unknown','CONCLUSION_WITHOUT_COMPLETION');
+   map[row.id]={run_id:row.run_id,run_url:row.run_url||null,
+    run_observed_status:observed,run_conclusion:conclusion};
+
   }
  }
  return map;
@@ -128,8 +136,15 @@ function plan({root='.',date,previous=null,sourceCommit=null,validatorEvidence=n
   const item={id:st.id,source_path:rel,status,reason,dependencies:st.deps,
    sha256:obj?.sha256||null,run_id:run?.run_id||null,run_url:run?.run_url||null,
    dedup_key:date+':'+st.id,dispatch_authorized:false,dispatch_requested:false,
+   run_observed_status:run?.run_observed_status||'unknown',
+   run_conclusion:run?.run_conclusion||'unknown',
    next_action:status==='VERIFIED'?'continue':status==='BLOCKED'?'wait_for_dependencies':
-     status==='VALIDATION_REQUIRED'?'run_original_validator':'needs_approved_producer'};
+     status==='VALIDATION_REQUIRED'?'run_original_validator':
+     run?.run_id&&['queued','in_progress'].includes(run.run_observed_status)?
+       'check_existing_run_before_dispatch':
+     run?.run_id&&run.run_observed_status==='completed'?
+       'recheck_artifact_and_job_log_before_retry':
+       'needs_approved_producer'};
   items.push(item);
   if(item.sha256)records[st.id]=item.sha256;
  }
