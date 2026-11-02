@@ -287,3 +287,17 @@ phase_status=MVP10-A INCOMPLETE
 next_action=inspect actual 41440136258 job after completion and fix only witnessed failure
 plan_changed=NO
 publication_authorized=false
+
+## 2026-11-02 Prompt A — actual preview CI #14/16 and minimal scope-shadow fix
+
+A browser tab for `research-mvp10-20261013-preview.yml` showed 16 actual research runs. We fetched actual GitHub Actions Run `41424851204`, job `125208865395`, which failed *at Edge TTS scene 3* (all four attempts `NoAudioReceived`, scene 1 and 2 succeeded). Correctly bound that root cause to research-only checkpoint/resume `bacdaa68`, bounded retries `48dda8c0`, offline test `6f133d44` and CI `c1f204d8`, all preserving YunJhe+15% and WordBoundary requirements.
+
+Run **`41440136258`**, job **`125259748887`**, was then confirmed completed **failure**, but now earlier at the new offline fake scene-3 recovery test. Real GitHub Job Log pinpointed `UnboundLocalError: cannot access local variable 'hashlib' where it is not associated with a value`, file `scripts/synthesize_daily_gainers_tts.py`, in `record["audio_sha256"]=hashlib.sha256(...)`. Original legacy M5 code inside `main()` had `import hashlib`, which made `hashlib` a function-local identifier; the new research-only code had imported `hashlib` globally but accessed it earlier, causing Python scope shadowing. NOT another Edge failure. One-line research-branch fix at commit `c40f2f0018de1d2278b319c6f0b0c4665ec2d1e1` removes the redundant local import; legacy M5 hash checking retains global hashlib with identical semantics. Its workflow trigger already includes `scripts/synthesize_daily_gainers_tts.py`, so push starts the same isolated research CI without production side effects.
+
+Real new-run result and MP4 are **not yet verified** after this fix. Next: check newest `research-mvp10-20261013-preview.yml` run from browser / Actions and use `fetch_workflow_run_jobs` and `fetch_workflow_job_logs` to verify offline test, genuine completed YunJhe 7-scene MP3 manifest and MP4 QA. Do not repeatedly introduce new nonessential commits while CI runs (concurrency cancel-in-progress). Keep original paired A/B, main, secrets, uploads, schedules and release locks unchanged.
+
+research_progress_status=PROGRESS
+phase_status=MVP10-A INCOMPLETE
+next_action=check actual newest CI after c40f2f0 and repair witnessed failure only
+plan_changed=NO
+publication_authorized=false
