@@ -57,3 +57,16 @@ next_action: promptA after checking actual CI/new source evidence
 plan_changed: NO
 publication_authorized: false
 youtube_upload_authorized: false
+
+## Further hardening — facts original validation and 10-test CI
+- Commit `8504238bd887a5ea7133ec258a446d4f26d33f26` also marks **Facts** `VALIDATION_REQUIRED` until original `daily_gainers_ai_contract_cli.js assert-facts` proof matches exact target date, `main` SHA, file path and SHA-256. This closes a second source-flag-only readiness bypass.
+- Tests commit `8f9624a1aefb37fca2ada74bacc1c0395ff33cbb` now contains **10 committed tests**; intended real CI test PASS still not independently observed. Research CI label reconciled by `81695838c448b43971289bc1d4a8e23f0f1771dd`.
+- Original validator success is an existing schema/semantic gate, **not proof of truth of external reporting, date-effective listed ordinary stock classification or full owner editorial approval**. The status `VERIFIED` in the research preflight is explicitly scoped to exact bytes passing the invoked original validator; final production A/B remains false.
+- **No safe crawler or true ChatGPT Agent runtime connected.** State receipts and next-cycle verification exist only as research CI code. Never claim self-running daily or source repair dispatch in current research branch.
+
+research_progress_status: PROGRESS
+phase_status: MVP10-A INCOMPLETE
+b_status: FROZEN_NOT_ELIGIBLE
+ci_acceptance_verified: false
+next_action: promptA (independently inspect real CI run; then identify an explicitly authorized safe source/agent producer)
+publication_authorized: false
