@@ -179,3 +179,41 @@ test('untrusted raw or different date prevents ready Agent tasks',t=>{
  assert.equal(p.agent_tasks.find(x=>x.stage==='news').status,'BLOCKED_DEPENDENCIES');
  assert.equal(p.agent_tasks.some(x=>x.auto_invoke_authorized),false);
 });
+
+test('a queued or executing known run requires observation, never duplicate dispatch',t=>{
+ const f=fixture();t.after(f.cleanup);
+ const first=plan({root:f.root,date:DATE});
+ const news=first.stages.find(x=>x.id==='news');
+ news.run_id=45678;news.run_url='https://github.com/example/actions/runs/45678';
+ news.run_observed_status='in_progress';news.run_conclusion='unknown';
+ const second=plan({root:f.root,date:DATE,previous:first});
+ const n=second.stages.find(x=>x.id==='news');
+ assert.equal(n.status,'MISSING');
+ assert.equal(n.next_action,'check_existing_run_before_dispatch');
+ assert.equal(n.dispatch_requested,false);
+ assert.equal(n.run_id,45678);
+ assert.equal(n.run_observed_status,'in_progress');
+ news.run_observed_status='queued';
+ assert.equal(plan({root:f.root,date:DATE,previous:first}).stages.find(x=>x.id==='news').next_action,'check_existing_run_before_dispatch');
+});
+test('completed prior run is not proof of new valid output',t=>{
+ const f=fixture();t.after(f.cleanup);
+ const first=plan({root:f.root,date:DATE});
+ const news=first.stages.find(x=>x.id==='news');
+ news.run_id=56789;news.run_observed_status='completed';news.run_conclusion='success';
+ const second=plan({root:f.root,date:DATE,previous:first});
+ const n=second.stages.find(x=>x.id==='news');
+ assert.equal(n.status,'MISSING');
+ assert.equal(n.next_action,'recheck_artifact_and_job_log_before_retry');
+ assert.equal(n.dispatch_requested,false);
+ assert.equal(n.run_conclusion,'success');
+});
+test('invalid claimed observation status and premature conclusion fail closed',t=>{
+ const f=fixture();t.after(f.cleanup);
+ const first=plan({root:f.root,date:DATE});
+ const news=first.stages.find(x=>x.id==='news');
+ news.run_id=321;news.run_observed_status='invented';
+ assert.throws(()=>plan({root:f.root,date:DATE,previous:first}),/INVALID_PREVIOUS_RUN_STATUS/);
+ news.run_observed_status='queued';news.run_conclusion='success';
+ assert.throws(()=>plan({root:f.root,date:DATE,previous:first}),/CONCLUSION_WITHOUT_COMPLETION/);
+});
