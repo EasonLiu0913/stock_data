@@ -64,9 +64,11 @@ jobs:
           const fs=require('node:fs'),path=require('node:path');
           const d=JSON.parse(fs.readFileSync(path.join(process.env.RUNNER_TEMP,'mvp10-official-mops/20261008-primary-revenue-claim-boundary.json'),'utf8'));
           if(d.primary_revenue_facts.length!==3||d.unresolved_legacy_strong_claims.length!==8||
+            d.provisional_editorial_claim_ledger.length!==32||
+            d.provisional_editorial_claim_ledger.some(x=>x.supported_stock_price_cause!==false)||
             d.render_authorized!==false||d.summary_final!==false||d.publication_authorized!==false)
             throw Error('PREMATURE_FINAL_SOURCE_PROMOTION');
-          console.log('OFFICIAL_MOPS_FACT_BOUNDARY_PASS sources=3 unresolved_strong=8 render=false');
+          console.log('OFFICIAL_MOPS_FACT_BOUNDARY_PASS sources=3 provisional_stocks=32 unresolved_strong=8 render=false');
           NODE
           echo "3 primary revenue facts validated; 8 legacy strong claims need independent review. No price causation or final video authorized." >> "$GITHUB_STEP_SUMMARY"
       - name: Upload original HTTP receipt and any directly matching rows
