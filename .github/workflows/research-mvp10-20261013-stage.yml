@@ -34,6 +34,9 @@ jobs:
             tests/audit_mvp10_20261013_script_invalidation.test.js
             scripts/draft_mvp10_20261013_20stock_script.js
             tests/draft_mvp10_20261013_20stock_script.test.js
+            scripts/validate_daily_gainers_video_script.js
+            scripts/daily_gainers_brand_opening.js
+            scripts/daily_gainers_mvp10_ordinary_scope_gate.js
           sparse-checkout-cone-mode: false
       - uses: actions/checkout@v4
         with:
@@ -115,6 +118,25 @@ jobs:
             actual_summary_status:s.status,original_builder_applied:true,original_summary_validator_pass:true,
             render_authorized:false},null,2));
           NODE
+          # Prove the UNCHANGED original research-branch video validator still
+          # blocks the honest 20-stock draft whose summary remains preliminary.
+          mkdir -p scripts video_scripts/daily-gainers
+          cp "$GITHUB_WORKSPACE/research/scripts/validate_daily_gainers_video_script.js" scripts/
+          cp "$GITHUB_WORKSPACE/research/scripts/daily_gainers_brand_opening.js" scripts/
+          cp "$GITHUB_WORKSPACE/research/scripts/daily_gainers_mvp10_ordinary_scope_gate.js" scripts/
+          cp "$RUNNER_TEMP/mvp10-20261013-20-script-review/20261013-20stock-draft-script.json" \
+            video_scripts/daily-gainers/20261013.json
+          set +e
+          node scripts/validate_daily_gainers_video_script.js 20261013 > "$RUNNER_TEMP/mvp10-20261013-original-video-validator.log" 2>&1
+          result=$?
+          set -e
+          test "$result" -ne 0 || { echo "UNSAFE_ORIGINAL_VIDEO_VALIDATOR_ACCEPTED_PRELIMINARY_DRAFT" >&2; exit 1; }
+          grep -Fq 'summary not final/complete' "$RUNNER_TEMP/mvp10-20261013-original-video-validator.log" || {
+            cat "$RUNNER_TEMP/mvp10-20261013-original-video-validator.log" >&2
+            echo "ORIGINAL_VIDEO_VALIDATOR_FAILED_FOR_UNEXPECTED_REASON" >&2
+            exit 1
+          }
+          echo "ORIGINAL_VIDEO_VALIDATOR_FAIL_CLOSED=PASS reason=summary_not_final_complete"
           echo "20 coherent provisional input rows staged and original summary builder+validator applied. No fabricated final analysis or video claim; no MP4/YouTube." >> "$GITHUB_STEP_SUMMARY"
       - name: Retain auditable staged inputs and original summary
         if: always()
@@ -124,6 +146,7 @@ jobs:
           path: |
             ${{ runner.temp }}/mvp10-20261013-research-stage-result.json
             ${{ runner.temp }}/mvp10-20261013-original-media-invalidation.json
+            ${{ runner.temp }}/mvp10-20261013-original-video-validator.log
             ${{ runner.temp }}/mvp10-20261013-20-script-review/
             ${{ runner.temp }}/mvp10-20261013-20-candidates/research-mvp10-20261013-staging.json
             ${{ runner.temp }}/mvp10-20261013-20-candidates/data_daily_gain_over_5/market-summary/20261013.json
