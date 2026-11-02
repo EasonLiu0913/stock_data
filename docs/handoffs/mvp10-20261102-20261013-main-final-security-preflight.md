@@ -414,3 +414,27 @@ phase_status=MVP10-A INCOMPLETE
 next_action=extract specific official MI_INDEX breadth and BFI82U 20261013 total records via bounded parsing; add evidence validators without changing screenshot layout
 plan_changed=NO
 publication_authorized=false
+
+## 2026-11-02 Prompt A — TRUE MI_INDEX 20261013 stock breadth and source fail-closed CI PASS
+
+Actual persisted official-schema `data_twse_mi_index/20261013_twse_mi_index.json` was parsed in full via GitHub blob `99fe6857069978699de47f08a3f212868828e9e5`, `stat:OK`, `date:20261013`, `params.action:MI_INDEX`, `params.type:ALL`. Original table `漲跌證券數合計` fields `類型 | 整體市場 | 股票`:
+- **股票欄** up **269** (limit-up **13**), down **730** (limit-down **5**), flat **78**, no-trade **2**, no-reference **4**; total **1083**. This is the official MI_INDEX label `股票`, NOT an already-certified date-effective *ordinary-share-only* universe.
+- **整體市場欄** up **3,142** (limit-up **49**), down **13,037** (limit-down **122**), flat **535**, no-trade **16,810**, no-reference **3,625**; total **37,149**, exactly equals separate `每日收盤行情(全部)` table row count; contains non-stock products, must never be substituted for the stock column.
+- `大盤統計資訊` total all-securities turnover `1,201,861,264,942 TWD`; stock-securities subtotal `1,061,039,068,703 TWD`. Official-schema `發行量加權股價指數` row close **48,341.31**, change **-960.65** (-1.95%). Both reconcile with saved `data_twse_market_chart/market_chart.json` dated aggregate.
+- Different `actual_market_environment` analytics sample `n=1047` must NOT be converted into MI_INDEX full stock counts.
+- `data_twse_institutional_investors/20261013_twse_institutional_investors.json` is the daily **per-security net share count table** (`fields` 19, `data` 20,035), not the **BFI82U market-wide institution monetary aggregate**; avoid conflating quantities and TWD. Saved market-chart foreign `-165,290,508,085 TWD` differs from contemporaneously reported BFI82U rounded foreign `-1653.42 億元`; source/scope discrepancy remains, so **NO** official investment trust, dealer or three-entity combined amount has been certified.
+- Original HTTP response status/headers/URL/time and original authenticated receipt remain **MISSING** despite repository-stored TWSE-schema raw bytes.
+ 
+Research-only commits and real checks:
+- `08f1036833aac1e7d3980819f15cc06930408181` updates `data_research/m5/mvp10-20261013-research/market-opening-source-audit.json` to record both column scopes, raw blob identity, actual turnover and explicit unresolved institution gap.
+- `1d48a191f31a77789605aa6e23e72c0b98846dfe` adds strict `scripts/research_mvp10_verify_mi_index_breadth.js`; `5d46a17cbeead4f2342b49fc4be794b51c3eca83` adds actual source and negative cases (date, tamper, mistaken whole market, approval bypass); `063cceca667b2a0266d0a1ffd816f6e7b9c46625` adds tiny independent read-only GitHub Actions workflow `.github/workflows/research-mvp10-mi-index-evidence.yml` (**not** a video render or upload).
+- **Real GitHub Actions PASS**: Run `41468872124`, Job `125356869820`, all tests and source validation PASS; original actual raw file SHA-256 `a72d71b2fef85f9627174658a9ba345b00314b452721d6caeb4b6c868e0b36cc`. Evidence Artifact ID **13154921344**, `research-mvp10-20261013-mi-index-evidence-only`, approx 1,095 bytes zip, `source_http_receipt_verified:false`, `institutional_BFI82U_amounts_verified:false`, `publication_authorized:false`.
+- Last known full screenshot-locked Dashboard media CI **41463609661** PASS; visual ID `TAIWAN_STOCK_TABLE_LIST_20261102_V1` stays sole allowed. No changes to approved visual, video TTS, source narration, main, production schedule, owner A/B, Prompt B or YouTube credentials/unlock.
+
+Status: **partial official Market Opening facts verified from persisted original schema; complete Market Opening Master still NOT PASS.** Next necessary source work: obtain date-matched **BFI82U** original three institutional monetary rows + check different foreign-net scope; original TWSE HTTP receipt provenance and date-effective ordinary-stock classification; then only after original A/B and owner approvals integrate verified rows into approved table-led Dashboard, never a four-quadrant-only layout.
+
+research_progress_status=PROGRESS
+phase_status=MVP10-A INCOMPLETE
+next_action=BFI82U monetary source lineage/reconciliation in research-only branch; preserve dashboard and no-release gates
+plan_changed=NO
+publication_authorized=false
