@@ -14,7 +14,7 @@ function fixture(){
  ];
  const proof={};
  for(const [code,spec] of Object.entries(entries)){
-  pages[spec.domestic?0:1].target_rows[code]=[code,spec.name,String(spec.revenue)];
+  pages[spec.domestic?0:1].target_rows[code]=[code,spec.name,spec.revenue.toLocaleString('en-US'),'0','0','0',spec.yoy.toFixed(2),'0','0','0','fixture only'];
   proof[code]={verified:true,company_name:spec.name,revenue_thousand_ntd:spec.revenue,official_yoy_pct:spec.yoy};
  }
  const receipt={research_only:true,target_trade_date:'20261008',official_source_period:'ROC115/09',official_table_columns_verified:true,company_event_caused_market_movement_verified:false,render_authorized:false,publication_authorized:false,pages,official_column_proof:proof,official_revenue_claims_validated:Object.keys(entries)};
@@ -84,4 +84,19 @@ test('complete 32-row safe editorial ledger never promotes revenue into causatio
  assert.ok(r.provisional_editorial_claim_ledger.every(x=>x.original_research_narrative_reused===false));
  assert.equal(r.summary_final,false);
  assert.equal(r.render_authorized,false);
+});
+
+test('tampered official table amount, YOY and issuer fail even if proof says verified',()=>{
+ const amount=fixture();
+ amount.receipt.pages[0].target_rows['2305'][2]='196,566';
+ assert.throws(()=>reconcile(amount.receipt,amount.published),/revenue mismatch/);
+ const yoy=fixture();
+ yoy.receipt.pages[0].target_rows['3416'][6]='95.91';
+ assert.throws(()=>reconcile(yoy.receipt,yoy.published),/YOY mismatch/);
+ const issuer=fixture();
+ issuer.receipt.pages[1].target_rows['6672'][1]='其他公司';
+ assert.throws(()=>reconcile(issuer.receipt,issuer.published),/issuer mismatch/);
+ const short=fixture();
+ short.receipt.pages[0].target_rows['2305']=['2305','全友'];
+ assert.throws(()=>reconcile(short.receipt,short.published),/row incomplete/);
 });
