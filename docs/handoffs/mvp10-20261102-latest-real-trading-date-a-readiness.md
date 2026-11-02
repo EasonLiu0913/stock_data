@@ -83,3 +83,15 @@ next_action: promptA
 plan_changed: NO
 publication_authorized: false
 youtube_upload_authorized: false
+
+## 2026-11-03 — Upstream AI draft-producer lineage check
+- Exact current-main `research_pending/daily-gainers-ai/20261102.json` returned 404. Publisher `.github/workflows/publish-daily-gainers-ai-analysis.yml` expects a valid pending AI draft; cannot create this missing upstream draft by simply dispatching publish.
+- Historic commit `60e97ab4bc983fe7bf176b57c40377dbc6cc402c` introduced `scripts/synthesize_daily_gainers_ai_from_complete_facts.js`, but this script returns 404 from **current main**. Historic one-shot workflow `.github/workflows/one-shot-synthesize-daily-gainers-ai-20260827.yml` was introduced by `13585edbf7f3494c149fb4581d9987a7adaceba8` and **removed** by `b3e1ab8e96e1123b51a20a0aa5e17bdce701ee24`. Do NOT try to dispatch the removed workflow or assume that historic file is active.
+- Historic `analysis: research daily 5% news themes 20261013` commit `0d72df3e1a22ae04f5b85bdeae3ecc9b46aed5c5` wrote `data_daily_gain_over_5/analysis-news/20261013.json`, but this does NOT identify an existing safe 20261102 news crawler or confer publishing authorization.
+- Concrete unresolved dependency: existing **safe upstream news and AI synthesis producer** for 20261102 not verified on current main. Do not use empty commits to cause workflow triggers; inspect canonical current producer first, and stop when capability/side effects unknown.
+
+research_progress_status: PROGRESS
+phase_status: MVP10-A INCOMPLETE
+next_action: promptA only when a distinct upstream producer discovery or new dated source evidence is available; otherwise WAITING_SOURCE
+plan_changed: NO
+publication_authorized: false
