@@ -338,3 +338,21 @@ phase_status=MVP10-A INCOMPLETE
 next_action=review actual video preview and finish ordinary-share date certification plus source/editorial final gate; retain strict A/B
 plan_changed=NO
 publication_authorized=false
+
+## 2026-11-02 Prompt A — Dashboard hardburn visual QA: local 3-cue verification
+
+User-approved layout: hardburned captions visible in the dedicated band ABOVE chapter timeline; SRT/CC stays available but its optional placement must not constrain MP4 layout. Data Dashboard must remain visible. Current branch changes `ba8a0a99b594a92173d8372ecb032db8b93e2de8` and `adb416c584331cfcf71aa4b513ec5f653ee5b880` add independent ffmpeg frame-change checks and correct subtitle style to `FontSize=22,Alignment=2,MarginV=75,MarginL=12,MarginR=75`.
+
+Independent media check used actual previously downloaded 409.699-second Dashboard MP4 from successful **old-layout** Run `41452665223`, plus its exact 107-cue SRT. Locally re-encoded with the current subtitle style; source/burned grayscale pixel differences threshold >35, tested on regions caption (x150 y705 w1150 h104), timeline (x150 y815 w1150 h112), data table (x150 y200 w1150 h420).
+- cue 1 at **1.349s**: changed pixels [caption=13755, timeline=0, dashboard=1], PASS.
+- cue 54 at **209.182s**: [22512, 0, 0], PASS.
+- cue 107 at **408.397s**: extracted source 402s tail, re-based actual last SRT cues and applied same subtitle style; [10167, 0, 0], PASS. Last test is a local short-section reproduction, not the complete final new artifact.
+These prove the chosen subtitle layout shows visible captions without obscuring the two monitored regions at three positions on REAL previous Dashboard imagery. However, the available local full re-encode was interrupted after ~298 seconds by execution timeout, so DO NOT assert a new final 409.699-second MP4 produced locally. The **real new GitHub CI Run after `adb416c5` cannot currently be identified**, because the original GitHub Actions browser tab is no longer present; the GitHub connector commit-to-workflow lookup supports PR runs only. Thus final full CI and `caption-visual-qa.json` artifact remain **UNVERIFIED**, despite independent local three-cue successes. Do not invent Run ID, upload or grant source/editorial permission.
+
+Next action: obtain exact latest GitHub Actions Run ID for `research-mvp10-20261013-preview.yml` after commit `adb416c5`, then fetch Jobs, Job Log and Artifact; if visual QA FAIL use the measured changed-pixel counts to minimally repair. Original A/B and source approval still incomplete, all release/YouTube/main locks stay closed.
+
+research_progress_status=PROGRESS
+phase_status=MVP10-A INCOMPLETE
+new_dashboard_caption_visual_ci=UNVERIFIED
+next_action=fetch newest run and caption-visual-qa.json
+publication_authorized=false
