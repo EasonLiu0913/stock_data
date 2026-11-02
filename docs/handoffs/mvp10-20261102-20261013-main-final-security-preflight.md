@@ -375,3 +375,23 @@ phase_status=MVP10-A INCOMPLETE
 next_action=integrate original official full-market opening claims with dated verified sources, preserve source/editorial release gates
 plan_changed=NO
 publication_authorized=false
+
+## 2026-11-02 Prompt A — owner locks Nov 2 screenshot stock-list Dashboard as only visual design
+
+Owner explicitly approves the screenshots captured at ~22:28 on 2026-11-02 of the 20261013 research video: dark navy 1920x1080 Dashboard with contextual top summary tiles and **prominent full-width multi-stock TABLE showing stock/code, percentage rise, foreign net lots, investment-trust net lots, margin change, broker net lots and volume ratio**. Presenter at right, burned-in zh-TW captions above bottom chapter/timeline, independent optional SRT backup. This visual system is the ONLY owner-approved design for all future market opening, thematic analysis and individual stock segments. Owner rejects all former standalone four-quadrant market dashboards and old title/bullet-only scenes. The screenshot top summary tiles remain acceptable SECONDARY elements within this ONE table-led design; DO NOT confuse these with prior standalone four-grid Dashboard. Do not preserve old aesthetics as compatibility, alternate layouts or fallbacks. Relevant screenshots supplied in chat on 2026-11-02, not assumed uploaded to repo.
+
+Research-only branch implementation:
+- `a9ff419b096b7e53dd835f0567c3b06209b316b1`: mark sole Dashboard renderer `scripts/research_mvp10_20261013_dashboard.js` with `OWNER_LOCKED_DASHBOARD_VERSION='TAIWAN_STOCK_TABLE_LIST_20261102_V1'`. Embed version attribute in every output SVG, preserving approved screenshot's exact geometry, four contextual summary cards and central required multi-stock table.
+- `bea1273a40777164ec550036b986953fe0608593`: `scripts/research_mvp10_20261013_preview_plan.js` writes `dashboard_layout_version` into plan and seven scenes, and strictly refuses to generate any scene lacking the approved renderer version and ALL stock table headers. This is the singular 7-scene renderer, not an alternate style.
+- `68df69b4d7f4fb6e272348d52ea6140a47e54db4`: expand `tests/research_mvp10_20261013_preview_plan.test.js`: all seven scene slides require version marker and table columns; multi-stock scene includes three distinct rows; opening also contains table, flags 20 candidates as NOT all-market; invalid code rejected.
+- Independently executed exact fetched research plan module in-memory against actual persisted 20261013 20-stock candidate JSON; seven SVGs rendered; all passed version marker, table columns, reserved caption lane; actual table rows per scene [7,7,1,3,2,2,6]; `publication_authorized:false`.
+- Changes on research branch only; no edits to `main`, actual uploader, publishing locks, existing A/B or production scheduler. Research replay CI outcome for these latest commits not yet independently obtained; static/in-memory generator PASS does not imply new video runner PASS. Last known successful pre-lock video remains Run `41456187784`.
+
+This user directive is a visual acceptance decision (plan changed YES for aesthetics, NO release-gate change); full production implementation on main still requires the frozen original A/B and explicit owner authorization. Older Dashboard source files on main are not deleted or modified by this research-only operation; promotion must remove/disable old render paths after independent authorized approval, rather than silently deleting production code.
+
+research_progress_status=PROGRESS
+dashboard_visual_design_owner_locked=TAIWAN_STOCK_TABLE_LIST_20261102_V1
+phase_status=MVP10-A INCOMPLETE
+next_action=verify latest preview CI for table-lock regression; continue dated official market opening evidence without changing approved visual layout
+plan_changed=YES_visual_only
+publication_authorized=false
