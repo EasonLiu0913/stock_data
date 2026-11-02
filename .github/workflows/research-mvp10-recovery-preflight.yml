@@ -1,0 +1,88 @@
+name: "[Research Only] MVP10 dated recovery preflight"
+# This workflow NEVER dispatches a crawler, Pages, video or upload workflow.
+on:
+  push:
+    branches:
+      - research/daily-video-mvp10-a-20261029
+    paths:
+      - scripts/research_mvp10_recovery_plan.js
+      - tests/research_mvp10_recovery_plan.test.js
+      - .github/workflows/research-mvp10-recovery-preflight.yml
+permissions:
+  contents: read
+concurrency:
+  group: research-mvp10-recovery-preflight
+  cancel-in-progress: true
+jobs:
+  research-recovery-preflight:
+    if: github.ref == 'refs/heads/research/daily-video-mvp10-a-20261029'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Refuse production branch and publication context
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = "research/daily-video-mvp10-a-20261029"
+          test "$GITHUB_REF_TYPE" = branch
+      - name: Checkout research-only planner and tests
+        uses: actions/checkout@v4
+        with:
+          ref: research/daily-video-mvp10-a-20261029
+          path: research
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/research_mvp10_recovery_plan.js
+            tests/research_mvp10_recovery_plan.test.js
+          sparse-checkout-cone-mode: false
+      - name: Checkout read-only latest main source inputs
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: inputs
+          persist-credentials: false
+          sparse-checkout: |
+            data_daily_gain_over_5
+            research_pending/daily-gainers-ai
+            video_scripts/daily-gainers
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Run six offline negative and resumption tests
+        working-directory: research
+        run: |
+          set -euo pipefail
+          node --check scripts/research_mvp10_recovery_plan.js
+          node --test tests/research_mvp10_recovery_plan.test.js
+      - name: Inspect actual Nov 2 source dates, stages and missing dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p output/mvp10-recovery
+          git -C inputs rev-parse HEAD > output/mvp10-recovery/source-main-sha.txt
+          node research/scripts/research_mvp10_recovery_plan.js \
+            --date 20261102 --root inputs \
+            --source-commit "$(cat output/mvp10-recovery/source-main-sha.txt)" \
+            --output output/mvp10-recovery/20261102-plan.json
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const p=JSON.parse(fs.readFileSync('output/mvp10-recovery/20261102-plan.json','utf8'));
+          if(p.target_date!=='20261102'||p.auto_dispatch_allowlist.length!==0||
+             p.stages.some(s=>s.dispatch_requested)||p.publication_authorized!==false||
+             p.youtube_upload_authorized!==false||p.pages_deploy_authorized!==false||
+             p.dashboard_version!=='TAIWAN_STOCK_TABLE_LIST_20261102_V1')
+            throw Error('RESEARCH_SAFETY_GATE_FAIL');
+          console.log('RECOVERY_PREFLIGHT_ONLY_PASS',JSON.stringify({
+            main:p.source_commit,stage_statuses:p.stages.map(s=>[s.id,s.status]),
+            requested_dispatches:0,first_blocked_stage:p.first_blocked_stage
+          }));
+          NODE
+      - name: Preserve actual dated recovery plan or failure receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: research-mvp10-20261102-recovery-preflight-only
+          path: output/mvp10-recovery/
+          if-no-files-found: warn
+          retention-days: 14
