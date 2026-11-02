@@ -87,3 +87,23 @@ research_progress_status=PROGRESS
 phase_status=MVP10-A INCOMPLETE
 next_action=validate actual seven-scene draft CI then source-certified final analysis and full isolated render
 publication_authorized=false
+
+## 2026-11-02 Prompt A — original full-video validator fail-closed execution wired
+
+The latest globally active project remains `daily-gainers-market-opening-end-to-end`, latest known main `79df47fbdd08ea8351e12329bc0c1bbb8d375208`. The 20261013 20-candidate staging and 7-scene research draft were already committed but their actual push CI status cannot be discovered through the available GitHub connector (only PR-triggered workflow run listing, empty combined statuses). Current web access to the GitHub Actions workflow URL returned DisabledError. These constraints MUST NOT be interpreted as run failure/success.
+
+An actual functional verification gap was closed in existing research-only `.github/workflows/research-mvp10-20261013-stage.yml` via commit `759a6c36e739954dba6946847078796c632065d4`:
+- Sparse checkout includes the **UNCHANGED ORIGINAL** research-branch `scripts/validate_daily_gainers_video_script.js` with its brand opening and DR security gate dependencies. All copied into the temporary 20-candidate workspace only.
+- The generated seven-scene draft JSON is staged in temp `video_scripts/daily-gainers/20261013.json`. The original market-summary builder and original summary validator are invoked first, intentionally generating an unapproved `preliminary` market summary for 20 stocks.
+- The original video script validator is then actually executed as a shell command and **must exit nonzero with exact message `summary not final/complete`**. An accidental PASS, or failure for an unexpected reason, fails the CI Job. Captures raw validator stderr/stdout in the retained artifact `mvp10-20261013-original-video-validator.log`.
+- Research workflow remains read-only, pinned date/branch, no production, no YouTube, no main mutation, no release permission.
+
+The modified workflow was independently fetched from remote GitHub, blob SHA `49285173efd6a351320c96bfc0f99bf7ead7c164`; its three original validator dependency paths, expected rejection message and retained log path were text-verified. **New CI run/job/log actual execution is still UNCONFIRMED; do not claim validator execution PASS until the runner evidence is available.**
+
+Next actual delivery step after verifying this CI: source/editorial certification of the 20-stock coherent analysis, original strict `final/complete` market summary, then actual validator acceptance with the rewritten scene script and a complete isolated 1080p Render-only MP4/SRT/thumbnail/manifest/QA. The existing full film covers 25 mixed securities and cannot substitute. Freeze B and YouTube until owner action.
+
+research_progress_status=PROGRESS
+phase_status=MVP10-A INCOMPLETE
+next_action=verify newest isolated CI negative original video-validator result, then deliver 20-stock complete analysis and real media
+plan_changed=NO
+publication_authorized=false
