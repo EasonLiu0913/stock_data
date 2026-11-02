@@ -45,7 +45,8 @@ jobs:
           spec.loader.exec_module(m)
           types = list(m.REQUIRED)
           nets = [2, -1, 3, -4, 0, 0]
-          data = [[t, str(max(n, 0)), str(max(-n, 0)), str(n)] for t, n in zip(types, nets)]\n          data[-1] = ["合計", "5", "5", "0"]
+          data = [[t, str(max(n, 0)), str(max(-n, 0)), str(n)] for t, n in zip(types, nets)]
+          data[-1] = ["合計", "5", "5", "0"]
           sample = {"stat":"OK", "title":"115年10月13日 三大法人買賣金額統計表",
                     "fields":["單位名稱","買進金額","賣出金額","買賣差額"], "data":data}
           assert m.validate(json.dumps(sample).encode())["rows"]["合計"]["net_twd"] == 0
