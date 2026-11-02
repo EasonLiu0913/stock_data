@@ -51,7 +51,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Run ten offline negative and resumption tests
+      - name: Run twelve offline negative and resumption tests
         working-directory: research
         run: |
           set -euo pipefail
@@ -73,7 +73,10 @@ jobs:
           if(p.target_date!=='20261102'||p.auto_dispatch_allowlist.length!==0||
              p.stages.some(s=>s.dispatch_requested)||p.publication_authorized!==false||
              p.youtube_upload_authorized!==false||p.pages_deploy_authorized!==false||
-             p.dashboard_version!=='TAIWAN_STOCK_TABLE_LIST_20261102_V1')
+             p.dashboard_version!=='TAIWAN_STOCK_TABLE_LIST_20261102_V1'||
+             !Array.isArray(p.agent_tasks)||
+             p.agent_tasks.some(t=>t.auto_invoke_authorized||t.writing_to_main_authorized||
+               t.pages_deploy_authorized||t.youtube_upload_authorized))
             throw Error('RESEARCH_SAFETY_GATE_FAIL');
           console.log('RECOVERY_PREFLIGHT_ONLY_PASS',JSON.stringify({
             main:p.source_commit,stage_statuses:p.stages.map(s=>[s.id,s.status]),
@@ -136,7 +139,9 @@ jobs:
           const p=JSON.parse(fs.readFileSync('output/mvp10-recovery/20261102-rechecked-plan.json'));
           if(p.auto_dispatch_allowlist.length!==0||p.stages.some(x=>x.dispatch_requested)||
              p.publication_authorized!==false||p.youtube_upload_authorized!==false||
-             p.pages_deploy_authorized!==false||p.stages.find(x=>x.id==='render').status!=='BLOCKED')
+             p.pages_deploy_authorized!==false||p.stages.find(x=>x.id==='render').status!=='BLOCKED'||
+             p.agent_tasks.some(t=>t.auto_invoke_authorized||t.writing_to_main_authorized||
+               t.pages_deploy_authorized||t.youtube_upload_authorized))
             throw Error('RECHECK_MUST_REMAIN_NO_RELEASE');
           console.log('RECOVERY_SECOND_CYCLE_PASS',JSON.stringify({
              first_blocked:p.first_blocked_stage,
