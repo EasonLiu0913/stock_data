@@ -34,7 +34,13 @@ test('renders seven 1080p research scene slides and explicit release false',()=>
   assert.ok(slide.includes('x="1100" y="24"'));
   assert.ok(slide.includes('研究粗剪｜股別與編輯未驗收｜禁止發布'));
   assert.ok(!slide.includes('y="987"'));
-  assert.ok(slide.includes('y="935"'));
+  assert.ok(slide.includes('y="704"'), 'on-frame burn captions have a distinct area above progress');
+  assert.ok(slide.includes('y="929"'), 'footnote stays under progress overlay');
+  assert.ok(slide.includes('外資 張'), 'stock-level institutional data column visible');
+  assert.ok(slide.includes('融資 張'), 'margin data column visible');
+  assert.ok(slide.includes('分點 張'), 'broker-flow data column visible');
+  assert.ok(slide.includes('20 檔'), 'opening cards show research-universe size');
+  assert.ok(slide.includes('研究候選'), 'never mislabel candidate count as all-market count');
 
   assert.throws(()=>make(x.root),/PREVIEW_OUTPUT_MUST_BE_NEW/);
  }finally{fs.rmSync(x.root,{recursive:true,force:true});}
