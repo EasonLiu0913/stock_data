@@ -104,6 +104,41 @@ jobs:
         run: |
           set -euo pipefail
           python scripts/build_daily_gainers_srt.py output/daily-gainers-video/20261013/plan.json
+      - name: Burn Traditional Chinese captions into research preview MP4
+        shell: bash
+        run: |
+          set -euo pipefail
+          folder=output/daily-gainers-video/20261013
+          input="$folder/daily-gainers-20261013.mp4"
+          srt="$folder/daily-gainers-20261013.zh-TW.srt"
+          burned="$folder/preview-captions-burned.mp4"
+          test -s "$input"
+          test -s "$srt"
+          ffmpeg -y -loglevel error -i "$input" -vf "subtitles=$srt" -c:v libx264 -preset veryfast -crf 23 -pix_fmt yuv420p -c:a copy "$burned"
+          test -s "$burned"
+          python - <<'PY'
+          import json, hashlib, subprocess
+          from pathlib import Path
+          p=Path('output/daily-gainers-video/20261013')
+          orig=p/'daily-gainers-20261013.mp4'
+          burned=p/'preview-captions-burned.mp4'
+          def duration(v):
+              return float(subprocess.check_output(['ffprobe','-v','error','-show_entries','format=duration','-of','default=noprint_wrappers=1:nokey=1',str(v)],text=True).strip())
+          a,b=duration(orig),duration(burned)
+          if abs(a-b)>0.25 or b<300 or b>600:
+              raise RuntimeError('SUBTITLE_BURN_CHANGED_VIDEO_DURATION')
+          d={'target_date':'20261013','research_only':True,'caption_language':'zh-TW',
+             'burn_command':'ffmpeg subtitles filter','srt_file':'daily-gainers-20261013.zh-TW.srt',
+             'source_mp4_sha256':hashlib.sha256(orig.read_bytes()).hexdigest(),
+             'burned_mp4_sha256':hashlib.sha256(burned.read_bytes()).hexdigest(),
+             'duration_seconds':round(b,3),'source_final_approved':False,
+             'publication_authorized':False,'youtube_upload_authorized':False}
+          if d['source_mp4_sha256']==d['burned_mp4_sha256']:
+              raise RuntimeError('SUBTITLE_BURN_NO_VIDEO_CHANGE')
+          (p/'subtitle-burn-evidence.json').write_text(json.dumps(d,indent=2)+'\n')
+          print('RESEARCH_PREVIEW_CAPTIONS_BURNED',d['duration_seconds'])
+          PY
+          mv "$burned" "$input"
       - name: Video evidence QA and frame-based preview thumbnail
         shell: bash
         run: |
@@ -114,6 +149,7 @@ jobs:
           test -s "$folder/daily-gainers-20261013.zh-TW.srt"
           test -s "$folder/qa.json"
           test -s "$folder/tts-manifest.json"
+          test -s "$folder/subtitle-burn-evidence.json"
           test -s "$folder/lipsync.json"
           ffmpeg -y -loglevel error -ss 2 -i "$video" -frames:v 1 "$folder/research-preview-thumbnail.jpg"
           python - <<'PY'
@@ -143,6 +179,7 @@ jobs:
             output/daily-gainers-video/20261013/lipsync.json
             output/daily-gainers-video/20261013/render-timings.json
             output/daily-gainers-video/20261013/subtitle-manifest.json
+            output/daily-gainers-video/20261013/subtitle-burn-evidence.json
             output/daily-gainers-video/20261013/qa.json
             output/daily-gainers-video/20261013/research-preview-thumbnail.jpg
             output/daily-gainers-video/20261013/daily-gainers-20261013.zh-TW.srt
