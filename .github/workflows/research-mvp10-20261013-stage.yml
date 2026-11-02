@@ -99,6 +99,16 @@ jobs:
              x.editorial_approved!==false||x.render_authorized!==false||
              r.regenerated_mp4_exists!==false||r.publication_authorized!==false)
             throw Error('DRAFT_DID_NOT_RESPECT_SOURCE_OR_REVIEW_BOUNDARY');
+          const scenes=x.scenes;
+          const joined=scenes.map(s=>s.narration).join(' ');
+          if(/\\bpercent\\b/i.test(joined)||scenes.some(s=>s.narration.includes('25檔強勢股'))||
+             !scenes[2].narration.includes('融資減少1831張')||
+             !scenes[3].narration.includes('融資增加9413張')||
+             !scenes[4].narration.includes('賣超845張')||
+             !scenes[1].narration.includes('投信買超15100張')||
+             joined.includes('百分之百分之'))
+            throw Error('ACTUAL_DATED_NUMERIC_NARRATION_DRIFT');
+          console.log('DRAFT_DATED_FACTS_INVARIANTS verified=6834_margin,1312_margin,6668_foreign,6505_trust; percent_chinese_only=true');
           console.log('RESEARCH_SEVEN_SCENE_DRAFT_GENERATED source_count=20 media=false');
           NODE
           cd "$RUNNER_TEMP/mvp10-20261013-20-candidates"
@@ -112,7 +122,10 @@ jobs:
           if(m.provisional_stock_count!==20||JSON.stringify(m.excluded_original_codes.sort())!==JSON.stringify(expected)||
              m.analysis_final_rebuilt!==false||m.render_authorized!==false||m.publication_authorized!==false||
              s.status!=='preliminary'||s.coverage?.overall==='complete'||
-             s.breadth.stock_count!==20)
+             s.breadth.stock_count!==20||
+             s.summary_stage!=='news_theme'||s.coverage?.news!=='complete'||
+             s.coverage?.facts!=='complete'||s.coverage?.analysis!=='missing'||
+             s.source_lineage?.analysis?.available!==false)
             throw Error('RESEARCH_STAGING_PREMATURE_FINAL_OR_STOCK_COUNT_MISMATCH');
           console.log(JSON.stringify({decision:m.decision,source_rows:m.provisional_stock_count,
             actual_summary_status:s.status,original_builder_applied:true,original_summary_validator_pass:true,
