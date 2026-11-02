@@ -79,7 +79,7 @@ test('complete 32-row safe editorial ledger never promotes revenue into causatio
  const sources=r.provisional_editorial_claim_ledger.filter(x=>x.independently_verified_company_revenue_fact);
  assert.equal(sources.length,3);
  assert.equal(sources.find(x=>x.code==='2305').name,'全友');
- assert.match(sources.find(x=>x.code==='3416').independently_verified_company_revenue_fact,/95\\.90%/);
+ assert.ok(sources.find(x=>x.code==='3416').independently_verified_company_revenue_fact.includes('95.90%'));
  assert.ok(r.provisional_editorial_claim_ledger.every(x=>x.supported_stock_price_cause===false));
  assert.ok(r.provisional_editorial_claim_ledger.every(x=>x.original_research_narrative_reused===false));
  assert.equal(r.summary_final,false);
