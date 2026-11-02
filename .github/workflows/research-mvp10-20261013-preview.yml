@@ -10,6 +10,8 @@ on:
       - tests/research_mvp10_20261013_preview_plan.test.js
       - scripts/research_mvp10_20261013_caption_display.js
       - tests/research_mvp10_20261013_caption_display.test.js
+      - scripts/research_mvp10_verify_final_burn.js
+      - tests/research_mvp10_verify_final_burn.test.js
       - data_research/m5/mvp10-20261013-research/20stock-analysis-candidate.json
       - data_research/m5/mvp10-20261013-research/20stock-seven-scene-script-draft.json
 permissions:
@@ -37,6 +39,7 @@ jobs:
             scripts
             tests/research_mvp10_20261013_preview_plan.test.js
             tests/research_mvp10_20261013_caption_display.test.js
+            tests/research_mvp10_verify_final_burn.test.js
             assets/daily-gainers-vtuber-sprite.webp
             data_research/m5/mvp10-20261013-research/20stock-analysis-candidate.json
             data_research/m5/mvp10-20261013-research/20stock-seven-scene-script-draft.json
@@ -201,6 +204,9 @@ jobs:
           test -s "$folder/tts-manifest.json"
           test -s "$folder/subtitle-burn-evidence.json"
           test -s "$folder/lipsync.json"
+          node --test tests/research_mvp10_verify_final_burn.test.js
+          node scripts/research_mvp10_verify_final_burn.js "$folder"
+          test -s "$folder/final-burned-preview-qa.json"
           ffmpeg -y -loglevel error -ss 2 -i "$video" -frames:v 1 "$folder/research-preview-thumbnail.jpg"
           python - <<'PY'
           import json
@@ -234,6 +240,7 @@ jobs:
             output/daily-gainers-video/20261013/research-caption-display-evidence.json
             output/daily-gainers-video/20261013/subtitle-burn-evidence.json
             output/daily-gainers-video/20261013/qa.json
+            output/daily-gainers-video/20261013/final-burned-preview-qa.json
             output/daily-gainers-video/20261013/research-preview-thumbnail.jpg
             output/daily-gainers-video/20261013/daily-gainers-20261013.zh-TW.srt
             output/daily-gainers-video/20261013/daily-gainers-20261013.mp4
