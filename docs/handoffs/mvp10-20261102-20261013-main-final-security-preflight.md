@@ -210,3 +210,22 @@ phase_status=MVP10-A INCOMPLETE
 next_action=check real 20-stock full preview workflow MP3/FFmpeg/SRT evidence then promote only after original final source approval
 plan_changed=NO
 publication_authorized=false
+
+## 2026-11-02 Prompt A — visual subtitle safety corrected with actual FFmpeg syntax smoke test
+
+Most recent known remote `main` `3077d25c814bb03bc456d23b227814f034224d59`; active frozen `goal-v3/MVP-10DAY-v1`, Prompt A incomplete, B not eligible. Actual research branch preview workflow push-run still cannot be looked up using current connector: PR-filtered runs returned none, commit combined status `statuses:[]`; public web Actions fetch yielded DisabledError. No verified CI Run ID, 1080p MP4, or QA success is claimed.
+
+This turn verified the existing `research-mvp10-20261013-preview.yml` media pipeline and found a **real visual layout conflict**: the nonpublication watermark was located at `y=987`, the same bottom area required for burned SRT text, while progress bar occupies 815–928. To protect both captions and release warning, in-place fixes (research branch only):
+- `d9b6f6c7c8ae45af48d63bd2a3b7b1f3b7189e0a` changes `scripts/research_mvp10_20261013_preview_plan.js`: moves the prominently visible `研究粗剪｜股別與編輯未驗收｜禁止發布` warning into a top-right orange header banner `x=1100,y=24`, with subtitles now free to occupy lower 145 pixels below the progress UI. The bottom field remains reserved for subtitles, and the warning cannot be obscured by SRT. It preserves the seven-scene template and V4 once-only intro.
+- `5aa5beb803f6826bf579368509747874eafed4ac` modifies only the research preview `ffmpeg -vf subtitles` invocation: `force_style='FontName=Noto Sans CJK TC,FontSize=34,Alignment=2,MarginV=34,Outline=2,Shadow=0'`, keeping burned center-aligned zh-TW captions in the bottom caption-safe strip. Original renderer / original strict approval workflow remain untouched.
+- `d028796cf206b48317c34e8e8a84b34a53366ec2` adds research regression ensuring top banner marker remains, previous bottom overlapping warning absent and reserve bottom caption area.
+- Re-fetched committed source and executed original preview-plan JavaScript function against **actual GitHub research JSONs** (in-memory fs adapter): seven scene SVGs/plan, 2373 chars including immutable V4 once only, warning top-right, bottom warning removed, original release flags false; preview workflow contains styling.
+- Ran a REAL local FFmpeg 7.1.5 **filter-parse smoke test** with a 1-second generated black video and UTF-8 Chinese SRT containing `9.97%` using the exact research subtitle force_style filter. FFmpeg exited 0: `FFMPEG_CAPTION_FILTER_PARSE_PASS`. This validates filter syntax only, not actual GitHub Actions 1080p video or complete burned subtitle QA.
+
+Follow-up: Obtain a current real push-run ID/job/log for isolated `research-mvp10-20261013-preview.yml`; check Edge 7.3.1 plus YunJhe +15% boundaries, MP3 duration preflight 300–600 seconds, 1080p FFmpeg render and SRT hardburn hashes. Repair actual failing stage as necessary. Then return to source/editorial-certified 20-stock `final/complete` original positive gate before officially accepted video. Do not change main, production, YouTube, publication locks or original paired A/B.
+
+research_progress_status=PROGRESS
+phase_status=MVP10-A INCOMPLETE
+next_action=verify actual preview Actions run logs and deliver evidence-backed media preview, then original final source acceptance
+plan_changed=NO
+publication_authorized=false
