@@ -395,3 +395,22 @@ phase_status=MVP10-A INCOMPLETE
 next_action=verify latest preview CI for table-lock regression; continue dated official market opening evidence without changing approved visual layout
 plan_changed=YES_visual_only
 publication_authorized=false
+
+## 2026-11-02 Prompt A — screenshot-locked Dashboard video PASS + market-opening source triage
+
+Actual GitHub Connector independently verified successful **Run 41463609661**, Job **125339298304**, triggered by screenshot-locked seven-scene Dashboard regression commit `68df69b4d7f4fb6e272348d52ea6140a47e54db4`. Job success, seven real YunJhe +15% scenes, 1920x1080 H.264/AAC, 409.699s, hardburn 107 subtitle cues. `CAPTION_VISUAL_QA_PASS` with first/middle/last captions visible and almost zero changes to Dashboard/progress zones. Final burned video `sha256:bc5ca56bf410830faa3b079b37c107535f68a9871cc94d1c27164525d91d8821`, 13,561,094 bytes, under research-only decision `RESEARCH_PREVIEW_FINAL_MEDIA_VERIFIED_NOT_PUBLISHABLE`. Real artifact **13152205137**, `mvp10-20261013-20stock-research-preview-only`, ZIP 14,523,651 bytes and not expired. CI on latest subsequent commits not yet independently confirmed; Run 41463609661 proves the locked-design tests and actual media pipeline at that commit.
+
+New limited read-only evidence triage against actual persisted 20261013 sources:
+- `data_twse_market_chart/market_chart.json` blob SHA `58312aa169099e509dab0ebbd8181081dce61924`, aggregated source labels `TWSE MI_5MINS_HIST`, `TWSE FMTQIK`, `TWSE BFI82U`; 20261012 close 49301.96, 20261013 close **48341.31**, move **-960.65 (-1.95%)**, 20261013 turnover **1,201,861,264,942 TWD** and foreign+mainland ex-foreign-dealers net **-165,290,508,085 TWD**. These are date-specific persisted aggregate values, **not independently authenticated original raw official HTTP receipts** and not yet original market opening editorial approval.
+- `data_market_environment/20261013/actual_market_environment.json` SHA `25af8096ea3a21a7e7715b807f27f9f5f1d2be76` only records sample size **1047**, `up_ratio=25.21%`, `down_ratio=67.24%`. **Cannot** convert these ratios to whole-TWSE up/down/flat/limit-up counts; this is not the same statistical universe.
+- GitHub repository contains original 20261013 MI_INDEX and institutional daily files (`data_twse_mi_index/20261013_twse_mi_index.json`, `data_twse_institutional_investors/20261013_twse_institutional_investors.json`), but each is large and direct JSON connector read returned truncated content; no proof of actual BFI82U foreign/trust/dealer totals, full-market counts or HTTP SHA yet. Do not guess.
+- Research-only checkpoint commit `5cd5ff9eaafa187960c5d588ceeef83310207730` created `data_research/m5/mvp10-20261013-research/market-opening-source-audit.json` with explicit `PARTIAL_NOT_EDITORIAL_FINAL`, source blob SHAs, dated index/turnover/foreign and nulls for unverified official breadth/institutions. This file intentionally does not change the seven-scene video or its source narrative.
+- Owner-locked visual ID `TAIWAN_STOCK_TABLE_LIST_20261102_V1` remains mandatory; no reintroduction of four-grid-only display.
+
+Current blocker: complete date-matched trusted official TWSE breadth (rising/falling/flat/limit-up) and FMTQIK/MI_INDEX/BFI82U evidence receipts, matching institutional sums and date-effective ordinary-stock source certification. Full Market Opening Master cannot be declared PASS; continue on exact source evidence instead of resetting proven media design. Original A/B pending, Prompt B NOT_ELIGIBLE, production/main/YouTube locked.
+
+research_progress_status=PROGRESS
+phase_status=MVP10-A INCOMPLETE
+next_action=extract specific official MI_INDEX breadth and BFI82U 20261013 total records via bounded parsing; add evidence validators without changing screenshot layout
+plan_changed=NO
+publication_authorized=false
