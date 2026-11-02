@@ -18,9 +18,10 @@ function slide(scene,i,n){
  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">'+
  '<rect width="1920" height="1080" fill="#081322"/><rect width="1920" height="16" fill="#38bdf8"/>'+
  title+'<text x="165" y="307" font-size="31" font-family="Noto Sans CJK TC,Noto Sans TC,sans-serif" fill="#93c5fd">'+xml(scene.subtitle)+'</text>'+
- items+'<rect x="0" y="942" width="1920" height="138" fill="#0f172a"/>'+
- '<text x="45" y="987" font-size="26" font-family="Noto Sans CJK TC,Noto Sans TC,sans-serif" fill="#fbbf24">研究粗剪｜尚未完成編輯與股別日期審核｜禁止發布</text>'+
- '<text x="45" y="1032" font-size="24" font-family="Noto Sans CJK TC,Noto Sans TC,sans-serif" fill="#94a3b8">TAIWAN STOCK — 2026/10/13｜20 檔普通股候選</text>'+
+ items+'<rect x="0" y="935" width="1920" height="145" fill="#0f172a"/>'+
+ '<rect x="1100" y="24" width="792" height="69" rx="12" fill="#4a2110" stroke="#fbbf24" stroke-width="2"/>'+
+ '<text x="1120" y="69" font-size="27" font-weight="700" font-family="Noto Sans CJK TC,Noto Sans TC,sans-serif" fill="#fef3c7">研究粗剪｜股別與編輯未驗收｜禁止發布</text>'+
+ '<text x="45" y="1031" font-size="23" font-family="Noto Sans CJK TC,Noto Sans TC,sans-serif" fill="#64748b">TAIWAN STOCK｜20 檔研究候選</text>'+
  '<text x="1785" y="1032" font-size="24" fill="#f8fafc">'+(i+1)+' / '+n+'</text></svg>';
 }
 function make(root='.'){
