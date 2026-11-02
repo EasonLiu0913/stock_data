@@ -67,6 +67,15 @@ jobs:
             original/data_daily_gain_over_5/20261013.json \
             "$RUNNER_TEMP/mvp10-20261013-20-candidates/research-mvp10-20261013-staging.json" \
             "$RUNNER_TEMP/mvp10-20261013-original-media-invalidation.json"
+          node - <<'NODE'
+          const fs=require('node:fs'),path=require('node:path');
+          const x=JSON.parse(fs.readFileSync(path.join(process.env.RUNNER_TEMP,'mvp10-20261013-original-media-invalidation.json')));
+          if(JSON.stringify(x.stale_stock_count_scenes)!==JSON.stringify([1,2])||
+             x.scenes.length!==7||x.scenes.some(s=>s.original_render_reusable!==false||
+             s.original_tts_reusable!==false)||x.render_authorized!==false)
+            throw Error('STALE_NARRATION_MEDIA_INVALIDATION_GATE_FAILED');
+          console.log('ORIGINAL_25_STOCK_SCRIPT_INVALIDATED count_mentions_in_scenes=1,2; all_7_media=require_review');
+          NODE
           cd "$RUNNER_TEMP/mvp10-20261013-20-candidates"
           node scripts/build_daily_gainers_market_summary.js --date 20261013
           node scripts/validate_daily_gainers_market_summary.js --date 20261013
