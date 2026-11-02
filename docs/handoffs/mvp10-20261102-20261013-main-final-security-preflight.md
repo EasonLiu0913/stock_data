@@ -301,3 +301,18 @@ phase_status=MVP10-A INCOMPLETE
 next_action=check actual newest CI after c40f2f0 and repair witnessed failure only
 plan_changed=NO
 publication_authorized=false
+
+## 2026-11-02 Prompt A — actual 1080p 7-scene MP4 rendered, subtitle burn failure isolated and fixed
+
+Recovered actual 20-stock preview workflow run `41440368029` from the user's open GitHub Actions browser tab; GitHub Connector `fetch_workflow_run_jobs` identified Job `125260417436`, conclusion **failure only at `Burn Traditional Chinese captions into research preview MP4`**. Offline third-scene recovery unit tests PASS; seven real `zh-TW-YunJheNeural` +15% Edge TTS MP3s and nonempty actual WordBoundaries PASS (transient NoAudioReceived recovered through bounded verified per-scene checkpoints), audio-length preflight PASS (approx 410.706 s), 1920x1080 VTuber scene rendering PASS, original unburned H.264 MP4 QA **duration 409.698667 s (06:50)** PASS, SRT generation and dual-track percent-caption checks PASS. This is a **genuine complete render-only preview**, not source/editorial final, and not yet final caption-burned MP4. GitHub Actions artifact `mvp10-20261013-20stock-research-preview-only`, ID `13141223737`, returned **17,565,491 bytes**, not expired; it preserves partially generated research media/QA/MP4. Do not call it completed final publication-ready video.
+
+Actual FFmpeg 6.1.1 error from this Job Log:
+`[AVFilterGraph] No option name near '34'`, `Error parsing ... force_style=\\'FontName=Noto Sans CJK TC,FontSize=34,Alignment=2,MarginV=34,Outline=2,Shadow=0\\'`; this is a **shell quote escape bug** introduced in research workflow `.github/workflows/research-mvp10-20261013-preview.yml`, not an error in TTS, intro, caption alignment, data completeness or MP4 rendering. On-shell `-vf "subtitles=${srt}:force_style='FontName=...,FontSize=34,...'"` uses **actual inner single quotes, not backslash-single-quote**. Isolated one-line workflow correction commit `bad523df4cfedff5865dab3512306fa355604db4`; existing original normal media renderer and original A/B unchanged. Independently invoked installed local FFmpeg 7.1.5 with a generated 640x360 one-second test video and UTF-8 Chinese SRT, applying the exact corrected `-vf "subtitles=test.srt:force_style='FontName=Noto Sans CJK TC,FontSize=34,Alignment=2,MarginV=34,Outline=2,Shadow=0'"` syntax. FFmpeg returned exit 0 and nonempty video output. This is a tested filter syntax correction but NOT real new GitHub FFmpeg 6.1.1 full 1080p caption-burn PASS.
+
+Next action is inspect new branch-push run for `bad523df4` with genuine Actions ID, follow latest job through TTS recovery, 1080p rendering, caption burn, final verifier `final-burned-preview-qa.json` and artifact. Avoid new workflow-triggering pushes while render is in progress (cancel-in-progress concurrency). If burn now passes, inspect captions and full movie, but original source-date ordinary-stock classification, editorial `final/complete`, original positive A/B and YouTube owner authorization are still incomplete, and main/publishing remain unchanged.
+
+research_progress_status=PROGRESS
+phase_status=MVP10-A INCOMPLETE (real unburned video exists)
+next_action=inspect workflow run after bad523df4 and validate final caption-burned 1080p MP4 artifact
+plan_changed=NO
+publication_authorized=false
