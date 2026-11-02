@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import asyncio, json, os, subprocess, sys, random
+import asyncio, json, os, subprocess, sys, random, hashlib
 from pathlib import Path
 from daily_gainers_spoken_text import normalize_spoken_text
 
@@ -40,10 +40,23 @@ def espeak_save(text, out_path):
 
 async def main():
     manifest = {"voice": voice, "rate": rate, "engine": None, "scenes": []}
-    # M5 research retains a per-scene checkpoint on failure; legacy production remains unchanged.
+    # The two experimental partial-resume modes are isolated; legacy non-research behavior is unchanged.
     checkpoint = plan.get("schema_version") == 2
+    preview_resume = os.environ.get("MVP10_RESEARCH_TTS_CHECKPOINT") == "1"
+    if preview_resume:
+        if (plan.get("schema_version") != 1 or
+            plan.get("target_date") != "20261013" or
+            plan.get("research_only") is not True or
+            plan.get("source_final_approved") is not False or
+            plan.get("publication_authorized") is not False or
+            plan.get("render_preview_only") is not True or
+            len(plan.get("scenes", [])) != 7 or
+            voice != "zh-TW-YunJheNeural" or rate != "+15%"):
+            raise RuntimeError("MVP10_RESEARCH_TTS_CHECKPOINT_NOT_AUTHORIZED")
     manifest_path = plan_path.parent / "tts-manifest.json"
     resume = os.environ.get("M5_VERIFIED_PARTIAL_RESUME") == "1"
+    if resume and preview_resume:
+        raise RuntimeError("M5_AND_MVP10_RESUME_MUTUALLY_EXCLUSIVE")
     if resume:
         marker = json.loads((plan_path.parent / "m5-verified-resume.json").read_text(encoding="utf-8"))
         if not checkpoint or marker.get("source_run") != 38062405623 or marker.get("source_artifact_id") != 11674007334 or marker.get("scene_count") != 5 or marker.get("publication_authorized") is not False:
@@ -51,10 +64,33 @@ async def main():
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         if (manifest.get("voice"), manifest.get("rate"), manifest.get("engine")) != (voice, rate, "edge-tts") or len(manifest.get("scenes", [])) != 5:
             raise RuntimeError("M5_RESUME_MANIFEST_INVALID")
+    if preview_resume and manifest_path.exists():
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if (manifest.get("voice"), manifest.get("rate"), manifest.get("engine")) != (voice, rate, "edge-tts"):
+            raise RuntimeError("MVP10_RESEARCH_TTS_MANIFEST_IDENTITY_DRIFT")
+        if len(manifest.get("scenes", [])) > len(plan["scenes"]):
+            raise RuntimeError("MVP10_RESEARCH_TTS_MANIFEST_SCENE_OVERFLOW")
     for scene in plan["scenes"]:
         sid = int(scene["id"])
         out_path = out_dir / f"{sid:02d}.mp3"
         text = normalize_spoken_text(scene["speech_text"] if plan.get("schema_version") == 2 else scene["narration"])
+        if preview_resume:
+            if sid != plan["scenes"].index(scene) + 1:
+                raise RuntimeError("MVP10_RESEARCH_TTS_SCENE_ORDER_INVALID")
+            completed = len(manifest["scenes"])
+            if sid <= completed:
+                record = manifest["scenes"][sid - 1]
+                digest = hashlib.sha256(out_path.read_bytes()).hexdigest() if out_path.is_file() else None
+                if (record.get("id") != sid or record.get("spoken_text") != text or
+                    record.get("engine") != "edge-tts" or
+                    not record.get("word_boundaries") or
+                    record.get("audio_sha256") != digest or
+                    out_path.stat().st_size < 1000):
+                    raise RuntimeError(f"MVP10_RESEARCH_TTS_COMPLETED_SCENE_DRIFT_{sid}")
+                print(f"scene {sid:02d}: reuse verified YunJhe audio+WordBoundary", flush=True)
+                continue
+            if sid != completed + 1:
+                raise RuntimeError("MVP10_RESEARCH_TTS_NONCONTIGUOUS_CHECKPOINT")
         if resume and sid <= 5:
             record = manifest["scenes"][sid-1]
             import hashlib
@@ -94,8 +130,11 @@ async def main():
             raise RuntimeError(f"TTS output invalid for scene {sid}: {out_path}")
         print(f"scene {sid:02d}: {engine} -> {out_path} ({out_path.stat().st_size} bytes)")
         manifest["engine"] = manifest["engine"] or engine
-        manifest["scenes"].append({"id": sid, "engine": engine, "file": str(out_path), "errors": errors, "spoken_text": text, "word_boundaries": boundaries})
-        if checkpoint:
+        record = {"id": sid, "engine": engine, "file": str(out_path), "errors": errors, "spoken_text": text, "word_boundaries": boundaries}
+        if preview_resume:
+            record["audio_sha256"] = hashlib.sha256(out_path.read_bytes()).hexdigest()
+        manifest["scenes"].append(record)
+        if checkpoint or preview_resume:
             manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
