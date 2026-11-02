@@ -170,3 +170,24 @@ phase_status=MVP10-A INCOMPLETE
 next_action=check actual isolated CI and pursue approved final 20-stock semantic source followed by full video
 plan_changed=NO
 publication_authorized=false
+
+## 2026-11-02 Prompt A — actual isolated 1080p media preview entry, first direct end-to-end render attempt
+
+Current observed `main` HEAD `3077d25c814bb03bc456d23b227814f034224d59`; original `goal-v3/MVP-10DAY-v1` / A/B unchanged. Frozen main factual 20261013 pinned `f0fb2e44e00e3141a2673a4f6955af47768e5ce9`. GitHub commit status only returned empty statuses and available connector cannot enumerate push-triggered Actions runs; no newest Run ID/log/QA has been obtained. **No claim of actual GitHub CI green or completed MP4**.
+
+This turn deliberately moved from repetitive provisional analysis to a **full read-only media rendering attempt** using two real, committed date-tied 20-stock research JSON artifacts:
+- `scripts/research_mvp10_20261013_preview_plan.js`, commit `11c6f9c0eb9b282769e258e7dd397c76c01efbee`, reads the 20-stock analysis candidate and seven-scene narrative draft in `data_research/m5/mvp10-20261013-research` and constructs seven honest **1920×1080 SVG slides**, `output/daily-gainers-video/20261013/plan.json`, and explicit `research-preview-boundary.json`. This plan is **NOT** a published `video_scripts/daily-gainers/20261013.json`, not an accepted summary, and does not invoke or weaken the original final/complete gating workflow. Every slide displays a research-only no-publication warning.
+- `tests/research_mvp10_20261013_preview_plan.test.js`, commit `ed6128185783075da94f77d14e5805f404d41831`, checks all seven slides, privacy/no release, and rejection of trusted source/invalid stock references.
+- An isolated V8-isolate in-memory execution of exact fetched `research_mvp10_20261013_preview_plan.js` with both **actual committed JSONs** confirmed successful construction of seven scene SVGs, 1270 spoken chars, research `plan.json` and explicit publish-lock evidence. **This is an executed function with mock fs, not a rendered binary video**.
+- `.github/workflows/research-mvp10-20261013-preview.yml`, created at `aae254aeabea32eb01f1bca8c44cd3d43baa0a88`, runs on push **only to `research/daily-video-mvp10-a-20261029`**, `contents: read`, checkout `persist-credentials:false`, no YouTube credentials/actions or production jobs. It executes Node preview guards, installs FFmpeg, librsvg, CJK fonts and TTS dependencies, forces `edge-tts==7.3.1`, `zh-TW-YunJheNeural`, rate `+15%`, validates seven genuine EdgeTTS WordBoundary scene receipts, builds VTuber mouth intervals, reuses unmodified `scripts/render_daily_gainers_video.js` to create complete 1080p research MP4, then reuses unmodified `scripts/build_daily_gainers_srt.py` for aligned zh-TW SRT, performs video QA and extracts thumbnail. Captures research media/plan/manifests/QA/MP4/SRT as a 14-day artifact, including partial evidence on failure. No fallback TTS falsely reported as YunJhe; actual engine, boundaries and duration must pass.
+- `53b69babca526d149cf9ad76b8a5a13a20ff6c9a` amended this workflow to **hard-burn the actual zh-TW SRT captions into the preview MP4** with FFmpeg (not just external SRT), compare before/after video duration and SHA-256 and record `subtitle-burn-evidence.json` in the CI artifact. This is research rough-cut only; original MP4/QA/media accepted A/B remain unaffected.
+
+**Critical provenance and acceptance boundary:** the new media entry is a clearly visibly watermarked **research-only rough-cut** derived from 20 provisional stock candidates and unapproved narration. This is intentionally NOT the frozen original final/complete positive acceptance, source-date security certification, or publishable 2026/10/13 production video. Even if its new CI renders successfully, `MVP10-A` must remain INCOMPLETE until source/editorial review, original positive validator, full final film QA, and separate owner permission for private YouTube upload. No main/production schedules, secrets, publication flags or original A/B were altered. Watch potential external TTS WordBoundary failure or render duration; do not claim PASS without job logs.
+
+Next: retrieve `research-mvp10-20261013-preview.yml` run/job logs and actual MP4/SRT/QA evidence; if real job fails fix the precise failure; then complete editorial and target-date stock-category approval, regenerate final-approved source master and real accepted complete movie. Keep Prompt B NOT_ELIGIBLE. Delivery goal 2026-11-08 remains at risk.
+
+research_progress_status=PROGRESS
+phase_status=MVP10-A INCOMPLETE
+next_action=verify actual full 1080p preview workflow and fix real failing media stages then original positive source acceptance
+plan_changed=NO
+publication_authorized=false
