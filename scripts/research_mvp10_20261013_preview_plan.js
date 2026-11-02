@@ -2,6 +2,7 @@
 'use strict';
 // MVP10-A research preview PLAN only. Do not claim source final, media or publication PASS.
 const fs=require('node:fs'),path=require('node:path');
+const {addOpening,assertOpening,OPENING_TEXT}=require('./daily_gainers_brand_opening');
 const DATE='20261013';
 const INPUT='data_research/m5/mvp10-20261013-research/20stock-seven-scene-script-draft.json';
 const ANALYSIS='data_research/m5/mvp10-20261013-research/20stock-analysis-candidate.json';
@@ -35,12 +36,17 @@ function make(root='.'){
    raw.scenes.some(s=>s.stock_codes.some(c=>!codes.has(String(c))))||
    raw.scenes.some(s=>/percent/i.test(s.narration)||s.narration.includes('百分之百分之')))
   throw Error('UNSAFE_PREVIEW_SCRIPT_CLAIMS_OR_STOCK_SCOPE');
- const scenes=raw.scenes.map((scene,i)=>({
-  id:i+1,title:scene.title,subtitle:scene.subtitle,bullets:scene.bullets,
-  narration:scene.narration,stock_codes:scene.stock_codes,
-  footer:'研究粗剪｜禁止發布｜需來源與編輯審核',
-  speech_text:scene.narration,caption_text:scene.narration
- }));
+ const scenes=raw.scenes.map((scene,i)=>{
+  const narration=i===0?addOpening(scene.narration):scene.narration;
+  if(i===0)assertOpening(narration);
+  return {id:i+1,title:scene.title,subtitle:scene.subtitle,bullets:scene.bullets,
+   narration,stock_codes:scene.stock_codes,
+   footer:'研究粗剪｜禁止發布｜需來源與編輯審核',
+   speech_text:narration,caption_text:narration};
+ });
+ if(!scenes[0].narration.startsWith(OPENING_TEXT)||
+    scenes[0].narration.indexOf(OPENING_TEXT,OPENING_TEXT.length)!==-1)
+  throw Error('RESEARCH_PREVIEW_V4_OPENING_MISSING_OR_DUPLICATE');
  const out=path.join(root,OUTPUT),dir=path.join(out,'slides');
  if(fs.existsSync(out))throw Error('PREVIEW_OUTPUT_MUST_BE_NEW');
  fs.mkdirSync(dir,{recursive:true});
