@@ -131,3 +131,24 @@ phase_status=MVP10-A INCOMPLETE
 next_action=verify actual research runner logs and complete source-certified final analysis for full 20-stock render
 plan_changed=NO
 publication_authorized=false
+
+## 2026-11-02 Prompt A — complete per-stock deterministic 20 candidate analysis produced in research
+
+New current observed main HEAD `3077d25c814bb03bc456d23b227814f034224d59`; source identity remains pinned to `f0fb2e44e00e3141a2673a4f6955af47768e5ce9`. AGENTS.md, owner policy, routing and frozen MVP10 pair rechecked. GitHub Actions website could not be opened via web (DisabledError). The GitHub Connector's combined commit status returns `statuses:[]`, not CI PASS or FAIL. No new actual workflow run ID or artifact was verified.
+
+This Prompt A **created executable 20-stock full-row research analysis candidate**, eliminating repeated classification investigation without weakening original validators:
+- `scripts/draft_mvp10_20261013_20stock_analysis.js`, commit `98804fa87e65f10695ad5b9df10d1f3e7d5ebed4`. Consumes dated `20261013` isolated staging raw/facts and strict 20-stock identity/code-order and source-price agreements. Produces `20261013-20stock-analysis-candidate.json` (all 20 rows, deterministic price, foreign, trust, dealer, margin, broker and technical signals; explicit ambiguous/null handling, follow-up, original contract-shaped rows) plus `20261013-20stock-analysis-review.json`, with no original 25-stock AI catalyst narrative inherited; all 20 `cause_type=unknown`, `evidence_strength=none`, `confidence=low`, `sources=[]`, `independently_verified_causal_claim=false`. Candidate is in **a separate temp review directory, NOT `data_daily_gain_over_5/analysis/20261013.json`**, has `research_only`, `summary_final=false`, `render_authorized=false` and `publication_authorized=false`.
+- An executable V8-isolate smoke test with the *actual fetched research source* and *actual pinned 20261013 upstream raw/facts filtered to 20* successfully produced 20 candidate rows and a review bundle, 0 promoted causal claims, and no final/permission flags. Original SHA values were stubbed in this in-memory test and are not genuine receipts. GitHub runner will calculate actual SHA-256 hashes with `node:crypto`.
+- `tests/draft_mvp10_20261013_20stock_analysis.test.js`, commit `b953cf785790e63fa7275dfc7acb9160078d43d1`, tests reject missing source and premature final/incorrect scope.
+- `.github/workflows/research-mvp10-20261013-stage.yml` updated at `1a66929a6f237a78d42d7e5b49b11bd6ad112f4e` to run new tests and source-derived research candidate generation and assert all 20 have no promoted cause or render permission; upload original review JSON with research staged inputs. No privileged tasks, no YouTube upload or main write. Fixed actual output-directory collision in `bf12c8405db2aff98ae4baba623b1d76686d580a`: CLI safely creates its own new review dir; CI must not pre-create it.
+- Previously independently executed original market-summary builder/validator business functions with actual 20-stock data correctly produced `preliminary/news_theme` and passed original summary validator. Original video validator independently rejected with `summary not final/complete`. These are **in-memory environment function tests**, not claimed GitHub CI PASS.
+
+Critical distinction: This newest candidate is an auditable complete **research input** for editorial/source review, **not yet a source-certified published final analysis**. Its original contract-shaped fields could cause the old builder to output `final` if copied prematurely into the published analysis path, therefore **NEVER copy it into `data_daily_gain_over_5/analysis/20261013.json` without full editorial and source/ordinary-date approval.** Original builder/validator should remain unchanged and release locks closed.
+
+Next: verify actual research CI run Job Log for `research-mvp10-20261013-stage.yml`, then source/editorial review of 20 stock claims and 7 scenes; after certified final/complete, re-run original positive validator on coherent target-date 20-stock data and full isolated 1080p Render-only. Do not reuse the historic 25 mixed-security movie/voice. Owner's 2026-11-08 MVP deadline at risk. B ineligible; all production and YouTube remain closed.
+
+research_progress_status=PROGRESS
+phase_status=MVP10-A INCOMPLETE
+next_action=verify actual 20-stock candidate CI and complete final source certification before original positive video validation and full render
+plan_changed=NO
+publication_authorized=false
