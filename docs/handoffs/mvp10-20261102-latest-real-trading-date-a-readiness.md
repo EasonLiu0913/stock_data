@@ -35,3 +35,24 @@ next_action: promptA
 plan_changed: NO
 publication_authorized: false
 youtube_upload_authorized: false
+
+## 2026-11-03 00:17+08 — Fresh source and workflow side-effect audit
+
+- Rechecked remote `main`: `75526ad20f8ad09ab1e3ff4c90896cbb92c8bbf8` (point-in-time snapshot; recheck before writes).
+- `data_daily_gain_over_5/analysis/20261102.json` **NOW EXISTS**, Git blob `70a89aeffc73f282c8b118359c0946b1daf4b07a`, generated `2026-11-02T16:20:54.143Z`, source date `20261102`, `stock_count:29`, `retrospective:true`. Earlier "analysis missing" line above is historically correct at that prior check, but is **superseded for the current remote main**. This is an intermediate retrospective analysis, not final editorial authorization.
+- Still absent from `main` via exact GitHub content lookup: `analysis-news/20261102.json`, `analysis-facts/20261102.json`, `analysis-ai/20261102.json`, and `video_scripts/daily-gainers/20261102.json`. Existing `market-summary/20261102.json` remains **preliminary** with original snapshot `coverage.overall:missing`; do not infer that its coverage dynamically reflects the new analysis until regenerated and validated.
+- `.github/workflows/daily-gainers-video-upload-orchestrator.yml` on `main`: `workflow_dispatch`, weekday scheduled and `main` `video_scripts/daily-gainers/*.json` push listener; `permissions: actions:write`. Explicitly invokes `gh workflow run generate-upload-daily-gainers-video.yml --ref main` on decision `render`, and `retry-upload-daily-gainers-video.yml` on `retry`. `generate-upload-daily-gainers-video.yml` has `contents:write` and performs YouTube upload. **UNSAFE for research/recovery; DO NOT DISPATCH**.
+- `scripts/decide_daily_gainers_video_upload.sh` confirms `main` receipts, GitHub artifact discovery and dispatch decisions; this is *not* a no-upload data recovery workflow.
+- Likely guessed standalone recovery workflow names did not resolve via exact connector lookup, and GitHub code search produced no matching results. This does **not** establish that safe data recovery does not exist; exact existing trigger and side effects remain unverified. **No workflow dispatch this round**.
+- Next bounded A step: locate the actual canonical data-recovery runner via original workflow documentation or an authenticated tree/listing-capable GitHub surface, then review exact dispatch/event permissions, all output destinations, and direct downstream listeners. Recover 20261102 news/facts/AI and recompute summary only if verified isolated safe. Original B is NOT_ELIGIBLE.
+- No changes to `main`, production schedules, Pages, secrets, YouTube or release locks. Preserve only table-led Dashboard `TAIWAN_STOCK_TABLE_LIST_20261102_V1`, successful media research Run `41463609661`; do not permit the 20-candidate research preview to stand for complete final 29-stock daily video.
+- Distinct progress: new actual 29-stock retrospective `analysis` arrived, and real upload side-effect confirmed; no new CI, no media, no new source-final certification.
+
+research_progress_status: PROGRESS
+phase_status: MVP10-A INCOMPLETE
+b_status: NOT_ELIGIBLE
+blocker: absent 20261102 news/facts/AI/script, preliminary stale summary, verified safe data recovery entrypoint not yet located
+next_action: promptA
+plan_changed: NO
+publication_authorized: false
+youtube_upload_authorized: false
