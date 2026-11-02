@@ -36,6 +36,12 @@ def validate(blob):
     title = str(obj.get("title", ""))
     if "115年10月13日" not in title or "三大法人" not in title:
         raise ValueError("wrong dated source title")
+    # Reject conflicting machine-readable dates even when the human-readable title matches.
+    # TWSE report variants may omit `date`; do not invent a mandatory field.
+    if "date" in obj and str(obj["date"]).strip() not in (
+        DATE, "1151013", "115/10/13", "115年10月13日"
+    ):
+        raise ValueError("report date conflicts with requested trading day")
     fields = obj.get("fields")
     data = obj.get("data")
     if not isinstance(fields, list) or len(fields) != 4:
