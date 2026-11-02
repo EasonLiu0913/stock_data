@@ -7,6 +7,7 @@ on:
     paths:
       - .github/workflows/research-mvp10-20261013-preview.yml
       - scripts/research_mvp10_20261013_preview_plan.js
+      - scripts/synthesize_daily_gainers_tts.py
       - tests/research_mvp10_20261013_preview_plan.test.js
       - scripts/research_mvp10_20261013_caption_display.js
       - tests/research_mvp10_20261013_caption_display.test.js
@@ -98,10 +99,21 @@ jobs:
         env:
           YOUTUBE_TTS_VOICE: zh-TW-YunJheNeural
           YOUTUBE_TTS_RATE: "+15%"
+          MVP10_RESEARCH_TTS_CHECKPOINT: "1"
         shell: bash
         run: |
           set -euo pipefail
-          python scripts/synthesize_daily_gainers_tts.py output/daily-gainers-video/20261013/plan.json
+          for cycle in 1 2 3; do
+            echo "MVP10_RESEARCH_TTS_CYCLE=${cycle}/3 (verified partial checkpoint retained)"
+            if python scripts/synthesize_daily_gainers_tts.py output/daily-gainers-video/20261013/plan.json; then
+              break
+            fi
+            if [ "$cycle" -eq 3 ]; then
+              echo "EDGE_TTS_BOUNDED_3_CYCLES_EXHAUSTED" >&2
+              exit 1
+            fi
+            sleep 18
+          done
           python - <<'PY'
           import json
           from pathlib import Path
@@ -111,6 +123,11 @@ jobs:
               raise SystemExit('EDGE_YUNJHE_PLUS15_TTS_NOT_VERIFIED')
           if any(not x.get('word_boundaries') for x in m['scenes']):
               raise SystemExit('EDGE_WORD_BOUNDARIES_MISSING')
+          import hashlib
+          for record in m['scenes']:
+              audio=f.parent/'audio'/f"{int(record['id']):02d}.mp3"
+              if not record.get('audio_sha256') or hashlib.sha256(audio.read_bytes()).hexdigest() != record['audio_sha256']:
+                  raise SystemExit('EDGE_TTS_RESUME_SOURCE_SHA_MISMATCH')
           print('REAL_EDGE_TTS_PASS: YunJhe +15%; 7 scenes; timestamp boundaries')
           PY
       - name: Check real YunJhe MP3 durations before expensive 1080p rendering
