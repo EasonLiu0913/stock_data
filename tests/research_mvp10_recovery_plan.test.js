@@ -154,3 +154,28 @@ test('facts availability flags without original validator receipt cannot unblock
  assert.equal(p.stages.find(x=>x.id==='ai_pending').status,'BLOCKED');
  assert.equal(p.first_blocked_stage,'facts');
 });
+
+test('news agent task is date-bounded with exact raw receipt and cannot invoke workflow',t=>{
+ const f=fixture();t.after(f.cleanup);
+ const p=plan({root:f.root,date:DATE,sourceCommit:'f'.repeat(40)});
+ const news=p.agent_tasks.find(x=>x.stage==='news');
+ assert.equal(news.status,'READY_FOR_APPROVED_AGENT');
+ assert.equal(news.id,DATE+':news');
+ assert.equal(news.source_main_sha,'f'.repeat(40));
+ assert.equal(news.required_inputs.length,1);
+ assert.equal(news.required_inputs[0].verified,true);
+ assert.equal(news.required_inputs[0].sha256,p.stages.find(x=>x.id==='raw').sha256);
+ assert.match(news.validator,/validate_daily_gainers_news_analysis/);
+ assert.equal(news.auto_invoke_authorized,false);
+ assert.equal(news.writing_to_main_authorized,false);
+ assert.equal(p.agent_tasks.find(x=>x.stage==='ai_pending').status,'BLOCKED_DEPENDENCIES');
+ assert.equal(p.agent_tasks.find(x=>x.stage==='script').status,'BLOCKED_DEPENDENCIES');
+});
+test('untrusted raw or different date prevents ready Agent tasks',t=>{
+ const f=fixture();t.after(f.cleanup);
+ f.write(f.files.raw,{...f.raw,target_date:'20261030'});
+ const p=plan({root:f.root,date:DATE});
+ assert.equal(p.stages[0].status,'INVALID');
+ assert.equal(p.agent_tasks.find(x=>x.stage==='news').status,'BLOCKED_DEPENDENCIES');
+ assert.equal(p.agent_tasks.some(x=>x.auto_invoke_authorized),false);
+});
