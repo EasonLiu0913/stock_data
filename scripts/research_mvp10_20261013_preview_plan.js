@@ -3,6 +3,7 @@
 // MVP10-A research preview PLAN only. Do not claim source final, media or publication PASS.
 const fs=require('node:fs'),path=require('node:path');
 const {addOpening,assertOpening,OPENING_TEXT}=require('./daily_gainers_brand_opening');
+const {renderDashboard}=require('./research_mvp10_20261013_dashboard');
 const DATE='20261013';
 const INPUT='data_research/m5/mvp10-20261013-research/20stock-seven-scene-script-draft.json';
 const ANALYSIS='data_research/m5/mvp10-20261013-research/20stock-analysis-candidate.json';
@@ -10,20 +11,10 @@ const OUTPUT='output/daily-gainers-video/20261013';
 const read=p=>JSON.parse(fs.readFileSync(p,'utf8'));
 const xml=s=>String(s).replace(/[<>&"']/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&apos;'}[c]));
 function wrap(s,max=29){const a=[...String(s)];return Array.from({length:Math.ceil(a.length/max)},(_,i)=>a.slice(i*max,(i+1)*max).join(''));}
-function slide(scene,i,n){
- const items=scene.bullets.slice(0,5).map((s,j)=>
-  '<text x="180" y="'+(382+j*104)+'" font-size="41" font-family="Noto Sans CJK TC,Noto Sans TC,sans-serif" fill="#f1f5f9">'+xml(s)+'</text>').join('\n');
- const title=wrap(scene.title,23).slice(0,2).map((x,j)=>
- '<text x="160" y="'+(140+j*72)+'" font-size="60" font-weight="bold" font-family="Noto Sans CJK TC,Noto Sans TC,sans-serif" fill="#f8fafc">'+xml(x)+'</text>').join('\n');
- return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">'+
- '<rect width="1920" height="1080" fill="#081322"/><rect width="1920" height="16" fill="#38bdf8"/>'+
- title+'<text x="165" y="307" font-size="31" font-family="Noto Sans CJK TC,Noto Sans TC,sans-serif" fill="#93c5fd">'+xml(scene.subtitle)+'</text>'+
- items+'<rect x="0" y="935" width="1920" height="145" fill="#0f172a"/>'+
- '<rect x="1100" y="24" width="792" height="69" rx="12" fill="#4a2110" stroke="#fbbf24" stroke-width="2"/>'+
- '<text x="1120" y="69" font-size="27" font-weight="700" font-family="Noto Sans CJK TC,Noto Sans TC,sans-serif" fill="#fef3c7">研究粗剪｜股別與編輯未驗收｜禁止發布</text>'+
- '<text x="45" y="1031" font-size="23" font-family="Noto Sans CJK TC,Noto Sans TC,sans-serif" fill="#64748b">TAIWAN STOCK｜20 檔研究候選</text>'+
- '<text x="1785" y="1032" font-size="24" fill="#f8fafc">'+(i+1)+' / '+n+'</text></svg>';
+function slide(scene,i,n,analyses){
+ return renderDashboard(scene,i,n,analyses);
 }
+
 function make(root='.'){
  const file=path.join(root,INPUT),aFile=path.join(root,ANALYSIS);
  const raw=read(file),a=read(aFile);
@@ -51,7 +42,7 @@ function make(root='.'){
  const out=path.join(root,OUTPUT),dir=path.join(out,'slides');
  if(fs.existsSync(out))throw Error('PREVIEW_OUTPUT_MUST_BE_NEW');
  fs.mkdirSync(dir,{recursive:true});
- for(const s of scenes)fs.writeFileSync(path.join(dir,String(s.id).padStart(2,'0')+'.svg'),slide(s,s.id-1,scenes.length),{flag:'wx'});
+ for(const s of scenes)fs.writeFileSync(path.join(dir,String(s.id).padStart(2,'0')+'.svg'),slide(s,s.id-1,scenes.length,a.analyses),{flag:'wx'});
  const plan={schema_version:1,methodology_version:'research-mvp10-20261013-preview-v1',
   target_date:DATE,scene_count:scenes.length,narration_chars:scenes.reduce((n,x)=>n+[...x.narration].length,0),
   research_only:true,source_final_approved:false,source_classification_effective_date_verified:false,
