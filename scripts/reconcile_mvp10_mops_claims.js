@@ -48,7 +48,19 @@ function reconcile(receipt,published){
     assert.equal(r.official_yoy_pct,spec.yoy);
     const url=expectedUrls[spec.source];
     const page=pages.find(x=>x.url===url);
-    assert.ok(page.target_rows?.[code],'official dated row absent '+code);
+    const cells=page.target_rows?.[code];
+    assert.ok(Array.isArray(cells) && cells.length>=11,'official dated row incomplete '+code);
+    const numericCell=(i)=>{
+      const v=String(cells[i]??'').replaceAll(',','').trim();
+      assert.match(v,/^[+-]?[0-9]+(?:\\.[0-9]+)?$/,'non-numeric official column '+code+':'+i);
+      return Number(v);
+    };
+    assert.equal(String(cells[0]).replace(/^0+(?=[1-9])/,'').trim(),code,'official code mismatch '+code);
+    assert.equal(cells[1],spec.name,'official row issuer mismatch '+code);
+    assert.equal(numericCell(2),spec.revenue,'official row revenue mismatch '+code);
+    assert.equal(numericCell(6),spec.yoy,'official row YOY mismatch '+code);
+    assert.equal(r.revenue_thousand_ntd,numericCell(2),'independent proof and original row disagree '+code);
+    assert.equal(r.official_yoy_pct,numericCell(6),'independent proof YOY and row disagree '+code);
     const rows=pages.filter(p=>p.target_rows?.[code]);
     assert.equal(rows.length,1,'duplicate company across official pages');
     allowed.push({code,name:spec.name,source_url:url,source_period:'2026-09',
