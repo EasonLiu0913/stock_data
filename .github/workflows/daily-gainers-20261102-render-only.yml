@@ -69,6 +69,8 @@ jobs:
           const fs=require('node:fs');
           const p=JSON.parse(fs.readFileSync('output/daily-gainers-video/20261102/list-dashboard-manifest.json'));
           if(p.dashboard!=='owner-approved-multi-stock-list-only'||p.stock_codes.length!==29)process.exit(1);
+          const expected=['加權指數','全市場成交金額','上漲／下跌','平盤／漲停','外資／投信／自營商','三大法人合計','市場強弱摘要'];
+          if(JSON.stringify(p.opening_dashboard_fields)!==JSON.stringify(expected))throw Error('Owner-approved fixed opening Dashboard order mismatch');
           NODE
       - name: Validate TTS and subtitle text rules
         shell: bash
@@ -87,6 +89,20 @@ jobs:
           node scripts/render_daily_gainers_video.js "$DATE"
       - name: Generate spoken-aligned Traditional Chinese SRT
         run: python scripts/build_daily_gainers_srt.py "output/daily-gainers-video/$DATE/plan.json"
+      - name: Fail closed on unsafe subtitle cue length or multiline overflow
+        shell: bash
+        run: |
+          python - "$DATE" <<'PY'
+          import pathlib,re,sys
+          p=pathlib.Path(f"output/daily-gainers-video/{sys.argv[1]}/daily-gainers-{sys.argv[1]}.zh-TW.srt")
+          blocks=re.split(r'\n\s*\n',p.read_text(encoding='utf-8').strip())
+          if not blocks: raise SystemExit('No SRT cues')
+          for i,block in enumerate(blocks,1):
+              lines=block.splitlines()
+              if len(lines)<3 or len(lines[2:])>2: raise SystemExit(f'Cue {i}: not 1-2 lines')
+              if len(''.join(lines[2:]))>30: raise SystemExit(f'Cue {i}: >30 characters')
+          print(f"SRT safe-area PASS cues={len(blocks)}")
+          PY
       - name: Burn spoken Traditional Chinese SRT into final MP4 and verify visual pixels
         shell: bash
         run: |
