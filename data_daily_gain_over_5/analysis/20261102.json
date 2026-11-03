@@ -1,141 +1,1436 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
+  "methodology_version": "daily-gainers-unified-analysis-v2",
+  "contract_version": 3,
+  "contract_policy": "latest-rules-only",
   "target_date": "20261102",
-  "generated_at": "2026-11-02T16:20:54.143Z",
+  "previous_date": "20261030",
+  "generated_at": "2026-11-03T05:55:23.310Z",
   "source_list_file": "data_daily_gain_over_5/20261102.json",
+  "source_facts_file": "data_daily_gain_over_5/analysis-facts/20261102.json",
+  "source_ai_file": "research_pending/daily-gainers-ai/20261102.json",
+  "ignored_ai_file": null,
+  "ignored_ai_reason": null,
+  "generation_mode": "ai_verified",
+  "facts_source_completeness": {
+    "status": "complete",
+    "required_sources": [
+      "margin",
+      "broker_details",
+      "mi_index",
+      "foreign",
+      "investment_trust",
+      "dealer"
+    ],
+    "missing_sources": [],
+    "complete_source_count": 6,
+    "required_source_count": 6
+  },
   "stock_count": 29,
-  "retrospective": true,
-  "methodology_note": "事後歸因研究：允許使用交易日之後發布、但能補充當日基本面或產業背景的公開資訊；不作為事前預測。無直接證據時降低可信度。",
+  "market_context": {
+    "gainer_count": 29,
+    "breadth_regime": "selective_risk_on",
+    "mi_index_status": "available",
+    "mi_index_table_count": 10
+  },
+  "market_summary": {
+    "summary": "11/02 強勢股29檔呈現族群題材與價量籌碼分歧：資安資訊服務與同欣電、麗臺、台灣虎航有不同程度新聞佐證，但不可將法人流向直接等同單一新聞催化；部分高量股同時融資增加，須評估追價風險。",
+    "common_flow_clues": [
+      "外資與融資同向增加並非必然長線資金；需檢查隔日延續",
+      "部分漲幅強股外資反向賣超，不應概括法人全面買進",
+      "少數股票低量急漲，不能僅憑漲幅推斷大額資金流入"
+    ]
+  },
+  "priority_watchlist": [
+    "2468",
+    "6271",
+    "2465",
+    "6757",
+    "2371",
+    "1786",
+    "8996"
+  ],
   "analyses": [
     {
       "code": "2491",
       "name": "吉祥全",
       "change_pct": 10,
-      "reason_summary": "未找到可直接驗證的單一公開催化劑；先以族群輪動、價量與籌碼變化解讀，不把上漲本身倒果為因。",
+      "cause_type": "unknown",
+      "cause_tags": [
+        "unverified_catalyst"
+      ],
+      "evidence_strength": "none",
+      "reason_summary": "吉祥全（2491）11/02收44.55元，漲10%，量2966張，前日量比1.08倍。漲停收在當日高點，但外資買超與融資增加同時出現，短線追價風險不能忽略。 外資買超248張；投信無個股紀錄；自營商無個股紀錄。融資增加382張，站在20日均線之上；收盤位置占當日高低區間100%。目前沒有足以確認直接漲因的公司新聞，不能倒推原因。",
       "evidence": [
-        "當日漲幅 +10.00%",
-        "成交量 2,966 張",
-        "當日5%以上股票 29 檔"
+        "官方日期化 Facts v3：收盤44.55元、漲幅10%、量2966張；量比1.08倍，站在20日均線之上。",
+        "同日法人檔：外資+248張、投信未見個股紀錄張、自營商未見個股紀錄張；投信 no_record 不等於0。",
+        "融資+382張；分點樣本買方前列元大證券、賣方前列宏遠證券；樣本淨額336張，非全市場淨流量。"
       ],
       "confidence": "low",
-      "follow_up": "優先比對法人、融資與後續2至5日價格延續性；若後續出現公司公告或產業消息，再提高原因可信度。",
+      "flow": {
+        "foreign": {
+          "net_shares": 248000,
+          "net_lots": 248,
+          "record_status": "reported",
+          "source_file": "data_twse_foreign_investors/20261102_twse_foreign_investors.json"
+        },
+        "investment_trust": {
+          "net_shares": null,
+          "net_lots": null,
+          "record_status": "no_record",
+          "source_file": "data_twse_investment_trust/20261102_twse_investment_trust.json"
+        },
+        "dealer": {
+          "net_shares": null,
+          "net_lots": null,
+          "record_status": "no_record",
+          "source_file": "data_twse_dealers/20261102_twse_dealers.json"
+        },
+        "margin": {
+          "margin_prev": 2276,
+          "margin_now": 2658,
+          "margin_delta": 382,
+          "short_prev": 15,
+          "short_now": 20,
+          "short_delta": 5
+        },
+        "broker": {
+          "status": "available",
+          "top3_buy_share_pct": 11.36,
+          "top5_buy_share_pct": 18.21,
+          "top3_sell_share_pct": 9.13,
+          "top5_sell_share_pct": 12.71,
+          "totals": {
+            "netBuy": 1032,
+            "netSell": 696,
+            "net": 336
+          },
+          "top_buy_brokers": [
+            {
+              "broker_name": "元大證券",
+              "broker_id": "9800",
+              "branch_id": "9800",
+              "net": 119,
+              "share_pct": 4.01
+            },
+            {
+              "broker_name": "美商高盛",
+              "broker_id": "1480",
+              "branch_id": "1480",
+              "net": 114,
+              "share_pct": 3.84
+            },
+            {
+              "broker_name": "凱基",
+              "broker_id": "9200",
+              "branch_id": "9200",
+              "net": 104,
+              "share_pct": 3.51
+            },
+            {
+              "broker_name": "港商野村",
+              "broker_id": "1560",
+              "branch_id": "1560",
+              "net": 102,
+              "share_pct": 3.44
+            },
+            {
+              "broker_name": "元大-竹科",
+              "broker_id": "9800",
+              "branch_id": "003900380030004b",
+              "net": 101,
+              "share_pct": 3.41
+            }
+          ],
+          "top_sell_brokers": [
+            {
+              "broker_name": "宏遠證券",
+              "broker_id": "1260",
+              "branch_id": "1260",
+              "net": 113,
+              "share_pct": 3.81
+            },
+            {
+              "broker_name": "永豐金-員林",
+              "broker_id": "9A00",
+              "branch_id": "0039004100390043",
+              "net": 95,
+              "share_pct": 3.2
+            },
+            {
+              "broker_name": "元大-沙鹿",
+              "broker_id": "9800",
+              "branch_id": "0039003800300064",
+              "net": 63,
+              "share_pct": 2.12
+            },
+            {
+              "broker_name": "永豐金-復興",
+              "broker_id": "9A00",
+              "branch_id": "003900410039005a",
+              "net": 56,
+              "share_pct": 1.89
+            },
+            {
+              "broker_name": "凱基-士林",
+              "broker_id": "9200",
+              "branch_id": "9238",
+              "net": 50,
+              "share_pct": 1.69
+            }
+          ],
+          "source_url": "https://fubon-ebrokerdj.fbs.com.tw/z/zc/zco/zco.djhtm?a=2491&e=2026-11-2&f=2026-11-2"
+        },
+        "institutional_verification_required": true
+      },
+      "technical": {
+        "sma5": 41.07,
+        "sma20": 38.28,
+        "sma60": 39.43,
+        "above_sma5": true,
+        "above_sma20": true,
+        "above_sma60": true,
+        "previous_volume": 2738,
+        "volume_ratio_vs_previous": 1.08,
+        "low_liquidity": false
+      },
+      "follow_up": [
+        "外資買超能否延續；融資餘額新增382張後是否形成隔日賣壓。",
+        "追蹤吉祥全次日外資、投信和融資變化；缺新聞時等待可核實之法說／公司公告，避免將市場交易方向誤當特定利多。"
+      ],
       "sources": []
     },
     {
       "code": "4720",
       "name": "德淵",
       "change_pct": 10,
-      "reason_summary": "未找到可直接驗證的單一公開催化劑；先以族群輪動、價量與籌碼變化解讀，不把上漲本身倒果為因。",
+      "cause_type": "fundamental",
+      "cause_tags": [
+        "specialty_chemicals"
+      ],
+      "evidence_strength": "circumstantial",
+      "reason_summary": "德淵（4720）11/02收29.7元，漲10%，量8267張，前日量比0.99倍。特化材料營收題材屬近期背景，不能確認11月2日漲停由它直接推動；當日外資卻賣超，與買盤集中現象出現分歧。 外資賣超566張；投信無個股紀錄；自營商買超3張。融資減少273張，站在20日均線之上；收盤位置占當日高低區間100%。新聞題材與價量／籌碼僅能交叉支持觀察，不宣稱單一因果。 ",
       "evidence": [
-        "當日漲幅 +10.00%",
-        "成交量 8,267 張",
-        "當日5%以上股票 29 檔"
+        "官方日期化 Facts v3：收盤29.7元、漲幅10%、量8267張；量比0.99倍，站在20日均線之上。",
+        "同日法人檔：外資-566張、投信未見個股紀錄張、自營商+3張；投信 no_record 不等於0。",
+        "融資-273張；分點樣本買方前列富邦-南京、賣方前列凱基-鳳山；樣本淨額799張，非全市場淨流量。",
+        "Repo 11/02漲幅10%、成交8,267張。",
+        "FTNN 10/22報導德淵9月營收創高及AI材料業務，屬此前背景，不能充當11/02新增事件。"
       ],
       "confidence": "low",
-      "follow_up": "優先比對法人、融資與後續2至5日價格延續性；若後續出現公司公告或產業消息，再提高原因可信度。",
-      "sources": []
+      "flow": {
+        "foreign": {
+          "net_shares": -566070,
+          "net_lots": -566,
+          "record_status": "reported",
+          "source_file": "data_twse_foreign_investors/20261102_twse_foreign_investors.json"
+        },
+        "investment_trust": {
+          "net_shares": null,
+          "net_lots": null,
+          "record_status": "no_record",
+          "source_file": "data_twse_investment_trust/20261102_twse_investment_trust.json"
+        },
+        "dealer": {
+          "net_shares": 3000,
+          "net_lots": 3,
+          "record_status": "reported",
+          "source_file": "data_twse_dealers/20261102_twse_dealers.json"
+        },
+        "margin": {
+          "margin_prev": 5922,
+          "margin_now": 5649,
+          "margin_delta": -273,
+          "short_prev": 124,
+          "short_now": 233,
+          "short_delta": 109
+        },
+        "broker": {
+          "status": "available",
+          "top3_buy_share_pct": 13.42,
+          "top5_buy_share_pct": 18.01,
+          "top3_sell_share_pct": 8.24,
+          "top5_sell_share_pct": 11.36,
+          "totals": {
+            "netBuy": 2273,
+            "netSell": 1474,
+            "net": 799
+          },
+          "top_buy_brokers": [
+            {
+              "broker_name": "富邦-南京",
+              "broker_id": "9600",
+              "branch_id": "0039003600310043",
+              "net": 389,
+              "share_pct": 4.71
+            },
+            {
+              "broker_name": "群益金鼎-內湖",
+              "broker_id": "9100",
+              "branch_id": "0039003100380064",
+              "net": 386,
+              "share_pct": 4.67
+            },
+            {
+              "broker_name": "台新-松德",
+              "broker_id": "9B00",
+              "branch_id": "0039004200320061",
+              "net": 334,
+              "share_pct": 4.04
+            },
+            {
+              "broker_name": "元大證券",
+              "broker_id": "9800",
+              "branch_id": "9800",
+              "net": 212,
+              "share_pct": 2.56
+            },
+            {
+              "broker_name": "凱基-信義",
+              "broker_id": "9200",
+              "branch_id": "9216",
+              "net": 168,
+              "share_pct": 2.03
+            }
+          ],
+          "top_sell_brokers": [
+            {
+              "broker_name": "凱基-鳳山",
+              "broker_id": "9200",
+              "branch_id": "9274",
+              "net": 238,
+              "share_pct": 2.88
+            },
+            {
+              "broker_name": "摩根大通",
+              "broker_id": "8440",
+              "branch_id": "8440",
+              "net": 237,
+              "share_pct": 2.87
+            },
+            {
+              "broker_name": "台新-左楠",
+              "broker_id": "9B00",
+              "branch_id": "0039004200310064",
+              "net": 206,
+              "share_pct": 2.49
+            },
+            {
+              "broker_name": "台新-高雄",
+              "broker_id": "9B00",
+              "branch_id": "0039004200310067",
+              "net": 157,
+              "share_pct": 1.9
+            },
+            {
+              "broker_name": "美商高盛",
+              "broker_id": "1480",
+              "branch_id": "1480",
+              "net": 101,
+              "share_pct": 1.22
+            }
+          ],
+          "source_url": "https://fubon-ebrokerdj.fbs.com.tw/z/zc/zco/zco.djhtm?a=4720&e=2026-11-2&f=2026-11-2"
+        },
+        "institutional_verification_required": true
+      },
+      "technical": {
+        "sma5": 30.49,
+        "sma20": 26.31,
+        "sma60": 21.3,
+        "above_sma5": false,
+        "above_sma20": true,
+        "above_sma60": true,
+        "previous_volume": 8333,
+        "volume_ratio_vs_previous": 0.99,
+        "low_liquidity": false
+      },
+      "follow_up": [
+        "先看特化材料營收是否有新公告，再觀察外資賣超與分點集中買盤能否互相消化。",
+        "追蹤德淵次日外資、投信和融資變化；缺新聞時等待可核實之法說／公司公告，避免將市場交易方向誤當特定利多。"
+      ],
+      "sources": [
+        {
+          "title": "FTNN：德淵營收與特化產品",
+          "url": "https://www.ftnn.com.tw/news/589255",
+          "published_at": "2026-10-22"
+        }
+      ]
     },
     {
       "code": "6756",
       "name": "威鋒電子",
       "change_pct": 10,
-      "reason_summary": "未找到可直接驗證的單一公開催化劑；先以族群輪動、價量與籌碼變化解讀，不把上漲本身倒果為因。",
+      "cause_type": "unknown",
+      "cause_tags": [
+        "unverified_catalyst"
+      ],
+      "evidence_strength": "none",
+      "reason_summary": "威鋒電子（6756）11/02收132元，漲10%，量884張，前日量比0.4倍。漲停但成交僅884張，且成交量比前一日縮減，與典型放量突破不同；外資買超而融資減少。 外資買超244張；投信無個股紀錄；自營商買賣超0張。融資減少53張，站在20日均線之上；收盤位置占當日高低區間100%。目前沒有足以確認直接漲因的公司新聞，不能倒推原因。",
       "evidence": [
-        "當日漲幅 +10.00%",
-        "成交量 884 張",
-        "當日5%以上股票 29 檔"
+        "官方日期化 Facts v3：收盤132元、漲幅10%、量884張；量比0.4倍，站在20日均線之上。",
+        "同日法人檔：外資+244張、投信未見個股紀錄張、自營商0張；投信 no_record 不等於0。",
+        "融資-53張；分點樣本買方前列港商野村、賣方前列富邦-員林；樣本淨額311張，非全市場淨流量。"
       ],
       "confidence": "low",
-      "follow_up": "優先比對法人、融資與後續2至5日價格延續性；若後續出現公司公告或產業消息，再提高原因可信度。",
+      "flow": {
+        "foreign": {
+          "net_shares": 244000,
+          "net_lots": 244,
+          "record_status": "reported",
+          "source_file": "data_twse_foreign_investors/20261102_twse_foreign_investors.json"
+        },
+        "investment_trust": {
+          "net_shares": null,
+          "net_lots": null,
+          "record_status": "no_record",
+          "source_file": "data_twse_investment_trust/20261102_twse_investment_trust.json"
+        },
+        "dealer": {
+          "net_shares": -48,
+          "net_lots": 0,
+          "record_status": "reported",
+          "source_file": "data_twse_dealers/20261102_twse_dealers.json"
+        },
+        "margin": {
+          "margin_prev": 957,
+          "margin_now": 904,
+          "margin_delta": -53,
+          "short_prev": 10,
+          "short_now": 27,
+          "short_delta": 17
+        },
+        "broker": {
+          "status": "available",
+          "top3_buy_share_pct": 39.13,
+          "top5_buy_share_pct": 49.43,
+          "top3_sell_share_pct": 13.57,
+          "top5_sell_share_pct": 17.42,
+          "totals": {
+            "netBuy": 590,
+            "netSell": 279,
+            "net": 311
+          },
+          "top_buy_brokers": [
+            {
+              "broker_name": "港商野村",
+              "broker_id": "1560",
+              "branch_id": "1560",
+              "net": 216,
+              "share_pct": 24.43
+            },
+            {
+              "broker_name": "台新-松德",
+              "broker_id": "9B00",
+              "branch_id": "0039004200320061",
+              "net": 78,
+              "share_pct": 8.82
+            },
+            {
+              "broker_name": "元大證券",
+              "broker_id": "9800",
+              "branch_id": "9800",
+              "net": 52,
+              "share_pct": 5.88
+            },
+            {
+              "broker_name": "群益金鼎-內湖",
+              "broker_id": "9100",
+              "branch_id": "0039003100380064",
+              "net": 50,
+              "share_pct": 5.66
+            },
+            {
+              "broker_name": "凱基-台北",
+              "broker_id": "9200",
+              "branch_id": "9268",
+              "net": 41,
+              "share_pct": 4.64
+            }
+          ],
+          "top_sell_brokers": [
+            {
+              "broker_name": "富邦-員林",
+              "broker_id": "9600",
+              "branch_id": "9672",
+              "net": 55,
+              "share_pct": 6.22
+            },
+            {
+              "broker_name": "臺銀-臺中",
+              "broker_id": "1040",
+              "branch_id": "0031003000340041",
+              "net": 36,
+              "share_pct": 4.07
+            },
+            {
+              "broker_name": "群益金鼎-基隆",
+              "broker_id": "9100",
+              "branch_id": "0039003100330045",
+              "net": 29,
+              "share_pct": 3.28
+            },
+            {
+              "broker_name": "摩根大通",
+              "broker_id": "8440",
+              "branch_id": "8440",
+              "net": 18,
+              "share_pct": 2.04
+            },
+            {
+              "broker_name": "美商高盛",
+              "broker_id": "1480",
+              "branch_id": "1480",
+              "net": 16,
+              "share_pct": 1.81
+            }
+          ],
+          "source_url": "https://fubon-ebrokerdj.fbs.com.tw/z/zc/zco/zco.djhtm?a=6756&e=2026-11-2&f=2026-11-2"
+        },
+        "institutional_verification_required": true
+      },
+      "technical": {
+        "sma5": 127.9,
+        "sma20": 111.23,
+        "sma60": 102.91,
+        "above_sma5": true,
+        "above_sma20": true,
+        "above_sma60": true,
+        "previous_volume": 2195,
+        "volume_ratio_vs_previous": 0.4,
+        "low_liquidity": false
+      },
+      "follow_up": [
+        "觀察縮量漲停後能否放量承接，並查公司公告是否有可驗證的需求催化。",
+        "追蹤威鋒電子次日外資、投信和融資變化；缺新聞時等待可核實之法說／公司公告，避免將市場交易方向誤當特定利多。"
+      ],
       "sources": []
     },
     {
       "code": "2468",
       "name": "華經",
       "change_pct": 9.96,
-      "reason_summary": "未找到可直接驗證的單一公開催化劑；先以族群輪動、價量與籌碼變化解讀，不把上漲本身倒果為因。",
-      "evidence": [
-        "當日漲幅 +9.96%",
-        "成交量 22,443 張",
-        "當日5%以上股票 29 檔"
+      "cause_type": "industry_theme",
+      "cause_tags": [
+        "cybersecurity"
       ],
-      "confidence": "low",
-      "follow_up": "優先比對法人、融資與後續2至5日價格延續性；若後續出現公司公告或產業消息，再提高原因可信度。",
-      "sources": []
+      "evidence_strength": "corroborated",
+      "reason_summary": "華經（2468）11/02收58.5元，漲9.96%，量22443張，前日量比0.84倍。資安與資訊服務輪動具多篇當日報導支持，不能等同華經取得新訂單；外資買超，融資也增加，市場熱度與槓桿同步升溫。 外資買超2953張；投信無個股紀錄；自營商買超3張。融資增加278張，站在20日均線之上；收盤位置占當日高低區間100%。新聞題材與價量／籌碼僅能交叉支持觀察，不宣稱單一因果。 ",
+      "evidence": [
+        "官方日期化 Facts v3：收盤58.5元、漲幅9.96%、量22443張；量比0.84倍，站在20日均線之上。",
+        "同日法人檔：外資+2953張、投信未見個股紀錄張、自營商+3張；投信 no_record 不等於0。",
+        "融資+278張；分點樣本買方前列港商野村、賣方前列國泰-敦南；樣本淨額3270張，非全市場淨流量。",
+        "近期來源：永豐金證券：資安題材華經漲停，日期2026-11-02。",
+        "原始強勢股清單確認漲幅9.96%，但不代表已證實股價因果。"
+      ],
+      "confidence": "medium",
+      "flow": {
+        "foreign": {
+          "net_shares": 2952977,
+          "net_lots": 2953,
+          "record_status": "reported",
+          "source_file": "data_twse_foreign_investors/20261102_twse_foreign_investors.json"
+        },
+        "investment_trust": {
+          "net_shares": null,
+          "net_lots": null,
+          "record_status": "no_record",
+          "source_file": "data_twse_investment_trust/20261102_twse_investment_trust.json"
+        },
+        "dealer": {
+          "net_shares": 2535,
+          "net_lots": 3,
+          "record_status": "reported",
+          "source_file": "data_twse_dealers/20261102_twse_dealers.json"
+        },
+        "margin": {
+          "margin_prev": 4176,
+          "margin_now": 4454,
+          "margin_delta": 278,
+          "short_prev": 330,
+          "short_now": 720,
+          "short_delta": 390
+        },
+        "broker": {
+          "status": "available",
+          "top3_buy_share_pct": 11.26,
+          "top5_buy_share_pct": 13.95,
+          "top3_sell_share_pct": 2.2,
+          "top5_sell_share_pct": 3.28,
+          "totals": {
+            "netBuy": 4613,
+            "netSell": 1343,
+            "net": 3270
+          },
+          "top_buy_brokers": [
+            {
+              "broker_name": "港商野村",
+              "broker_id": "1560",
+              "branch_id": "1560",
+              "net": 1239,
+              "share_pct": 5.52
+            },
+            {
+              "broker_name": "美商高盛",
+              "broker_id": "1480",
+              "branch_id": "1480",
+              "net": 692,
+              "share_pct": 3.08
+            },
+            {
+              "broker_name": "凱基-台北",
+              "broker_id": "9200",
+              "branch_id": "9268",
+              "net": 596,
+              "share_pct": 2.66
+            },
+            {
+              "broker_name": "元大證券",
+              "broker_id": "9800",
+              "branch_id": "9800",
+              "net": 375,
+              "share_pct": 1.67
+            },
+            {
+              "broker_name": "統一",
+              "broker_id": "5850",
+              "branch_id": "5850",
+              "net": 230,
+              "share_pct": 1.02
+            }
+          ],
+          "top_sell_brokers": [
+            {
+              "broker_name": "國泰-敦南",
+              "broker_id": "8880",
+              "branch_id": "8888",
+              "net": 203,
+              "share_pct": 0.9
+            },
+            {
+              "broker_name": "國泰-館前",
+              "broker_id": "8880",
+              "branch_id": "0038003800380041",
+              "net": 155,
+              "share_pct": 0.69
+            },
+            {
+              "broker_name": "永豐金-竹科",
+              "broker_id": "9A00",
+              "branch_id": "0039004100390058",
+              "net": 138,
+              "share_pct": 0.61
+            },
+            {
+              "broker_name": "永豐金-內湖",
+              "broker_id": "9A00",
+              "branch_id": "0039004100390067",
+              "net": 128,
+              "share_pct": 0.57
+            },
+            {
+              "broker_name": "臺銀-臺中",
+              "broker_id": "1040",
+              "branch_id": "0031003000340041",
+              "net": 114,
+              "share_pct": 0.51
+            }
+          ],
+          "source_url": "https://fubon-ebrokerdj.fbs.com.tw/z/zc/zco/zco.djhtm?a=2468&e=2026-11-2&f=2026-11-2"
+        },
+        "institutional_verification_required": true
+      },
+      "technical": {
+        "sma5": 54.58,
+        "sma20": 48.35,
+        "sma60": 40.83,
+        "above_sma5": true,
+        "above_sma20": true,
+        "above_sma60": true,
+        "previous_volume": 26677,
+        "volume_ratio_vs_previous": 0.84,
+        "low_liquidity": false
+      },
+      "follow_up": [
+        "確認資安題材是否轉為公司實際訂單，並追蹤法人方向與高週轉風險。",
+        "追蹤華經次日外資、投信和融資變化；缺新聞時等待可核實之法說／公司公告，避免將市場交易方向誤當特定利多。"
+      ],
+      "sources": [
+        {
+          "title": "永豐金證券：資安題材華經漲停",
+          "url": "https://www.sinotrade.com.tw/richclub/MarketTrends/%E4%BB%8A%E6%97%A5%E6%BC%B2%E5%81%9C%E8%82%A1-%E8%B3%87%E5%AE%89%E7%88%86%E7%99%BC%E8%88%87%E9%9B%BB%E5%AD%90%E9%80%B1%E9%82%8A%E7%8B%82%E9%A3%86-%E5%AF%8C%E5%96%AC-%E8%8F%AF%E7%B6%93-%E9%AB%98%E5%83%91%E5%BC%B7%E6%94%BB%E6%BC%B2%E5%81%9C-1102-6ae836e4d03a4f01605853ba",
+          "published_at": "2026-11-02"
+        },
+        {
+          "title": "自由時報：焦點股華經—資金轉進軟體股及9月營收",
+          "url": "https://ec.ltn.com.tw/article/breakingnews/5626260",
+          "published_at": "2026-11-02"
+        },
+        {
+          "title": "經濟日報：資安事件帶動資服股資金輪動、華經漲停",
+          "url": "https://money.udn.com/money/story/5607/9851673",
+          "published_at": "2026-11-02"
+        }
+      ]
     },
     {
       "code": "6689",
       "name": "伊雲谷",
       "change_pct": 9.96,
-      "reason_summary": "未找到可直接驗證的單一公開催化劑；先以族群輪動、價量與籌碼變化解讀，不把上漲本身倒果為因。",
+      "cause_type": "unknown",
+      "cause_tags": [
+        "unverified_catalyst"
+      ],
+      "evidence_strength": "none",
+      "reason_summary": "伊雲谷（6689）11/02收77.3元，漲9.96%，量2763張，前日量比4.43倍。成交量達前一日4倍以上且收盤漲停，外資與融資均增加；但資服族群同步走強並非公司新訂單證據。 外資買超146張；投信無個股紀錄；自營商買超5張。融資增加374張，站在20日均線之上；收盤位置占當日高低區間100%。目前沒有足以確認直接漲因的公司新聞，不能倒推原因。",
       "evidence": [
-        "當日漲幅 +9.96%",
-        "成交量 2,763 張",
-        "當日5%以上股票 29 檔"
+        "官方日期化 Facts v3：收盤77.3元、漲幅9.96%、量2763張；量比4.43倍，站在20日均線之上。",
+        "同日法人檔：外資+146張、投信未見個股紀錄張、自營商+5張；投信 no_record 不等於0。",
+        "融資+374張；分點樣本買方前列元大-竹科、賣方前列華南永昌-竹北；樣本淨額371張，非全市場淨流量。"
       ],
       "confidence": "low",
-      "follow_up": "優先比對法人、融資與後續2至5日價格延續性；若後續出現公司公告或產業消息，再提高原因可信度。",
+      "flow": {
+        "foreign": {
+          "net_shares": 145553,
+          "net_lots": 146,
+          "record_status": "reported",
+          "source_file": "data_twse_foreign_investors/20261102_twse_foreign_investors.json"
+        },
+        "investment_trust": {
+          "net_shares": null,
+          "net_lots": null,
+          "record_status": "no_record",
+          "source_file": "data_twse_investment_trust/20261102_twse_investment_trust.json"
+        },
+        "dealer": {
+          "net_shares": 5000,
+          "net_lots": 5,
+          "record_status": "reported",
+          "source_file": "data_twse_dealers/20261102_twse_dealers.json"
+        },
+        "margin": {
+          "margin_prev": 1473,
+          "margin_now": 1847,
+          "margin_delta": 374,
+          "short_prev": 5,
+          "short_now": 11,
+          "short_delta": 6
+        },
+        "broker": {
+          "status": "available",
+          "top3_buy_share_pct": 17.4,
+          "top5_buy_share_pct": 23.01,
+          "top3_sell_share_pct": 9.01,
+          "top5_sell_share_pct": 12.12,
+          "totals": {
+            "netBuy": 955,
+            "netSell": 584,
+            "net": 371
+          },
+          "top_buy_brokers": [
+            {
+              "broker_name": "元大-竹科",
+              "broker_id": "9800",
+              "branch_id": "003900380030004b",
+              "net": 196,
+              "share_pct": 7.09
+            },
+            {
+              "broker_name": "元大證券",
+              "broker_id": "9800",
+              "branch_id": "9800",
+              "net": 146,
+              "share_pct": 5.28
+            },
+            {
+              "broker_name": "群益金鼎-內湖",
+              "broker_id": "9100",
+              "branch_id": "0039003100380064",
+              "net": 139,
+              "share_pct": 5.03
+            },
+            {
+              "broker_name": "台灣摩根士丹利",
+              "broker_id": "1470",
+              "branch_id": "1470",
+              "net": 105,
+              "share_pct": 3.8
+            },
+            {
+              "broker_name": "台新-世貿",
+              "broker_id": "9B00",
+              "branch_id": "0039004200320075",
+              "net": 50,
+              "share_pct": 1.81
+            }
+          ],
+          "top_sell_brokers": [
+            {
+              "broker_name": "華南永昌-竹北",
+              "broker_id": "9300",
+              "branch_id": "9339",
+              "net": 118,
+              "share_pct": 4.27
+            },
+            {
+              "broker_name": "致和-南京",
+              "broker_id": "7030",
+              "branch_id": "7038",
+              "net": 79,
+              "share_pct": 2.86
+            },
+            {
+              "broker_name": "(牛牛牛)亞-鑫豐",
+              "broker_id": "6010",
+              "branch_id": "0036003000310064",
+              "net": 52,
+              "share_pct": 1.88
+            },
+            {
+              "broker_name": "華南永昌-古亭",
+              "broker_id": "9300",
+              "branch_id": "9309",
+              "net": 49,
+              "share_pct": 1.77
+            },
+            {
+              "broker_name": "元大-北三重",
+              "broker_id": "9800",
+              "branch_id": "0039003800390056",
+              "net": 37,
+              "share_pct": 1.34
+            }
+          ],
+          "source_url": "https://fubon-ebrokerdj.fbs.com.tw/z/zc/zco/zco.djhtm?a=6689&e=2026-11-2&f=2026-11-2"
+        },
+        "institutional_verification_required": true
+      },
+      "technical": {
+        "sma5": 73.3,
+        "sma20": 68.24,
+        "sma60": 64.71,
+        "above_sma5": true,
+        "above_sma20": true,
+        "above_sma60": true,
+        "previous_volume": 624,
+        "volume_ratio_vs_previous": 4.43,
+        "low_liquidity": false
+      },
+      "follow_up": [
+        "放量後的承接與融資增加是否造成震盪，另核對公司特定公告。",
+        "追蹤伊雲谷次日外資、投信和融資變化；缺新聞時等待可核實之法說／公司公告，避免將市場交易方向誤當特定利多。"
+      ],
       "sources": []
     },
     {
       "code": "4562",
       "name": "穎漢",
       "change_pct": 9.9,
-      "reason_summary": "未找到可直接驗證的單一公開催化劑；先以族群輪動、價量與籌碼變化解讀，不把上漲本身倒果為因。",
+      "cause_type": "unknown",
+      "cause_tags": [
+        "unverified_catalyst"
+      ],
+      "evidence_strength": "none",
+      "reason_summary": "穎漢（4562）11/02收33.3元，漲9.9%，量1271張，前日量比2.32倍。穎漢漲停伴隨量比擴大，外資買超；目前缺少可核實的當日事件，技術性強勢與基本面催化必須分開。 外資買超282張；投信無個股紀錄；自營商無個股紀錄。融資增加56張，站在20日均線之上；收盤位置占當日高低區間100%。目前沒有足以確認直接漲因的公司新聞，不能倒推原因。",
       "evidence": [
-        "當日漲幅 +9.90%",
-        "成交量 1,271 張",
-        "當日5%以上股票 29 檔"
+        "官方日期化 Facts v3：收盤33.3元、漲幅9.9%、量1271張；量比2.32倍，站在20日均線之上。",
+        "同日法人檔：外資+282張、投信未見個股紀錄張、自營商未見個股紀錄張；投信 no_record 不等於0。",
+        "融資+56張；分點樣本買方前列美商高盛、賣方前列凱基-三重；樣本淨額236張，非全市場淨流量。"
       ],
       "confidence": "low",
-      "follow_up": "優先比對法人、融資與後續2至5日價格延續性；若後續出現公司公告或產業消息，再提高原因可信度。",
+      "flow": {
+        "foreign": {
+          "net_shares": 282000,
+          "net_lots": 282,
+          "record_status": "reported",
+          "source_file": "data_twse_foreign_investors/20261102_twse_foreign_investors.json"
+        },
+        "investment_trust": {
+          "net_shares": null,
+          "net_lots": null,
+          "record_status": "no_record",
+          "source_file": "data_twse_investment_trust/20261102_twse_investment_trust.json"
+        },
+        "dealer": {
+          "net_shares": null,
+          "net_lots": null,
+          "record_status": "no_record",
+          "source_file": "data_twse_dealers/20261102_twse_dealers.json"
+        },
+        "margin": {
+          "margin_prev": 1688,
+          "margin_now": 1744,
+          "margin_delta": 56,
+          "short_prev": 27,
+          "short_now": 34,
+          "short_delta": 7
+        },
+        "broker": {
+          "status": "available",
+          "top3_buy_share_pct": 20.14,
+          "top5_buy_share_pct": 28.79,
+          "top3_sell_share_pct": 8.02,
+          "top5_sell_share_pct": 11.01,
+          "totals": {
+            "netBuy": 502,
+            "netSell": 266,
+            "net": 236
+          },
+          "top_buy_brokers": [
+            {
+              "broker_name": "美商高盛",
+              "broker_id": "1480",
+              "branch_id": "1480",
+              "net": 114,
+              "share_pct": 8.97
+            },
+            {
+              "broker_name": "港商野村",
+              "broker_id": "1560",
+              "branch_id": "1560",
+              "net": 72,
+              "share_pct": 5.66
+            },
+            {
+              "broker_name": "統一-南京",
+              "broker_id": "5850",
+              "branch_id": "0035003800350055",
+              "net": 70,
+              "share_pct": 5.51
+            },
+            {
+              "broker_name": "凱基-台北",
+              "broker_id": "9200",
+              "branch_id": "9268",
+              "net": 65,
+              "share_pct": 5.11
+            },
+            {
+              "broker_name": "新光-台南",
+              "broker_id": "8560",
+              "branch_id": "8564",
+              "net": 45,
+              "share_pct": 3.54
+            }
+          ],
+          "top_sell_brokers": [
+            {
+              "broker_name": "凱基-三重",
+              "broker_id": "9200",
+              "branch_id": "9205",
+              "net": 52,
+              "share_pct": 4.09
+            },
+            {
+              "broker_name": "合庫-台南",
+              "broker_id": "1020",
+              "branch_id": "1022",
+              "net": 29,
+              "share_pct": 2.28
+            },
+            {
+              "broker_name": "高橋",
+              "broker_id": "5320",
+              "branch_id": "5320",
+              "net": 21,
+              "share_pct": 1.65
+            },
+            {
+              "broker_name": "元大-長榮",
+              "broker_id": "9800",
+              "branch_id": "0039003800390049",
+              "net": 20,
+              "share_pct": 1.57
+            },
+            {
+              "broker_name": "聯邦-台南",
+              "broker_id": "8580",
+              "branch_id": "8588",
+              "net": 18,
+              "share_pct": 1.42
+            }
+          ],
+          "source_url": "https://fubon-ebrokerdj.fbs.com.tw/z/zc/zco/zco.djhtm?a=4562&e=2026-11-2&f=2026-11-2"
+        },
+        "institutional_verification_required": true
+      },
+      "technical": {
+        "sma5": 31.39,
+        "sma20": 30.46,
+        "sma60": 30.81,
+        "above_sma5": true,
+        "above_sma20": true,
+        "above_sma60": true,
+        "previous_volume": 549,
+        "volume_ratio_vs_previous": 2.32,
+        "low_liquidity": false
+      },
+      "follow_up": [
+        "觀察隔日有無延續量能，以及公司是否發布實質訊息。",
+        "追蹤穎漢次日外資、投信和融資變化；缺新聞時等待可核實之法說／公司公告，避免將市場交易方向誤當特定利多。"
+      ],
       "sources": []
     },
     {
       "code": "6271",
       "name": "同欣電",
       "change_pct": 9.9,
-      "reason_summary": "未找到可直接驗證的單一公開催化劑；先以族群輪動、價量與籌碼變化解讀，不把上漲本身倒果為因。",
-      "evidence": [
-        "當日漲幅 +9.90%",
-        "成交量 3,738 張",
-        "當日5%以上股票 29 檔"
+      "cause_type": "company_event",
+      "cause_tags": [
+        "optical_communications"
       ],
-      "confidence": "low",
-      "follow_up": "優先比對法人、融資與後續2至5日價格延續性；若後續出現公司公告或產業消息，再提高原因可信度。",
-      "sources": []
+      "evidence_strength": "corroborated",
+      "reason_summary": "同欣電（6271）11/02收216.5元，漲9.9%，量3738張，前日量比1.09倍。10月底法說與光通訊、AMB基板展望提供公司層級背景，11月2日股價漲停；外資與投信同向買超，但收盤仍未站上20日均線。 外資買超363張；投信買超102張；自營商賣超16張。融資減少274張，仍低於20日均線；收盤位置占當日高低區間100%。新聞題材與價量／籌碼僅能交叉支持觀察，不宣稱單一因果。 ",
+      "evidence": [
+        "官方日期化 Facts v3：收盤216.5元、漲幅9.9%、量3738張；量比1.09倍，仍低於20日均線。",
+        "同日法人檔：外資+363張、投信+102張、自營商-16張；投信 no_record 不等於0。",
+        "融資-274張；分點樣本買方前列元大證券、賣方前列美商高盛；樣本淨額905張，非全市場淨流量。",
+        "近期來源：經濟日報：同欣電財報與法說，日期2026-10-30。",
+        "原始強勢股清單確認漲幅9.9%，但不代表已證實股價因果。"
+      ],
+      "confidence": "high",
+      "flow": {
+        "foreign": {
+          "net_shares": 362635,
+          "net_lots": 363,
+          "record_status": "reported",
+          "source_file": "data_twse_foreign_investors/20261102_twse_foreign_investors.json"
+        },
+        "investment_trust": {
+          "net_shares": 102000,
+          "net_lots": 102,
+          "record_status": "reported",
+          "source_file": "data_twse_investment_trust/20261102_twse_investment_trust.json"
+        },
+        "dealer": {
+          "net_shares": -16000,
+          "net_lots": -16,
+          "record_status": "reported",
+          "source_file": "data_twse_dealers/20261102_twse_dealers.json"
+        },
+        "margin": {
+          "margin_prev": 6665,
+          "margin_now": 6391,
+          "margin_delta": -274,
+          "short_prev": 28,
+          "short_now": 64,
+          "short_delta": 36
+        },
+        "broker": {
+          "status": "available",
+          "top3_buy_share_pct": 29.83,
+          "top5_buy_share_pct": 35.42,
+          "top3_sell_share_pct": 10.44,
+          "top5_sell_share_pct": 12.85,
+          "totals": {
+            "netBuy": 1637,
+            "netSell": 732,
+            "net": 905
+          },
+          "top_buy_brokers": [
+            {
+              "broker_name": "元大證券",
+              "broker_id": "9800",
+              "branch_id": "9800",
+              "net": 564,
+              "share_pct": 15.09
+            },
+            {
+              "broker_name": "摩根大通",
+              "broker_id": "8440",
+              "branch_id": "8440",
+              "net": 423,
+              "share_pct": 11.32
+            },
+            {
+              "broker_name": "花旗環球",
+              "broker_id": "1590",
+              "branch_id": "1590",
+              "net": 128,
+              "share_pct": 3.42
+            },
+            {
+              "broker_name": "美林",
+              "broker_id": "1440",
+              "branch_id": "1440",
+              "net": 112,
+              "share_pct": 3
+            },
+            {
+              "broker_name": "元大-新莊",
+              "broker_id": "9800",
+              "branch_id": "9898",
+              "net": 97,
+              "share_pct": 2.59
+            }
+          ],
+          "top_sell_brokers": [
+            {
+              "broker_name": "美商高盛",
+              "broker_id": "1480",
+              "branch_id": "1480",
+              "net": 185,
+              "share_pct": 4.95
+            },
+            {
+              "broker_name": "台灣摩根士丹利",
+              "broker_id": "1470",
+              "branch_id": "1470",
+              "net": 127,
+              "share_pct": 3.4
+            },
+            {
+              "broker_name": "富邦-永和",
+              "broker_id": "9600",
+              "branch_id": "9654",
+              "net": 78,
+              "share_pct": 2.09
+            },
+            {
+              "broker_name": "兆豐-桃鶯",
+              "broker_id": "7000",
+              "branch_id": "0037003000300055",
+              "net": 52,
+              "share_pct": 1.39
+            },
+            {
+              "broker_name": "國泰-敦南",
+              "broker_id": "8880",
+              "branch_id": "8888",
+              "net": 38,
+              "share_pct": 1.02
+            }
+          ],
+          "source_url": "https://fubon-ebrokerdj.fbs.com.tw/z/zc/zco/zco.djhtm?a=6271&e=2026-11-2&f=2026-11-2"
+        },
+        "institutional_verification_required": false
+      },
+      "technical": {
+        "sma5": 208.3,
+        "sma20": 227.48,
+        "sma60": 217.15,
+        "above_sma5": true,
+        "above_sma20": false,
+        "above_sma60": false,
+        "previous_volume": 3420,
+        "volume_ratio_vs_previous": 1.09,
+        "low_liquidity": false
+      },
+      "follow_up": [
+        "追蹤下一季產品量產與營收驗證，確認20日線能否收復及投信籌碼是否延續。",
+        "追蹤同欣電次日外資、投信和融資變化；缺新聞時等待可核實之法說／公司公告，避免將市場交易方向誤當特定利多。"
+      ],
+      "sources": [
+        {
+          "title": "MoneyDJ／台視：同欣電光通訊及AMB展望",
+          "url": "https://www.ttv.com.tw/finance/view/11202602090694B2B0AD66A447479AA0710890057AFEFFC5/587",
+          "published_at": "2026-11-02"
+        }
+      ]
     },
     {
       "code": "1617",
       "name": "榮星",
       "change_pct": 9.88,
-      "reason_summary": "未找到可直接驗證的單一公開催化劑；先以族群輪動、價量與籌碼變化解讀，不把上漲本身倒果為因。",
+      "cause_type": "unknown",
+      "cause_tags": [
+        "unverified_catalyst"
+      ],
+      "evidence_strength": "none",
+      "reason_summary": "榮星（1617）11/02收22.25元，漲9.88%，量1521張，前日量比2.6倍。股價收高點且成交量顯著放大，外資買超；不過仍位於20日均線下方，須避免單日漲停就宣稱趨勢反轉。 外資買超176張；投信無個股紀錄；自營商買超6張。融資增加57張，仍低於20日均線；收盤位置占當日高低區間100%。目前沒有足以確認直接漲因的公司新聞，不能倒推原因。",
       "evidence": [
-        "當日漲幅 +9.88%",
-        "成交量 1,521 張",
-        "當日5%以上股票 29 檔"
+        "官方日期化 Facts v3：收盤22.25元、漲幅9.88%、量1521張；量比2.6倍，仍低於20日均線。",
+        "同日法人檔：外資+176張、投信未見個股紀錄張、自營商+6張；投信 no_record 不等於0。",
+        "融資+57張；分點樣本買方前列元大-台北、賣方前列國泰證券；樣本淨額220張，非全市場淨流量。"
       ],
       "confidence": "low",
-      "follow_up": "優先比對法人、融資與後續2至5日價格延續性；若後續出現公司公告或產業消息，再提高原因可信度。",
+      "flow": {
+        "foreign": {
+          "net_shares": 175973,
+          "net_lots": 176,
+          "record_status": "reported",
+          "source_file": "data_twse_foreign_investors/20261102_twse_foreign_investors.json"
+        },
+        "investment_trust": {
+          "net_shares": null,
+          "net_lots": null,
+          "record_status": "no_record",
+          "source_file": "data_twse_investment_trust/20261102_twse_investment_trust.json"
+        },
+        "dealer": {
+          "net_shares": 5804,
+          "net_lots": 6,
+          "record_status": "reported",
+          "source_file": "data_twse_dealers/20261102_twse_dealers.json"
+        },
+        "margin": {
+          "margin_prev": 2271,
+          "margin_now": 2328,
+          "margin_delta": 57,
+          "short_prev": 6,
+          "short_now": 9,
+          "short_delta": 3
+        },
+        "broker": {
+          "status": "available",
+          "top3_buy_share_pct": 25.18,
+          "top5_buy_share_pct": 29.06,
+          "top3_sell_share_pct": 12.29,
+          "top5_sell_share_pct": 14.59,
+          "totals": {
+            "netBuy": 576,
+            "netSell": 356,
+            "net": 220
+          },
+          "top_buy_brokers": [
+            {
+              "broker_name": "元大-台北",
+              "broker_id": "9800",
+              "branch_id": "0039003800300068",
+              "net": 235,
+              "share_pct": 15.45
+            },
+            {
+              "broker_name": "美商高盛",
+              "broker_id": "1480",
+              "branch_id": "1480",
+              "net": 88,
+              "share_pct": 5.79
+            },
+            {
+              "broker_name": "港商野村",
+              "broker_id": "1560",
+              "branch_id": "1560",
+              "net": 60,
+              "share_pct": 3.94
+            },
+            {
+              "broker_name": "凱基-台北",
+              "broker_id": "9200",
+              "branch_id": "9268",
+              "net": 31,
+              "share_pct": 2.04
+            },
+            {
+              "broker_name": "富邦-虎尾",
+              "broker_id": "9600",
+              "branch_id": "9697",
+              "net": 28,
+              "share_pct": 1.84
+            }
+          ],
+          "top_sell_brokers": [
+            {
+              "broker_name": "國泰證券",
+              "broker_id": "8880",
+              "branch_id": "8880",
+              "net": 78,
+              "share_pct": 5.13
+            },
+            {
+              "broker_name": "元大證券",
+              "broker_id": "9800",
+              "branch_id": "9800",
+              "net": 58,
+              "share_pct": 3.81
+            },
+            {
+              "broker_name": "台新-成功",
+              "broker_id": "9B00",
+              "branch_id": "003900420032006d",
+              "net": 51,
+              "share_pct": 3.35
+            },
+            {
+              "broker_name": "元大-新莊",
+              "broker_id": "9800",
+              "branch_id": "9898",
+              "net": 18,
+              "share_pct": 1.18
+            },
+            {
+              "broker_name": "富邦-高雄",
+              "broker_id": "9600",
+              "branch_id": "9659",
+              "net": 17,
+              "share_pct": 1.12
+            }
+          ],
+          "source_url": "https://fubon-ebrokerdj.fbs.com.tw/z/zc/zco/zco.djhtm?a=1617&e=2026-11-2&f=2026-11-2"
+        },
+        "institutional_verification_required": true
+      },
+      "technical": {
+        "sma5": 21.34,
+        "sma20": 22.79,
+        "sma60": 19.95,
+        "above_sma5": true,
+        "above_sma20": false,
+        "above_sma60": true,
+        "previous_volume": 584,
+        "volume_ratio_vs_previous": 2.6,
+        "low_liquidity": false
+      },
+      "follow_up": [
+        "先看20日均線壓力是否突破，再追蹤放量後法人買盤。",
+        "追蹤榮星次日外資、投信和融資變化；缺新聞時等待可核實之法說／公司公告，避免將市場交易方向誤當特定利多。"
+      ],
       "sources": []
     },
     {
       "code": "2465",
       "name": "麗臺",
       "change_pct": 9.8,
-      "reason_summary": "AI伺服器／高階運算供應鏈資金回流，電源、散熱、伺服器、ASIC與周邊零組件同時受惠資本支出與算力需求，偏大型成長主線。",
+      "cause_type": "mixed",
+      "cause_tags": [
+        "ai_workstation"
+      ],
+      "evidence_strength": "corroborated",
+      "reason_summary": "麗臺（2465）11/02收112元，漲9.8%，量2615張，前日量比0.2倍。獲利與AI工作站題材有新聞背景，但當日外資賣超、成交量反而低於前一日；漲停不代表法人一致加碼。 外資賣超224張；投信無個股紀錄；自營商買超24張。融資減少67張，站在20日均線之上；收盤位置占當日高低區間100%。新聞題材與價量／籌碼僅能交叉支持觀察，不宣稱單一因果。 ",
       "evidence": [
-        "當日漲幅 +9.80%",
-        "成交量 2,615 張",
-        "當日共有 29 檔漲幅達5%"
+        "官方日期化 Facts v3：收盤112元、漲幅9.8%、量2615張；量比0.2倍，站在20日均線之上。",
+        "同日法人檔：外資-224張、投信未見個股紀錄張、自營商+24張；投信 no_record 不等於0。",
+        "融資-67張；分點樣本買方前列凱基-台北、賣方前列台灣摩根士丹利；樣本淨額880張，非全市場淨流量。",
+        "近期來源：非凡新聞：麗臺獲利與漲停，日期2026-11-02。",
+        "原始強勢股清單確認漲幅9.8%，但不代表已證實股價因果。"
       ],
       "confidence": "high",
-      "follow_up": "觀察隔日是否續量、同族群是否維持多檔同步，以及法人買盤是否延續。",
+      "flow": {
+        "foreign": {
+          "net_shares": -224000,
+          "net_lots": -224,
+          "record_status": "reported",
+          "source_file": "data_twse_foreign_investors/20261102_twse_foreign_investors.json"
+        },
+        "investment_trust": {
+          "net_shares": null,
+          "net_lots": null,
+          "record_status": "no_record",
+          "source_file": "data_twse_investment_trust/20261102_twse_investment_trust.json"
+        },
+        "dealer": {
+          "net_shares": 23750,
+          "net_lots": 24,
+          "record_status": "reported",
+          "source_file": "data_twse_dealers/20261102_twse_dealers.json"
+        },
+        "margin": {
+          "margin_prev": 5618,
+          "margin_now": 5551,
+          "margin_delta": -67,
+          "short_prev": 123,
+          "short_now": 368,
+          "short_delta": 245
+        },
+        "broker": {
+          "status": "available",
+          "top3_buy_share_pct": 53.92,
+          "top5_buy_share_pct": 55.75,
+          "top3_sell_share_pct": 10.59,
+          "top5_sell_share_pct": 15.52,
+          "totals": {
+            "netBuy": 1608,
+            "netSell": 728,
+            "net": 880
+          },
+          "top_buy_brokers": [
+            {
+              "broker_name": "凱基-台北",
+              "broker_id": "9200",
+              "branch_id": "9268",
+              "net": 1060,
+              "share_pct": 40.54
+            },
+            {
+              "broker_name": "富邦-南屯",
+              "broker_id": "9600",
+              "branch_id": "9666",
+              "net": 299,
+              "share_pct": 11.43
+            },
+            {
+              "broker_name": "凱基-站前",
+              "broker_id": "9200",
+              "branch_id": "0039003200300046",
+              "net": 51,
+              "share_pct": 1.95
+            },
+            {
+              "broker_name": "統一-城中",
+              "broker_id": "5850",
+              "branch_id": "5854",
+              "net": 28,
+              "share_pct": 1.07
+            },
+            {
+              "broker_name": "台新-大昌",
+              "broker_id": "9B00",
+              "branch_id": "0039004200320044",
+              "net": 20,
+              "share_pct": 0.76
+            }
+          ],
+          "top_sell_brokers": [
+            {
+              "broker_name": "台灣摩根士丹利",
+              "broker_id": "1470",
+              "branch_id": "1470",
+              "net": 107,
+              "share_pct": 4.09
+            },
+            {
+              "broker_name": "富邦-豐原",
+              "broker_id": "9600",
+              "branch_id": "003900360033004c",
+              "net": 98,
+              "share_pct": 3.75
+            },
+            {
+              "broker_name": "富邦-仁愛",
+              "broker_id": "9600",
+              "branch_id": "9676",
+              "net": 72,
+              "share_pct": 2.75
+            },
+            {
+              "broker_name": "群益金鼎-新店",
+              "broker_id": "9100",
+              "branch_id": "0039003100380046",
+              "net": 66,
+              "share_pct": 2.52
+            },
+            {
+              "broker_name": "國泰-敦南",
+              "broker_id": "8880",
+              "branch_id": "8888",
+              "net": 63,
+              "share_pct": 2.41
+            }
+          ],
+          "source_url": "https://fubon-ebrokerdj.fbs.com.tw/z/zc/zco/zco.djhtm?a=2465&e=2026-11-2&f=2026-11-2"
+        },
+        "institutional_verification_required": true
+      },
+      "technical": {
+        "sma5": 104.78,
+        "sma20": 92.2,
+        "sma60": 91.93,
+        "above_sma5": true,
+        "above_sma20": true,
+        "above_sma60": true,
+        "previous_volume": 12871,
+        "volume_ratio_vs_previous": 0.2,
+        "low_liquidity": false
+      },
+      "follow_up": [
+        "比較財報後的實際訂單與需求，留意縮量漲停和外資賣壓。",
+        "追蹤麗臺次日外資、投信和融資變化；缺新聞時等待可核實之法說／公司公告，避免將市場交易方向誤當特定利多。"
+      ],
       "sources": [
         {
-          "title": "中央社：AI功能升級帶動高階PCB與IC載板需求",
-          "url": "https://www.cna.com.tw/news/afe/202605140043.aspx",
-          "published_at": "2026-05-14"
+          "title": "非凡新聞：麗臺獲利與漲停",
+          "url": "https://news.ustv.com.tw/newsdetail/20261102A001016?newsall=true&type=103",
+          "published_at": "2026-11-02"
         }
       ]
     },
@@ -143,293 +1438,2989 @@
       "code": "6467",
       "name": "泰合",
       "change_pct": 9.8,
-      "reason_summary": "未找到可直接驗證的單一公開催化劑；先以族群輪動、價量與籌碼變化解讀，不把上漲本身倒果為因。",
+      "cause_type": "unknown",
+      "cause_tags": [
+        "unverified_catalyst"
+      ],
+      "evidence_strength": "none",
+      "reason_summary": "泰合（6467）11/02收224元，漲9.8%，量571張，前日量比1.41倍。成交僅571張的漲停股，外資買超且主要買方分點集中；融資與20日均線資料無法完整驗證，不宜推定全面資金進駐。 外資買超104張；投信無個股紀錄；自營商買超13張。融資增減資料不足，20日均線資料不足；收盤位置占當日高低區間100%。目前沒有足以確認直接漲因的公司新聞，不能倒推原因。",
       "evidence": [
-        "當日漲幅 +9.80%",
-        "成交量 571 張",
-        "當日5%以上股票 29 檔"
+        "官方日期化 Facts v3：收盤224元、漲幅9.8%、量571張；量比1.41倍，20日均線資料不足。",
+        "同日法人檔：外資+104張、投信未見個股紀錄張、自營商+13張；投信 no_record 不等於0。",
+        "融資缺增減數據；分點樣本買方前列元大證券、賣方前列富邦-台北；樣本淨額195張，非全市場淨流量。"
       ],
       "confidence": "low",
-      "follow_up": "優先比對法人、融資與後續2至5日價格延續性；若後續出現公司公告或產業消息，再提高原因可信度。",
+      "flow": {
+        "foreign": {
+          "net_shares": 104117,
+          "net_lots": 104,
+          "record_status": "reported",
+          "source_file": "data_twse_foreign_investors/20261102_twse_foreign_investors.json"
+        },
+        "investment_trust": {
+          "net_shares": null,
+          "net_lots": null,
+          "record_status": "no_record",
+          "source_file": "data_twse_investment_trust/20261102_twse_investment_trust.json"
+        },
+        "dealer": {
+          "net_shares": 12910,
+          "net_lots": 13,
+          "record_status": "reported",
+          "source_file": "data_twse_dealers/20261102_twse_dealers.json"
+        },
+        "margin": {
+          "margin_prev": null,
+          "margin_now": null,
+          "margin_delta": null,
+          "short_prev": null,
+          "short_now": null,
+          "short_delta": null
+        },
+        "broker": {
+          "status": "available",
+          "top3_buy_share_pct": 29.07,
+          "top5_buy_share_pct": 43.6,
+          "top3_sell_share_pct": 13.48,
+          "top5_sell_share_pct": 19.61,
+          "totals": {
+            "netBuy": 417,
+            "netSell": 222,
+            "net": 195
+          },
+          "top_buy_brokers": [
+            {
+              "broker_name": "元大證券",
+              "broker_id": "9800",
+              "branch_id": "9800",
+              "net": 57,
+              "share_pct": 9.98
+            },
+            {
+              "broker_name": "凱基-台北",
+              "broker_id": "9200",
+              "branch_id": "9268",
+              "net": 55,
+              "share_pct": 9.63
+            },
+            {
+              "broker_name": "美商高盛",
+              "broker_id": "1480",
+              "branch_id": "1480",
+              "net": 54,
+              "share_pct": 9.46
+            },
+            {
+              "broker_name": "台新-松德",
+              "broker_id": "9B00",
+              "branch_id": "0039004200320061",
+              "net": 49,
+              "share_pct": 8.58
+            },
+            {
+              "broker_name": "元大-大直",
+              "broker_id": "9800",
+              "branch_id": "9846",
+              "net": 34,
+              "share_pct": 5.95
+            }
+          ],
+          "top_sell_brokers": [
+            {
+              "broker_name": "富邦-台北",
+              "broker_id": "9600",
+              "branch_id": "9623",
+              "net": 32,
+              "share_pct": 5.6
+            },
+            {
+              "broker_name": "統一",
+              "broker_id": "5850",
+              "branch_id": "5850",
+              "net": 25,
+              "share_pct": 4.38
+            },
+            {
+              "broker_name": "國泰-敦南",
+              "broker_id": "8880",
+              "branch_id": "8888",
+              "net": 20,
+              "share_pct": 3.5
+            },
+            {
+              "broker_name": "富邦-花蓮",
+              "broker_id": "9600",
+              "branch_id": "9621",
+              "net": 18,
+              "share_pct": 3.15
+            },
+            {
+              "broker_name": "台新-敦南",
+              "broker_id": "9B00",
+              "branch_id": "0039004200320051",
+              "net": 17,
+              "share_pct": 2.98
+            }
+          ],
+          "source_url": "https://fubon-ebrokerdj.fbs.com.tw/z/zc/zco/zco.djhtm?a=6467&e=2026-11-2&f=2026-11-2"
+        },
+        "institutional_verification_required": true
+      },
+      "technical": {
+        "sma5": 210.9,
+        "sma20": null,
+        "sma60": null,
+        "above_sma5": true,
+        "above_sma20": null,
+        "above_sma60": null,
+        "previous_volume": 405,
+        "volume_ratio_vs_previous": 1.41,
+        "low_liquidity": false
+      },
+      "follow_up": [
+        "檢查後續成交深度及公司公告，並補齊技術與融資資料。",
+        "追蹤泰合次日外資、投信和融資變化；缺新聞時等待可核實之法說／公司公告，避免將市場交易方向誤當特定利多。"
+      ],
       "sources": []
     },
     {
       "code": "6272",
       "name": "驊陞",
       "change_pct": 8.89,
-      "reason_summary": "未找到可直接驗證的單一公開催化劑；先以族群輪動、價量與籌碼變化解讀，不把上漲本身倒果為因。",
+      "cause_type": "unknown",
+      "cause_tags": [
+        "unverified_catalyst"
+      ],
+      "evidence_strength": "none",
+      "reason_summary": "驊陞（6272）11/02收24.5元，漲8.89%，量549張，前日量比2.21倍。日內收盤靠近高點但未鎖漲停，量比超過2倍；外資賣超，融資增加，與價格上揚方向不同。 外資賣超120張；投信無個股紀錄；自營商賣超2張。融資增加36張，站在20日均線之上；收盤位置占當日高低區間90%。目前沒有足以確認直接漲因的公司新聞，不能倒推原因。",
       "evidence": [
-        "當日漲幅 +8.89%",
-        "成交量 549 張",
-        "當日5%以上股票 29 檔"
+        "官方日期化 Facts v3：收盤24.5元、漲幅8.89%、量549張；量比2.21倍，站在20日均線之上。",
+        "同日法人檔：外資-120張、投信未見個股紀錄張、自營商-2張；投信 no_record 不等於0。",
+        "融資+36張；分點樣本買方前列群益金鼎-三重、賣方前列凱基-台北；樣本淨額13張，非全市場淨流量。"
       ],
       "confidence": "low",
-      "follow_up": "優先比對法人、融資與後續2至5日價格延續性；若後續出現公司公告或產業消息，再提高原因可信度。",
+      "flow": {
+        "foreign": {
+          "net_shares": -120000,
+          "net_lots": -120,
+          "record_status": "reported",
+          "source_file": "data_twse_foreign_investors/20261102_twse_foreign_investors.json"
+        },
+        "investment_trust": {
+          "net_shares": null,
+          "net_lots": null,
+          "record_status": "no_record",
+          "source_file": "data_twse_investment_trust/20261102_twse_investment_trust.json"
+        },
+        "dealer": {
+          "net_shares": -2000,
+          "net_lots": -2,
+          "record_status": "reported",
+          "source_file": "data_twse_dealers/20261102_twse_dealers.json"
+        },
+        "margin": {
+          "margin_prev": 335,
+          "margin_now": 371,
+          "margin_delta": 36,
+          "short_prev": 0,
+          "short_now": 0,
+          "short_delta": 0
+        },
+        "broker": {
+          "status": "available",
+          "top3_buy_share_pct": 22.95,
+          "top5_buy_share_pct": 30.42,
+          "top3_sell_share_pct": 21.31,
+          "top5_sell_share_pct": 25.69,
+          "totals": {
+            "netBuy": 209,
+            "netSell": 196,
+            "net": 13
+          },
+          "top_buy_brokers": [
+            {
+              "broker_name": "群益金鼎-三重",
+              "broker_id": "9100",
+              "branch_id": "0039003100330067",
+              "net": 80,
+              "share_pct": 14.57
+            },
+            {
+              "broker_name": "安泰",
+              "broker_id": "8380",
+              "branch_id": "8380",
+              "net": 24,
+              "share_pct": 4.37
+            },
+            {
+              "broker_name": "摩根大通",
+              "broker_id": "8440",
+              "branch_id": "8440",
+              "net": 22,
+              "share_pct": 4.01
+            },
+            {
+              "broker_name": "元大-長榮",
+              "broker_id": "9800",
+              "branch_id": "0039003800390049",
+              "net": 21,
+              "share_pct": 3.83
+            },
+            {
+              "broker_name": "玉山-台中",
+              "broker_id": "8840",
+              "branch_id": "0038003800340042",
+              "net": 20,
+              "share_pct": 3.64
+            }
+          ],
+          "top_sell_brokers": [
+            {
+              "broker_name": "凱基-台北",
+              "broker_id": "9200",
+              "branch_id": "9268",
+              "net": 79,
+              "share_pct": 14.39
+            },
+            {
+              "broker_name": "台灣摩根士丹利",
+              "broker_id": "1470",
+              "branch_id": "1470",
+              "net": 22,
+              "share_pct": 4.01
+            },
+            {
+              "broker_name": "美商高盛",
+              "broker_id": "1480",
+              "branch_id": "1480",
+              "net": 16,
+              "share_pct": 2.91
+            },
+            {
+              "broker_name": "港商野村",
+              "broker_id": "1560",
+              "branch_id": "1560",
+              "net": 12,
+              "share_pct": 2.19
+            },
+            {
+              "broker_name": "台新-緯城",
+              "broker_id": "9B00",
+              "branch_id": "0039004200320041",
+              "net": 12,
+              "share_pct": 2.19
+            }
+          ],
+          "source_url": "https://fubon-ebrokerdj.fbs.com.tw/z/zc/zco/zco.djhtm?a=6272&e=2026-11-2&f=2026-11-2"
+        },
+        "institutional_verification_required": true
+      },
+      "technical": {
+        "sma5": 23.49,
+        "sma20": 24.24,
+        "sma60": 25.21,
+        "above_sma5": true,
+        "above_sma20": true,
+        "above_sma60": false,
+        "previous_volume": 248,
+        "volume_ratio_vs_previous": 2.21,
+        "low_liquidity": false
+      },
+      "follow_up": [
+        "追蹤外資調節與融資新增是否擴大，避免把量價上揚視為法人主導。",
+        "追蹤驊陞次日外資、投信和融資變化；缺新聞時等待可核實之法說／公司公告，避免將市場交易方向誤當特定利多。"
+      ],
       "sources": []
     },
     {
       "code": "2923",
       "name": "鼎固-KY",
       "change_pct": 8.52,
-      "reason_summary": "未找到可直接驗證的單一公開催化劑；成交量偏低，低流動性與短線籌碼可能放大價格波動，不宜硬解讀為基本面轉折。",
+      "cause_type": "low_liquidity",
+      "cause_tags": [
+        "low_liquidity"
+      ],
+      "evidence_strength": "none",
+      "reason_summary": "鼎固-KY（2923）11/02收29.3元，漲8.52%，量305張，前日量比2.05倍。成交量僅305張，雖然價格上漲8.52%，流動性限制使漲幅不容易外推；外資有小幅買超但投信沒有個股紀錄。 外資買超121張；投信無個股紀錄；自營商賣超2張。融資增減資料不足，站在20日均線之上；收盤位置占當日高低區間92%。低流動性屬行情限制，並非已證實上漲催化。",
       "evidence": [
-        "當日漲幅 +8.52%",
-        "成交量 305 張",
-        "當日5%以上股票 29 檔"
+        "官方日期化 Facts v3：收盤29.3元、漲幅8.52%、量305張；量比2.05倍，站在20日均線之上。",
+        "同日法人檔：外資+121張、投信未見個股紀錄張、自營商-2張；投信 no_record 不等於0。",
+        "融資缺增減數據；分點樣本買方前列凱基-台北、賣方前列凱基；樣本淨額32張，非全市場淨流量。"
       ],
       "confidence": "low",
-      "follow_up": "優先比對法人、融資與後續2至5日價格延續性；若後續出現公司公告或產業消息，再提高原因可信度。",
+      "flow": {
+        "foreign": {
+          "net_shares": 121000,
+          "net_lots": 121,
+          "record_status": "reported",
+          "source_file": "data_twse_foreign_investors/20261102_twse_foreign_investors.json"
+        },
+        "investment_trust": {
+          "net_shares": null,
+          "net_lots": null,
+          "record_status": "no_record",
+          "source_file": "data_twse_investment_trust/20261102_twse_investment_trust.json"
+        },
+        "dealer": {
+          "net_shares": -2000,
+          "net_lots": -2,
+          "record_status": "reported",
+          "source_file": "data_twse_dealers/20261102_twse_dealers.json"
+        },
+        "margin": {
+          "margin_prev": null,
+          "margin_now": null,
+          "margin_delta": null,
+          "short_prev": null,
+          "short_now": null,
+          "short_delta": null
+        },
+        "broker": {
+          "status": "available",
+          "top3_buy_share_pct": 33.12,
+          "top5_buy_share_pct": 42.95,
+          "top3_sell_share_pct": 17.71,
+          "top5_sell_share_pct": 26.56,
+          "totals": {
+            "netBuy": 181,
+            "netSell": 149,
+            "net": 32
+          },
+          "top_buy_brokers": [
+            {
+              "broker_name": "凱基-台北",
+              "broker_id": "9200",
+              "branch_id": "9268",
+              "net": 35,
+              "share_pct": 11.48
+            },
+            {
+              "broker_name": "台灣摩根士丹利",
+              "broker_id": "1470",
+              "branch_id": "1470",
+              "net": 33,
+              "share_pct": 10.82
+            },
+            {
+              "broker_name": "花旗環球",
+              "broker_id": "1590",
+              "branch_id": "1590",
+              "net": 33,
+              "share_pct": 10.82
+            },
+            {
+              "broker_name": "新加坡商瑞銀",
+              "broker_id": "1650",
+              "branch_id": "1650",
+              "net": 18,
+              "share_pct": 5.9
+            },
+            {
+              "broker_name": "摩根大通",
+              "broker_id": "8440",
+              "branch_id": "8440",
+              "net": 12,
+              "share_pct": 3.93
+            }
+          ],
+          "top_sell_brokers": [
+            {
+              "broker_name": "凱基",
+              "broker_id": "9200",
+              "branch_id": "9200",
+              "net": 24,
+              "share_pct": 7.87
+            },
+            {
+              "broker_name": "永豐金-板新",
+              "broker_id": "9A00",
+              "branch_id": "003900410039004a",
+              "net": 16,
+              "share_pct": 5.25
+            },
+            {
+              "broker_name": "富邦-台北",
+              "broker_id": "9600",
+              "branch_id": "9623",
+              "net": 14,
+              "share_pct": 4.59
+            },
+            {
+              "broker_name": "台新-嘉義",
+              "broker_id": "9B00",
+              "branch_id": "0039004200320049",
+              "net": 14,
+              "share_pct": 4.59
+            },
+            {
+              "broker_name": "合庫-高雄",
+              "broker_id": "1020",
+              "branch_id": "1023",
+              "net": 13,
+              "share_pct": 4.26
+            }
+          ],
+          "source_url": "https://fubon-ebrokerdj.fbs.com.tw/z/zc/zco/zco.djhtm?a=2923&e=2026-11-2&f=2026-11-2"
+        },
+        "institutional_verification_required": true
+      },
+      "technical": {
+        "sma5": 27.4,
+        "sma20": 25.34,
+        "sma60": 25.65,
+        "above_sma5": true,
+        "above_sma20": true,
+        "above_sma60": true,
+        "previous_volume": 149,
+        "volume_ratio_vs_previous": 2.05,
+        "low_liquidity": true
+      },
+      "follow_up": [
+        "優先觀察成交深度與公司公告，未來幾日若量能萎縮須特別留意滑價。",
+        "追蹤鼎固-KY次日外資、投信和融資變化；缺新聞時等待可核實之法說／公司公告，避免將市場交易方向誤當特定利多。"
+      ],
       "sources": []
     },
     {
       "code": "1528",
       "name": "恩德",
       "change_pct": 7.82,
-      "reason_summary": "未找到可直接驗證的單一公開催化劑；先以族群輪動、價量與籌碼變化解讀，不把上漲本身倒果為因。",
+      "cause_type": "unknown",
+      "cause_tags": [
+        "unverified_catalyst"
+      ],
+      "evidence_strength": "none",
+      "reason_summary": "恩德（1528）11/02收26.9元，漲7.82%，量20373張，前日量比3.62倍。恩德上漲同時量比擴至3倍以上，外資買超與融資增加並存；資金熱度明顯，但未取得足以證明產業訂單的當日公告。 外資買超1921張；投信無個股紀錄；自營商賣超2張。融資增加673張，站在20日均線之上；收盤位置占當日高低區間83%。目前沒有足以確認直接漲因的公司新聞，不能倒推原因。",
       "evidence": [
-        "當日漲幅 +7.82%",
-        "成交量 20,373 張",
-        "當日5%以上股票 29 檔"
+        "官方日期化 Facts v3：收盤26.9元、漲幅7.82%、量20373張；量比3.62倍，站在20日均線之上。",
+        "同日法人檔：外資+1921張、投信未見個股紀錄張、自營商-2張；投信 no_record 不等於0。",
+        "融資+673張；分點樣本買方前列台灣摩根士丹利、賣方前列康和-台中；樣本淨額1619張，非全市場淨流量。"
       ],
       "confidence": "low",
-      "follow_up": "優先比對法人、融資與後續2至5日價格延續性；若後續出現公司公告或產業消息，再提高原因可信度。",
+      "flow": {
+        "foreign": {
+          "net_shares": 1921493,
+          "net_lots": 1921,
+          "record_status": "reported",
+          "source_file": "data_twse_foreign_investors/20261102_twse_foreign_investors.json"
+        },
+        "investment_trust": {
+          "net_shares": null,
+          "net_lots": null,
+          "record_status": "no_record",
+          "source_file": "data_twse_investment_trust/20261102_twse_investment_trust.json"
+        },
+        "dealer": {
+          "net_shares": -2000,
+          "net_lots": -2,
+          "record_status": "reported",
+          "source_file": "data_twse_dealers/20261102_twse_dealers.json"
+        },
+        "margin": {
+          "margin_prev": 6660,
+          "margin_now": 7333,
+          "margin_delta": 673,
+          "short_prev": 198,
+          "short_now": 346,
+          "short_delta": 148
+        },
+        "broker": {
+          "status": "available",
+          "top3_buy_share_pct": 10.18,
+          "top5_buy_share_pct": 11.77,
+          "top3_sell_share_pct": 4.44,
+          "top5_sell_share_pct": 5.18,
+          "totals": {
+            "netBuy": 3194,
+            "netSell": 1575,
+            "net": 1619
+          },
+          "top_buy_brokers": [
+            {
+              "broker_name": "台灣摩根士丹利",
+              "broker_id": "1470",
+              "branch_id": "1470",
+              "net": 1300,
+              "share_pct": 6.38
+            },
+            {
+              "broker_name": "新加坡商瑞銀",
+              "broker_id": "1650",
+              "branch_id": "1650",
+              "net": 447,
+              "share_pct": 2.19
+            },
+            {
+              "broker_name": "元大證券",
+              "broker_id": "9800",
+              "branch_id": "9800",
+              "net": 329,
+              "share_pct": 1.61
+            },
+            {
+              "broker_name": "元大-金門",
+              "broker_id": "9800",
+              "branch_id": "003900380031004e",
+              "net": 200,
+              "share_pct": 0.98
+            },
+            {
+              "broker_name": "永豐金-敦北",
+              "broker_id": "9A00",
+              "branch_id": "0039004100380039",
+              "net": 125,
+              "share_pct": 0.61
+            }
+          ],
+          "top_sell_brokers": [
+            {
+              "broker_name": "康和-台中",
+              "broker_id": "8450",
+              "branch_id": "8455",
+              "net": 461,
+              "share_pct": 2.26
+            },
+            {
+              "broker_name": "凱基-台北",
+              "broker_id": "9200",
+              "branch_id": "9268",
+              "net": 285,
+              "share_pct": 1.4
+            },
+            {
+              "broker_name": "富邦-新莊",
+              "broker_id": "9600",
+              "branch_id": "0039003600320044",
+              "net": 158,
+              "share_pct": 0.78
+            },
+            {
+              "broker_name": "統一-東湖",
+              "broker_id": "5850",
+              "branch_id": "0035003800350052",
+              "net": 90,
+              "share_pct": 0.44
+            },
+            {
+              "broker_name": "元大-永春",
+              "broker_id": "9800",
+              "branch_id": "9852",
+              "net": 61,
+              "share_pct": 0.3
+            }
+          ],
+          "source_url": "https://fubon-ebrokerdj.fbs.com.tw/z/zc/zco/zco.djhtm?a=1528&e=2026-11-2&f=2026-11-2"
+        },
+        "institutional_verification_required": true
+      },
+      "technical": {
+        "sma5": 25.87,
+        "sma20": 24.72,
+        "sma60": 22.12,
+        "above_sma5": true,
+        "above_sma20": true,
+        "above_sma60": true,
+        "previous_volume": 5625,
+        "volume_ratio_vs_previous": 3.62,
+        "low_liquidity": false
+      },
+      "follow_up": [
+        "檢驗大量換手後能否守住日內強勢區，並查詢營收、重大訊息。",
+        "追蹤恩德次日外資、投信和融資變化；缺新聞時等待可核實之法說／公司公告，避免將市場交易方向誤當特定利多。"
+      ],
       "sources": []
     },
     {
       "code": "3004",
       "name": "豐達科",
       "change_pct": 7.59,
-      "reason_summary": "未找到可直接驗證的單一公開催化劑；先以族群輪動、價量與籌碼變化解讀，不把上漲本身倒果為因。",
+      "cause_type": "unknown",
+      "cause_tags": [
+        "unverified_catalyst"
+      ],
+      "evidence_strength": "none",
+      "reason_summary": "豐達科（3004）11/02收127.5元，漲7.59%，量1432張，前日量比4.74倍。豐達科量比放大至近5倍、外資買超，收盤未達當日最高點；動能提高同時要觀察獲利了結賣壓。 外資買超551張；投信無個股紀錄；自營商買超5張。融資增加50張，站在20日均線之上；收盤位置占當日高低區間85%。目前沒有足以確認直接漲因的公司新聞，不能倒推原因。",
       "evidence": [
-        "當日漲幅 +7.59%",
-        "成交量 1,432 張",
-        "當日5%以上股票 29 檔"
+        "官方日期化 Facts v3：收盤127.5元、漲幅7.59%、量1432張；量比4.74倍，站在20日均線之上。",
+        "同日法人檔：外資+551張、投信未見個股紀錄張、自營商+5張；投信 no_record 不等於0。",
+        "融資+50張；分點樣本買方前列新加坡商瑞銀、賣方前列中國信託；樣本淨額268張，非全市場淨流量。"
       ],
       "confidence": "low",
-      "follow_up": "優先比對法人、融資與後續2至5日價格延續性；若後續出現公司公告或產業消息，再提高原因可信度。",
+      "flow": {
+        "foreign": {
+          "net_shares": 550556,
+          "net_lots": 551,
+          "record_status": "reported",
+          "source_file": "data_twse_foreign_investors/20261102_twse_foreign_investors.json"
+        },
+        "investment_trust": {
+          "net_shares": null,
+          "net_lots": null,
+          "record_status": "no_record",
+          "source_file": "data_twse_investment_trust/20261102_twse_investment_trust.json"
+        },
+        "dealer": {
+          "net_shares": 5000,
+          "net_lots": 5,
+          "record_status": "reported",
+          "source_file": "data_twse_dealers/20261102_twse_dealers.json"
+        },
+        "margin": {
+          "margin_prev": 1535,
+          "margin_now": 1585,
+          "margin_delta": 50,
+          "short_prev": 2,
+          "short_now": 3,
+          "short_delta": 1
+        },
+        "broker": {
+          "status": "available",
+          "top3_buy_share_pct": 25.63,
+          "top5_buy_share_pct": 34.08,
+          "top3_sell_share_pct": 14.59,
+          "top5_sell_share_pct": 19.13,
+          "totals": {
+            "netBuy": 686,
+            "netSell": 418,
+            "net": 268
+          },
+          "top_buy_brokers": [
+            {
+              "broker_name": "新加坡商瑞銀",
+              "broker_id": "1650",
+              "branch_id": "1650",
+              "net": 189,
+              "share_pct": 13.2
+            },
+            {
+              "broker_name": "台灣摩根士丹利",
+              "broker_id": "1470",
+              "branch_id": "1470",
+              "net": 106,
+              "share_pct": 7.4
+            },
+            {
+              "broker_name": "新光",
+              "broker_id": "8560",
+              "branch_id": "8560",
+              "net": 72,
+              "share_pct": 5.03
+            },
+            {
+              "broker_name": "凱基-台北",
+              "broker_id": "9200",
+              "branch_id": "9268",
+              "net": 66,
+              "share_pct": 4.61
+            },
+            {
+              "broker_name": "美林",
+              "broker_id": "1440",
+              "branch_id": "1440",
+              "net": 55,
+              "share_pct": 3.84
+            }
+          ],
+          "top_sell_brokers": [
+            {
+              "broker_name": "中國信託",
+              "broker_id": "6160",
+              "branch_id": "6160",
+              "net": 90,
+              "share_pct": 6.28
+            },
+            {
+              "broker_name": "元大-六合",
+              "broker_id": "9800",
+              "branch_id": "0039003800320043",
+              "net": 61,
+              "share_pct": 4.26
+            },
+            {
+              "broker_name": "台灣企銀-岡山",
+              "broker_id": "1110",
+              "branch_id": "1119",
+              "net": 58,
+              "share_pct": 4.05
+            },
+            {
+              "broker_name": "(牛牛牛)亞-網路",
+              "broker_id": "6010",
+              "branch_id": "6012",
+              "net": 46,
+              "share_pct": 3.21
+            },
+            {
+              "broker_name": "群益金鼎-古亭",
+              "broker_id": "9100",
+              "branch_id": "0039003100380043",
+              "net": 19,
+              "share_pct": 1.33
+            }
+          ],
+          "source_url": "https://fubon-ebrokerdj.fbs.com.tw/z/zc/zco/zco.djhtm?a=3004&e=2026-11-2&f=2026-11-2"
+        },
+        "institutional_verification_required": true
+      },
+      "technical": {
+        "sma5": 121.9,
+        "sma20": 121.45,
+        "sma60": 121.26,
+        "above_sma5": true,
+        "above_sma20": true,
+        "above_sma60": true,
+        "previous_volume": 302,
+        "volume_ratio_vs_previous": 4.74,
+        "low_liquidity": false
+      },
+      "follow_up": [
+        "確認高量後是否繼續站穩20日線，核對航空零組件需求相關公司公告。",
+        "追蹤豐達科次日外資、投信和融資變化；缺新聞時等待可核實之法說／公司公告，避免將市場交易方向誤當特定利多。"
+      ],
       "sources": []
     },
     {
       "code": "2466",
       "name": "冠西電",
       "change_pct": 7.34,
-      "reason_summary": "未找到可直接驗證的單一公開催化劑；先以族群輪動、價量與籌碼變化解讀，不把上漲本身倒果為因。",
+      "cause_type": "unknown",
+      "cause_tags": [
+        "unverified_catalyst"
+      ],
+      "evidence_strength": "none",
+      "reason_summary": "冠西電（2466）11/02收380元，漲7.34%，量850張，前日量比0.74倍。冠西電上漲7.34%，但外資與分點樣本淨額同步偏賣，成交量也未放大；價格表現與籌碼方向不一致。 外資賣超201張；投信買超2張；自營商買超2張。融資減少39張，站在20日均線之上；收盤位置占當日高低區間74%。目前沒有足以確認直接漲因的公司新聞，不能倒推原因。",
       "evidence": [
-        "當日漲幅 +7.34%",
-        "成交量 850 張",
-        "當日5%以上股票 29 檔"
+        "官方日期化 Facts v3：收盤380元、漲幅7.34%、量850張；量比0.74倍，站在20日均線之上。",
+        "同日法人檔：外資-201張、投信+2張、自營商+2張；投信 no_record 不等於0。",
+        "融資-39張；分點樣本買方前列富邦-八德、賣方前列花旗環球；樣本淨額-173張，非全市場淨流量。"
       ],
       "confidence": "low",
-      "follow_up": "優先比對法人、融資與後續2至5日價格延續性；若後續出現公司公告或產業消息，再提高原因可信度。",
+      "flow": {
+        "foreign": {
+          "net_shares": -200997,
+          "net_lots": -201,
+          "record_status": "reported",
+          "source_file": "data_twse_foreign_investors/20261102_twse_foreign_investors.json"
+        },
+        "investment_trust": {
+          "net_shares": 2000,
+          "net_lots": 2,
+          "record_status": "reported",
+          "source_file": "data_twse_investment_trust/20261102_twse_investment_trust.json"
+        },
+        "dealer": {
+          "net_shares": 2000,
+          "net_lots": 2,
+          "record_status": "reported",
+          "source_file": "data_twse_dealers/20261102_twse_dealers.json"
+        },
+        "margin": {
+          "margin_prev": 6177,
+          "margin_now": 6138,
+          "margin_delta": -39,
+          "short_prev": 1122,
+          "short_now": 1153,
+          "short_delta": 31
+        },
+        "broker": {
+          "status": "available",
+          "top3_buy_share_pct": 9.77,
+          "top5_buy_share_pct": 13.77,
+          "top3_sell_share_pct": 22.94,
+          "top5_sell_share_pct": 30.23,
+          "totals": {
+            "netBuy": 220,
+            "netSell": 393,
+            "net": -173
+          },
+          "top_buy_brokers": [
+            {
+              "broker_name": "富邦-八德",
+              "broker_id": "9600",
+              "branch_id": "0039003600330041",
+              "net": 40,
+              "share_pct": 4.71
+            },
+            {
+              "broker_name": "群益金鼎-永和",
+              "broker_id": "9100",
+              "branch_id": "003900310038004a",
+              "net": 22,
+              "share_pct": 2.59
+            },
+            {
+              "broker_name": "國泰-敦南",
+              "broker_id": "8880",
+              "branch_id": "8888",
+              "net": 21,
+              "share_pct": 2.47
+            },
+            {
+              "broker_name": "永豐金-大園",
+              "broker_id": "9A00",
+              "branch_id": "0039004100390038",
+              "net": 20,
+              "share_pct": 2.35
+            },
+            {
+              "broker_name": "合庫-台南",
+              "broker_id": "1020",
+              "branch_id": "1022",
+              "net": 14,
+              "share_pct": 1.65
+            }
+          ],
+          "top_sell_brokers": [
+            {
+              "broker_name": "花旗環球",
+              "broker_id": "1590",
+              "branch_id": "1590",
+              "net": 102,
+              "share_pct": 12
+            },
+            {
+              "broker_name": "台灣摩根士丹利",
+              "broker_id": "1470",
+              "branch_id": "1470",
+              "net": 51,
+              "share_pct": 6
+            },
+            {
+              "broker_name": "凱基-台北",
+              "broker_id": "9200",
+              "branch_id": "9268",
+              "net": 42,
+              "share_pct": 4.94
+            },
+            {
+              "broker_name": "統一",
+              "broker_id": "5850",
+              "branch_id": "5850",
+              "net": 33,
+              "share_pct": 3.88
+            },
+            {
+              "broker_name": "台新-台南",
+              "broker_id": "9B00",
+              "branch_id": "0039004200310036",
+              "net": 29,
+              "share_pct": 3.41
+            }
+          ],
+          "source_url": "https://fubon-ebrokerdj.fbs.com.tw/z/zc/zco/zco.djhtm?a=2466&e=2026-11-2&f=2026-11-2"
+        },
+        "institutional_verification_required": false
+      },
+      "technical": {
+        "sma5": 331.7,
+        "sma20": 233.33,
+        "sma60": 145.57,
+        "above_sma5": true,
+        "above_sma20": true,
+        "above_sma60": true,
+        "previous_volume": 1152,
+        "volume_ratio_vs_previous": 0.74,
+        "low_liquidity": false
+      },
+      "follow_up": [
+        "觀察外資與賣方分點是否延續出貨，以及薄量時的價格波動。",
+        "追蹤冠西電次日外資、投信和融資變化；缺新聞時等待可核實之法說／公司公告，避免將市場交易方向誤當特定利多。"
+      ],
       "sources": []
     },
     {
       "code": "1809",
       "name": "中釉",
       "change_pct": 7.16,
-      "reason_summary": "未找到可直接驗證的單一公開催化劑；先以族群輪動、價量與籌碼變化解讀，不把上漲本身倒果為因。",
+      "cause_type": "unknown",
+      "cause_tags": [
+        "unverified_catalyst"
+      ],
+      "evidence_strength": "none",
+      "reason_summary": "中釉（1809）11/02收46.4元，漲7.16%，量4843張，前日量比1.51倍。中釉上漲且量比約1.5倍，外資買超、融資增加；法人買方與槓桿買方同時參與，仍未找到能指認當日催化的公告。 外資買超652張；投信無個股紀錄；自營商買賣超0張。融資增加163張，站在20日均線之上；收盤位置占當日高低區間86%。目前沒有足以確認直接漲因的公司新聞，不能倒推原因。",
       "evidence": [
-        "當日漲幅 +7.16%",
-        "成交量 4,843 張",
-        "當日5%以上股票 29 檔"
+        "官方日期化 Facts v3：收盤46.4元、漲幅7.16%、量4843張；量比1.51倍，站在20日均線之上。",
+        "同日法人檔：外資+652張、投信未見個股紀錄張、自營商0張；投信 no_record 不等於0。",
+        "融資+163張；分點樣本買方前列凱基-台北、賣方前列國泰-台中；樣本淨額453張，非全市場淨流量。"
       ],
       "confidence": "low",
-      "follow_up": "優先比對法人、融資與後續2至5日價格延續性；若後續出現公司公告或產業消息，再提高原因可信度。",
+      "flow": {
+        "foreign": {
+          "net_shares": 651637,
+          "net_lots": 652,
+          "record_status": "reported",
+          "source_file": "data_twse_foreign_investors/20261102_twse_foreign_investors.json"
+        },
+        "investment_trust": {
+          "net_shares": null,
+          "net_lots": null,
+          "record_status": "no_record",
+          "source_file": "data_twse_investment_trust/20261102_twse_investment_trust.json"
+        },
+        "dealer": {
+          "net_shares": 0,
+          "net_lots": 0,
+          "record_status": "zero_net",
+          "source_file": "data_twse_dealers/20261102_twse_dealers.json"
+        },
+        "margin": {
+          "margin_prev": 7073,
+          "margin_now": 7236,
+          "margin_delta": 163,
+          "short_prev": 125,
+          "short_now": 132,
+          "short_delta": 7
+        },
+        "broker": {
+          "status": "available",
+          "top3_buy_share_pct": 13.79,
+          "top5_buy_share_pct": 15.71,
+          "top3_sell_share_pct": 4.08,
+          "top5_sell_share_pct": 5.84,
+          "totals": {
+            "netBuy": 993,
+            "netSell": 540,
+            "net": 453
+          },
+          "top_buy_brokers": [
+            {
+              "broker_name": "凱基-台北",
+              "broker_id": "9200",
+              "branch_id": "9268",
+              "net": 357,
+              "share_pct": 7.37
+            },
+            {
+              "broker_name": "新加坡商瑞銀",
+              "broker_id": "1650",
+              "branch_id": "1650",
+              "net": 252,
+              "share_pct": 5.2
+            },
+            {
+              "broker_name": "統一-松江",
+              "broker_id": "5850",
+              "branch_id": "003500380035005a",
+              "net": 59,
+              "share_pct": 1.22
+            },
+            {
+              "broker_name": "統一-屏東",
+              "broker_id": "5850",
+              "branch_id": "5859",
+              "net": 50,
+              "share_pct": 1.03
+            },
+            {
+              "broker_name": "港商野村",
+              "broker_id": "1560",
+              "branch_id": "1560",
+              "net": 43,
+              "share_pct": 0.89
+            }
+          ],
+          "top_sell_brokers": [
+            {
+              "broker_name": "國泰-台中",
+              "broker_id": "8880",
+              "branch_id": "8882",
+              "net": 84,
+              "share_pct": 1.73
+            },
+            {
+              "broker_name": "美商高盛",
+              "broker_id": "1480",
+              "branch_id": "1480",
+              "net": 67,
+              "share_pct": 1.38
+            },
+            {
+              "broker_name": "國泰-松江",
+              "broker_id": "8880",
+              "branch_id": "8883",
+              "net": 47,
+              "share_pct": 0.97
+            },
+            {
+              "broker_name": "國泰-敦南",
+              "broker_id": "8880",
+              "branch_id": "8888",
+              "net": 46,
+              "share_pct": 0.95
+            },
+            {
+              "broker_name": "永豐金證券",
+              "broker_id": "9A00",
+              "branch_id": "0039004100300030",
+              "net": 39,
+              "share_pct": 0.81
+            }
+          ],
+          "source_url": "https://fubon-ebrokerdj.fbs.com.tw/z/zc/zco/zco.djhtm?a=1809&e=2026-11-2&f=2026-11-2"
+        },
+        "institutional_verification_required": true
+      },
+      "technical": {
+        "sma5": 45.83,
+        "sma20": 45.21,
+        "sma60": 41.23,
+        "above_sma5": true,
+        "above_sma20": true,
+        "above_sma60": true,
+        "previous_volume": 3213,
+        "volume_ratio_vs_previous": 1.51,
+        "low_liquidity": false
+      },
+      "follow_up": [
+        "關注融資擴張後的量價續航，以及公司消息是否與市場題材相符。",
+        "追蹤中釉次日外資、投信和融資變化；缺新聞時等待可核實之法說／公司公告，避免將市場交易方向誤當特定利多。"
+      ],
       "sources": []
     },
     {
       "code": "2371",
       "name": "大同",
       "change_pct": 6.62,
-      "reason_summary": "未找到可直接驗證的單一公開催化劑；先以族群輪動、價量與籌碼變化解讀，不把上漲本身倒果為因。",
+      "cause_type": "unknown",
+      "cause_tags": [
+        "unverified_catalyst"
+      ],
+      "evidence_strength": "none",
+      "reason_summary": "大同（2371）11/02收29.8元，漲6.62%，量18916張，前日量比2.45倍。大同量比2倍以上，外資與自營商均買超，融資增加；多種資金指標同向，但不等於股價因某項未證實企業事件上漲。 外資買超2756張；投信買超5張；自營商買超914張。融資增加656張，站在20日均線之上；收盤位置占當日高低區間81%。目前沒有足以確認直接漲因的公司新聞，不能倒推原因。",
       "evidence": [
-        "當日漲幅 +6.62%",
-        "成交量 18,916 張",
-        "當日5%以上股票 29 檔"
+        "官方日期化 Facts v3：收盤29.8元、漲幅6.62%、量18916張；量比2.45倍，站在20日均線之上。",
+        "同日法人檔：外資+2756張、投信+5張、自營商+914張；投信 no_record 不等於0。",
+        "融資+656張；分點樣本買方前列摩根大通、賣方前列彰銀；樣本淨額4879張，非全市場淨流量。"
       ],
       "confidence": "low",
-      "follow_up": "優先比對法人、融資與後續2至5日價格延續性；若後續出現公司公告或產業消息，再提高原因可信度。",
+      "flow": {
+        "foreign": {
+          "net_shares": 2755785,
+          "net_lots": 2756,
+          "record_status": "reported",
+          "source_file": "data_twse_foreign_investors/20261102_twse_foreign_investors.json"
+        },
+        "investment_trust": {
+          "net_shares": 5000,
+          "net_lots": 5,
+          "record_status": "reported",
+          "source_file": "data_twse_investment_trust/20261102_twse_investment_trust.json"
+        },
+        "dealer": {
+          "net_shares": 914000,
+          "net_lots": 914,
+          "record_status": "reported",
+          "source_file": "data_twse_dealers/20261102_twse_dealers.json"
+        },
+        "margin": {
+          "margin_prev": 40152,
+          "margin_now": 40808,
+          "margin_delta": 656,
+          "short_prev": 610,
+          "short_now": 689,
+          "short_delta": 79
+        },
+        "broker": {
+          "status": "available",
+          "top3_buy_share_pct": 16.03,
+          "top5_buy_share_pct": 22.07,
+          "top3_sell_share_pct": 3.04,
+          "top5_sell_share_pct": 4.48,
+          "totals": {
+            "netBuy": 6841,
+            "netSell": 1962,
+            "net": 4879
+          },
+          "top_buy_brokers": [
+            {
+              "broker_name": "摩根大通",
+              "broker_id": "8440",
+              "branch_id": "8440",
+              "net": 1291,
+              "share_pct": 6.83
+            },
+            {
+              "broker_name": "永豐金證券",
+              "broker_id": "9A00",
+              "branch_id": "0039004100300030",
+              "net": 891,
+              "share_pct": 4.71
+            },
+            {
+              "broker_name": "台灣摩根士丹利",
+              "broker_id": "1470",
+              "branch_id": "1470",
+              "net": 849,
+              "share_pct": 4.49
+            },
+            {
+              "broker_name": "台新",
+              "broker_id": "9B00",
+              "branch_id": "0039004200300030",
+              "net": 583,
+              "share_pct": 3.08
+            },
+            {
+              "broker_name": "群益金鼎-大安",
+              "broker_id": "9100",
+              "branch_id": "0039003100380065",
+              "net": 559,
+              "share_pct": 2.96
+            }
+          ],
+          "top_sell_brokers": [
+            {
+              "broker_name": "彰銀",
+              "broker_id": "1230",
+              "branch_id": "1230",
+              "net": 208,
+              "share_pct": 1.1
+            },
+            {
+              "broker_name": "台新-信義",
+              "broker_id": "9B00",
+              "branch_id": "0039004200320048",
+              "net": 194,
+              "share_pct": 1.03
+            },
+            {
+              "broker_name": "凱基-台北",
+              "broker_id": "9200",
+              "branch_id": "9268",
+              "net": 173,
+              "share_pct": 0.91
+            },
+            {
+              "broker_name": "富邦-仁愛",
+              "broker_id": "9600",
+              "branch_id": "9676",
+              "net": 142,
+              "share_pct": 0.75
+            },
+            {
+              "broker_name": "陽信-高雄",
+              "broker_id": "8710",
+              "branch_id": "8713",
+              "net": 130,
+              "share_pct": 0.69
+            }
+          ],
+          "source_url": "https://fubon-ebrokerdj.fbs.com.tw/z/zc/zco/zco.djhtm?a=2371&e=2026-11-2&f=2026-11-2"
+        },
+        "institutional_verification_required": false
+      },
+      "technical": {
+        "sma5": 28.74,
+        "sma20": 29.4,
+        "sma60": 28.31,
+        "above_sma5": true,
+        "above_sma20": true,
+        "above_sma60": true,
+        "previous_volume": 7736,
+        "volume_ratio_vs_previous": 2.45,
+        "low_liquidity": false
+      },
+      "follow_up": [
+        "核對外資／自營商後續方向與融資壓力，留意高量後是否整理。",
+        "追蹤大同次日外資、投信和融資變化；缺新聞時等待可核實之法說／公司公告，避免將市場交易方向誤當特定利多。"
+      ],
       "sources": []
     },
     {
       "code": "3031",
       "name": "佰鴻",
       "change_pct": 6.11,
-      "reason_summary": "未找到可直接驗證的單一公開催化劑；先以族群輪動、價量與籌碼變化解讀，不把上漲本身倒果為因。",
+      "cause_type": "unknown",
+      "cause_tags": [
+        "unverified_catalyst"
+      ],
+      "evidence_strength": "none",
+      "reason_summary": "佰鴻（3031）11/02收33元，漲6.11%，量2341張，前日量比0.86倍。佰鴻股價收在日高，外資買超，但量比低於1倍，屬縮量上揚而非放量確認；新聞催化仍未明。 外資買超326張；投信無個股紀錄；自營商賣超9張。融資增加10張，站在20日均線之上；收盤位置占當日高低區間100%。目前沒有足以確認直接漲因的公司新聞，不能倒推原因。",
       "evidence": [
-        "當日漲幅 +6.11%",
-        "成交量 2,341 張",
-        "當日5%以上股票 29 檔"
+        "官方日期化 Facts v3：收盤33元、漲幅6.11%、量2341張；量比0.86倍，站在20日均線之上。",
+        "同日法人檔：外資+326張、投信未見個股紀錄張、自營商-9張；投信 no_record 不等於0。",
+        "融資+10張；分點樣本買方前列凱基-台北、賣方前列群益金鼎-中壢；樣本淨額299張，非全市場淨流量。"
       ],
       "confidence": "low",
-      "follow_up": "優先比對法人、融資與後續2至5日價格延續性；若後續出現公司公告或產業消息，再提高原因可信度。",
+      "flow": {
+        "foreign": {
+          "net_shares": 326260,
+          "net_lots": 326,
+          "record_status": "reported",
+          "source_file": "data_twse_foreign_investors/20261102_twse_foreign_investors.json"
+        },
+        "investment_trust": {
+          "net_shares": null,
+          "net_lots": null,
+          "record_status": "no_record",
+          "source_file": "data_twse_investment_trust/20261102_twse_investment_trust.json"
+        },
+        "dealer": {
+          "net_shares": -9060,
+          "net_lots": -9,
+          "record_status": "reported",
+          "source_file": "data_twse_dealers/20261102_twse_dealers.json"
+        },
+        "margin": {
+          "margin_prev": 4506,
+          "margin_now": 4516,
+          "margin_delta": 10,
+          "short_prev": 54,
+          "short_now": 86,
+          "short_delta": 32
+        },
+        "broker": {
+          "status": "available",
+          "top3_buy_share_pct": 13.59,
+          "top5_buy_share_pct": 19.82,
+          "top3_sell_share_pct": 7.52,
+          "top5_sell_share_pct": 11.24,
+          "totals": {
+            "netBuy": 786,
+            "netSell": 487,
+            "net": 299
+          },
+          "top_buy_brokers": [
+            {
+              "broker_name": "凱基-台北",
+              "broker_id": "9200",
+              "branch_id": "9268",
+              "net": 136,
+              "share_pct": 5.81
+            },
+            {
+              "broker_name": "台灣摩根士丹利",
+              "broker_id": "1470",
+              "branch_id": "1470",
+              "net": 94,
+              "share_pct": 4.02
+            },
+            {
+              "broker_name": "兆豐-彰化",
+              "broker_id": "7000",
+              "branch_id": "0037003000300064",
+              "net": 88,
+              "share_pct": 3.76
+            },
+            {
+              "broker_name": "永豐金-南京",
+              "broker_id": "9A00",
+              "branch_id": "0039004100390053",
+              "net": 82,
+              "share_pct": 3.5
+            },
+            {
+              "broker_name": "兆豐-台南",
+              "broker_id": "7000",
+              "branch_id": "7006",
+              "net": 64,
+              "share_pct": 2.73
+            }
+          ],
+          "top_sell_brokers": [
+            {
+              "broker_name": "群益金鼎-中壢",
+              "broker_id": "9100",
+              "branch_id": "0039003100380041",
+              "net": 65,
+              "share_pct": 2.78
+            },
+            {
+              "broker_name": "康和-板橋",
+              "broker_id": "8450",
+              "branch_id": "0038003400350044",
+              "net": 56,
+              "share_pct": 2.39
+            },
+            {
+              "broker_name": "元大-板橋三民",
+              "broker_id": "9800",
+              "branch_id": "9879",
+              "net": 55,
+              "share_pct": 2.35
+            },
+            {
+              "broker_name": "統一-三多",
+              "broker_id": "5850",
+              "branch_id": "0035003800350051",
+              "net": 52,
+              "share_pct": 2.22
+            },
+            {
+              "broker_name": "統一-嘉義",
+              "broker_id": "5850",
+              "branch_id": "5858",
+              "net": 35,
+              "share_pct": 1.5
+            }
+          ],
+          "source_url": "https://fubon-ebrokerdj.fbs.com.tw/z/zc/zco/zco.djhtm?a=3031&e=2026-11-2&f=2026-11-2"
+        },
+        "institutional_verification_required": true
+      },
+      "technical": {
+        "sma5": 32.76,
+        "sma20": 32.54,
+        "sma60": 27.34,
+        "above_sma5": true,
+        "above_sma20": true,
+        "above_sma60": true,
+        "previous_volume": 2717,
+        "volume_ratio_vs_previous": 0.86,
+        "low_liquidity": false
+      },
+      "follow_up": [
+        "檢查縮量上行能否出現新增承接，避免單日收高就假定趨勢延續。",
+        "追蹤佰鴻次日外資、投信和融資變化；缺新聞時等待可核實之法說／公司公告，避免將市場交易方向誤當特定利多。"
+      ],
       "sources": []
     },
     {
       "code": "2441",
       "name": "超豐",
       "change_pct": 6.1,
-      "reason_summary": "未找到可直接驗證的單一公開催化劑；先以族群輪動、價量與籌碼變化解讀，不把上漲本身倒果為因。",
+      "cause_type": "unknown",
+      "cause_tags": [
+        "unverified_catalyst"
+      ],
+      "evidence_strength": "none",
+      "reason_summary": "超豐（2441）11/02收113元，漲6.1%，量4581張，前日量比1.39倍。超豐外資買超但自營商賣超，雖然上漲6.1%，仍在20日均線之下，反彈訊號與中期趨勢未完全一致。 外資買超334張；投信買超1張；自營商賣超12張。融資增加26張，仍低於20日均線；收盤位置占當日高低區間67%。目前沒有足以確認直接漲因的公司新聞，不能倒推原因。",
       "evidence": [
-        "當日漲幅 +6.10%",
-        "成交量 4,581 張",
-        "當日5%以上股票 29 檔"
+        "官方日期化 Facts v3：收盤113元、漲幅6.1%、量4581張；量比1.39倍，仍低於20日均線。",
+        "同日法人檔：外資+334張、投信+1張、自營商-12張；投信 no_record 不等於0。",
+        "融資+26張；分點樣本買方前列凱基-台北、賣方前列美商高盛；樣本淨額294張，非全市場淨流量。"
       ],
       "confidence": "low",
-      "follow_up": "優先比對法人、融資與後續2至5日價格延續性；若後續出現公司公告或產業消息，再提高原因可信度。",
+      "flow": {
+        "foreign": {
+          "net_shares": 333516,
+          "net_lots": 334,
+          "record_status": "reported",
+          "source_file": "data_twse_foreign_investors/20261102_twse_foreign_investors.json"
+        },
+        "investment_trust": {
+          "net_shares": 1000,
+          "net_lots": 1,
+          "record_status": "reported",
+          "source_file": "data_twse_investment_trust/20261102_twse_investment_trust.json"
+        },
+        "dealer": {
+          "net_shares": -11617,
+          "net_lots": -12,
+          "record_status": "reported",
+          "source_file": "data_twse_dealers/20261102_twse_dealers.json"
+        },
+        "margin": {
+          "margin_prev": 6940,
+          "margin_now": 6966,
+          "margin_delta": 26,
+          "short_prev": 4,
+          "short_now": 15,
+          "short_delta": 11
+        },
+        "broker": {
+          "status": "available",
+          "top3_buy_share_pct": 11.94,
+          "top5_buy_share_pct": 15.92,
+          "top3_sell_share_pct": 8.55,
+          "top5_sell_share_pct": 10.16,
+          "totals": {
+            "netBuy": 964,
+            "netSell": 670,
+            "net": 294
+          },
+          "top_buy_brokers": [
+            {
+              "broker_name": "凱基-台北",
+              "broker_id": "9200",
+              "branch_id": "9268",
+              "net": 275,
+              "share_pct": 6
+            },
+            {
+              "broker_name": "美林",
+              "broker_id": "1440",
+              "branch_id": "1440",
+              "net": 141,
+              "share_pct": 3.08
+            },
+            {
+              "broker_name": "第一金-澎湖",
+              "broker_id": "5380",
+              "branch_id": "5387",
+              "net": 131,
+              "share_pct": 2.86
+            },
+            {
+              "broker_name": "花旗環球",
+              "broker_id": "1590",
+              "branch_id": "1590",
+              "net": 119,
+              "share_pct": 2.6
+            },
+            {
+              "broker_name": "台灣摩根士丹利",
+              "broker_id": "1470",
+              "branch_id": "1470",
+              "net": 63,
+              "share_pct": 1.38
+            }
+          ],
+          "top_sell_brokers": [
+            {
+              "broker_name": "美商高盛",
+              "broker_id": "1480",
+              "branch_id": "1480",
+              "net": 275,
+              "share_pct": 6
+            },
+            {
+              "broker_name": "元大-大統",
+              "broker_id": "9800",
+              "branch_id": "003900380031007a",
+              "net": 60,
+              "share_pct": 1.31
+            },
+            {
+              "broker_name": "凱基-松山",
+              "broker_id": "9200",
+              "branch_id": "9217",
+              "net": 57,
+              "share_pct": 1.24
+            },
+            {
+              "broker_name": "台新-三重",
+              "broker_id": "9B00",
+              "branch_id": "0039004200320033",
+              "net": 39,
+              "share_pct": 0.85
+            },
+            {
+              "broker_name": "凱基",
+              "broker_id": "9200",
+              "branch_id": "9200",
+              "net": 35,
+              "share_pct": 0.76
+            }
+          ],
+          "source_url": "https://fubon-ebrokerdj.fbs.com.tw/z/zc/zco/zco.djhtm?a=2441&e=2026-11-2&f=2026-11-2"
+        },
+        "institutional_verification_required": false
+      },
+      "technical": {
+        "sma5": 111.9,
+        "sma20": 119.85,
+        "sma60": 119.08,
+        "above_sma5": true,
+        "above_sma20": false,
+        "above_sma60": false,
+        "previous_volume": 3300,
+        "volume_ratio_vs_previous": 1.39,
+        "low_liquidity": false
+      },
+      "follow_up": [
+        "觀察20日線阻力與不同法人的後續買賣方向。",
+        "追蹤超豐次日外資、投信和融資變化；缺新聞時等待可核實之法說／公司公告，避免將市場交易方向誤當特定利多。"
+      ],
       "sources": []
     },
     {
       "code": "4977",
       "name": "眾達-KY",
       "change_pct": 5.78,
-      "reason_summary": "CPO／高速光通訊受AI資料中心高速互連需求支撐，族群通常伴隨光模組、雷射與連接相關供應鏈同步走強。",
-      "evidence": [
-        "當日漲幅 +5.78%",
-        "成交量 7,650 張",
-        "當日共有 29 檔漲幅達5%"
+      "cause_type": "unknown",
+      "cause_tags": [
+        "unverified_catalyst"
       ],
-      "confidence": "high",
-      "follow_up": "觀察隔日是否續量、同族群是否維持多檔同步，以及法人買盤是否延續。",
-      "sources": [
-        {
-          "title": "中央社：AI功能升級帶動高階PCB與IC載板需求",
-          "url": "https://www.cna.com.tw/news/afe/202605140043.aspx",
-          "published_at": "2026-05-14"
-        }
-      ]
+      "evidence_strength": "none",
+      "reason_summary": "眾達-KY（4977）11/02收183元，漲5.78%，量7650張，前日量比1.76倍。眾達-KY成交量增加、外資小幅買超且融資下降，但分點樣本淨額接近中性；光通訊題材不能單靠族群聯想確認當日催化。 外資買超196張；投信無個股紀錄；自營商買超36張。融資減少166張，站在20日均線之上；收盤位置占當日高低區間74%。目前沒有足以確認直接漲因的公司新聞，不能倒推原因。",
+      "evidence": [
+        "官方日期化 Facts v3：收盤183元、漲幅5.78%、量7650張；量比1.76倍，站在20日均線之上。",
+        "同日法人檔：外資+196張、投信未見個股紀錄張、自營商+36張；投信 no_record 不等於0。",
+        "融資-166張；分點樣本買方前列凱基-台北、賣方前列台新；樣本淨額4張，非全市場淨流量。"
+      ],
+      "confidence": "low",
+      "flow": {
+        "foreign": {
+          "net_shares": 195893,
+          "net_lots": 196,
+          "record_status": "reported",
+          "source_file": "data_twse_foreign_investors/20261102_twse_foreign_investors.json"
+        },
+        "investment_trust": {
+          "net_shares": null,
+          "net_lots": null,
+          "record_status": "no_record",
+          "source_file": "data_twse_investment_trust/20261102_twse_investment_trust.json"
+        },
+        "dealer": {
+          "net_shares": 36000,
+          "net_lots": 36,
+          "record_status": "reported",
+          "source_file": "data_twse_dealers/20261102_twse_dealers.json"
+        },
+        "margin": {
+          "margin_prev": 8938,
+          "margin_now": 8772,
+          "margin_delta": -166,
+          "short_prev": 71,
+          "short_now": 102,
+          "short_delta": 31
+        },
+        "broker": {
+          "status": "available",
+          "top3_buy_share_pct": 3.42,
+          "top5_buy_share_pct": 5.24,
+          "top3_sell_share_pct": 6.58,
+          "top5_sell_share_pct": 7.69,
+          "totals": {
+            "netBuy": 793,
+            "netSell": 789,
+            "net": 4
+          },
+          "top_buy_brokers": [
+            {
+              "broker_name": "凱基-台北",
+              "broker_id": "9200",
+              "branch_id": "9268",
+              "net": 114,
+              "share_pct": 1.49
+            },
+            {
+              "broker_name": "國泰-敦南",
+              "broker_id": "8880",
+              "branch_id": "8888",
+              "net": 76,
+              "share_pct": 0.99
+            },
+            {
+              "broker_name": "元大證券",
+              "broker_id": "9800",
+              "branch_id": "9800",
+              "net": 72,
+              "share_pct": 0.94
+            },
+            {
+              "broker_name": "富邦-嘉義",
+              "broker_id": "9600",
+              "branch_id": "9692",
+              "net": 70,
+              "share_pct": 0.92
+            },
+            {
+              "broker_name": "永豐金證券",
+              "broker_id": "9A00",
+              "branch_id": "0039004100300030",
+              "net": 69,
+              "share_pct": 0.9
+            }
+          ],
+          "top_sell_brokers": [
+            {
+              "broker_name": "台新",
+              "broker_id": "9B00",
+              "branch_id": "0039004200300030",
+              "net": 306,
+              "share_pct": 4
+            },
+            {
+              "broker_name": "凱基-站前",
+              "broker_id": "9200",
+              "branch_id": "0039003200300046",
+              "net": 145,
+              "share_pct": 1.9
+            },
+            {
+              "broker_name": "國票-博愛",
+              "broker_id": "7790",
+              "branch_id": "003700370039007a",
+              "net": 52,
+              "share_pct": 0.68
+            },
+            {
+              "broker_name": "合庫-彰化",
+              "broker_id": "1020",
+              "branch_id": "1028",
+              "net": 47,
+              "share_pct": 0.61
+            },
+            {
+              "broker_name": "華南永昌-南京",
+              "broker_id": "9300",
+              "branch_id": "9326",
+              "net": 38,
+              "share_pct": 0.5
+            }
+          ],
+          "source_url": "https://fubon-ebrokerdj.fbs.com.tw/z/zc/zco/zco.djhtm?a=4977&e=2026-11-2&f=2026-11-2"
+        },
+        "institutional_verification_required": true
+      },
+      "technical": {
+        "sma5": 179.3,
+        "sma20": 177.55,
+        "sma60": 167.33,
+        "above_sma5": true,
+        "above_sma20": true,
+        "above_sma60": true,
+        "previous_volume": 4335,
+        "volume_ratio_vs_previous": 1.76,
+        "low_liquidity": false
+      },
+      "follow_up": [
+        "對照正式光通訊訂單或法說公告，再確認股價上行是否伴隨籌碼集中。",
+        "追蹤眾達-KY次日外資、投信和融資變化；缺新聞時等待可核實之法說／公司公告，避免將市場交易方向誤當特定利多。"
+      ],
+      "sources": []
     },
     {
       "code": "8499",
       "name": "鼎炫-KY",
       "change_pct": 5.74,
-      "reason_summary": "未找到可直接驗證的單一公開催化劑；成交量偏低，低流動性與短線籌碼可能放大價格波動，不宜硬解讀為基本面轉折。",
+      "cause_type": "low_liquidity",
+      "cause_tags": [
+        "low_liquidity"
+      ],
+      "evidence_strength": "none",
+      "reason_summary": "鼎炫-KY（8499）11/02收221元，漲5.74%，量37張，前日量比0.79倍。鼎炫-KY成交僅37張，上漲5.74%的樣本流動性極低；外資小額買超不能解讀成大型法人積極布局。 外資買超12張；投信無個股紀錄；自營商買賣超0張。融資減少3張，仍低於20日均線；收盤位置占當日高低區間87%。低流動性屬行情限制，並非已證實上漲催化。",
       "evidence": [
-        "當日漲幅 +5.74%",
-        "成交量 37 張",
-        "當日5%以上股票 29 檔"
+        "官方日期化 Facts v3：收盤221元、漲幅5.74%、量37張；量比0.79倍，仍低於20日均線。",
+        "同日法人檔：外資+12張、投信未見個股紀錄張、自營商0張；投信 no_record 不等於0。",
+        "融資-3張；分點樣本買方前列凱基-台北、賣方前列美商高盛；樣本淨額0張，非全市場淨流量。"
       ],
       "confidence": "low",
-      "follow_up": "優先比對法人、融資與後續2至5日價格延續性；若後續出現公司公告或產業消息，再提高原因可信度。",
+      "flow": {
+        "foreign": {
+          "net_shares": 12000,
+          "net_lots": 12,
+          "record_status": "reported",
+          "source_file": "data_twse_foreign_investors/20261102_twse_foreign_investors.json"
+        },
+        "investment_trust": {
+          "net_shares": null,
+          "net_lots": null,
+          "record_status": "no_record",
+          "source_file": "data_twse_investment_trust/20261102_twse_investment_trust.json"
+        },
+        "dealer": {
+          "net_shares": 0,
+          "net_lots": 0,
+          "record_status": "zero_net",
+          "source_file": "data_twse_dealers/20261102_twse_dealers.json"
+        },
+        "margin": {
+          "margin_prev": 587,
+          "margin_now": 584,
+          "margin_delta": -3,
+          "short_prev": 5,
+          "short_now": 0,
+          "short_delta": -5
+        },
+        "broker": {
+          "status": "available",
+          "top3_buy_share_pct": 54.05,
+          "top5_buy_share_pct": 70.27,
+          "top3_sell_share_pct": 40.53,
+          "top5_sell_share_pct": 54.05,
+          "totals": {
+            "netBuy": 29,
+            "netSell": 29,
+            "net": 0
+          },
+          "top_buy_brokers": [
+            {
+              "broker_name": "凱基-台北",
+              "broker_id": "9200",
+              "branch_id": "9268",
+              "net": 8,
+              "share_pct": 21.62
+            },
+            {
+              "broker_name": "新加坡商瑞銀",
+              "broker_id": "1650",
+              "branch_id": "1650",
+              "net": 7,
+              "share_pct": 18.92
+            },
+            {
+              "broker_name": "群益金鼎-新竹",
+              "broker_id": "9100",
+              "branch_id": "9186",
+              "net": 5,
+              "share_pct": 13.51
+            },
+            {
+              "broker_name": "台灣摩根士丹利",
+              "broker_id": "1470",
+              "branch_id": "1470",
+              "net": 4,
+              "share_pct": 10.81
+            },
+            {
+              "broker_name": "美林",
+              "broker_id": "1440",
+              "branch_id": "1440",
+              "net": 2,
+              "share_pct": 5.41
+            }
+          ],
+          "top_sell_brokers": [
+            {
+              "broker_name": "美商高盛",
+              "broker_id": "1480",
+              "branch_id": "1480",
+              "net": 5,
+              "share_pct": 13.51
+            },
+            {
+              "broker_name": "摩根大通",
+              "broker_id": "8440",
+              "branch_id": "8440",
+              "net": 5,
+              "share_pct": 13.51
+            },
+            {
+              "broker_name": "康和",
+              "broker_id": "8450",
+              "branch_id": "8450",
+              "net": 5,
+              "share_pct": 13.51
+            },
+            {
+              "broker_name": "玉山-台南",
+              "broker_id": "8840",
+              "branch_id": "8847",
+              "net": 3,
+              "share_pct": 8.11
+            },
+            {
+              "broker_name": "兆豐-天母",
+              "broker_id": "7000",
+              "branch_id": "003700300030004c",
+              "net": 2,
+              "share_pct": 5.41
+            }
+          ],
+          "source_url": "https://fubon-ebrokerdj.fbs.com.tw/z/zc/zco/zco.djhtm?a=8499&e=2026-11-2&f=2026-11-2"
+        },
+        "institutional_verification_required": true
+      },
+      "technical": {
+        "sma5": 219,
+        "sma20": 238.58,
+        "sma60": 252.46,
+        "above_sma5": true,
+        "above_sma20": false,
+        "above_sma60": false,
+        "previous_volume": 47,
+        "volume_ratio_vs_previous": 0.79,
+        "low_liquidity": true
+      },
+      "follow_up": [
+        "先看是否出現正常成交深度，再觀察報價波動及重大公告。",
+        "追蹤鼎炫-KY次日外資、投信和融資變化；缺新聞時等待可核實之法說／公司公告，避免將市場交易方向誤當特定利多。"
+      ],
       "sources": []
     },
     {
       "code": "3321",
       "name": "同泰",
       "change_pct": 5.72,
-      "reason_summary": "未找到可直接驗證的單一公開催化劑；先以族群輪動、價量與籌碼變化解讀，不把上漲本身倒果為因。",
+      "cause_type": "unknown",
+      "cause_tags": [
+        "unverified_catalyst"
+      ],
+      "evidence_strength": "none",
+      "reason_summary": "同泰（3321）11/02收21.25元，漲5.72%，量1691張，前日量比1.19倍。同泰股價上升，但分點樣本淨額偏賣，收盤位於日內區間中段，與漲停鎖死的強勢股不同。 外資買超115張；投信無個股紀錄；自營商賣超1張。融資持平0張，站在20日均線之上；收盤位置占當日高低區間46%。目前沒有足以確認直接漲因的公司新聞，不能倒推原因。",
       "evidence": [
-        "當日漲幅 +5.72%",
-        "成交量 1,691 張",
-        "當日5%以上股票 29 檔"
+        "官方日期化 Facts v3：收盤21.25元、漲幅5.72%、量1691張；量比1.19倍，站在20日均線之上。",
+        "同日法人檔：外資+115張、投信未見個股紀錄張、自營商-1張；投信 no_record 不等於0。",
+        "融資0張；分點樣本買方前列美商高盛、賣方前列富邦-桃園；樣本淨額-145張，非全市場淨流量。"
       ],
       "confidence": "low",
-      "follow_up": "優先比對法人、融資與後續2至5日價格延續性；若後續出現公司公告或產業消息，再提高原因可信度。",
+      "flow": {
+        "foreign": {
+          "net_shares": 115421,
+          "net_lots": 115,
+          "record_status": "reported",
+          "source_file": "data_twse_foreign_investors/20261102_twse_foreign_investors.json"
+        },
+        "investment_trust": {
+          "net_shares": null,
+          "net_lots": null,
+          "record_status": "no_record",
+          "source_file": "data_twse_investment_trust/20261102_twse_investment_trust.json"
+        },
+        "dealer": {
+          "net_shares": -1000,
+          "net_lots": -1,
+          "record_status": "reported",
+          "source_file": "data_twse_dealers/20261102_twse_dealers.json"
+        },
+        "margin": {
+          "margin_prev": 0,
+          "margin_now": 0,
+          "margin_delta": 0,
+          "short_prev": 0,
+          "short_now": 0,
+          "short_delta": 0
+        },
+        "broker": {
+          "status": "available",
+          "top3_buy_share_pct": 13.6,
+          "top5_buy_share_pct": 19.51,
+          "top3_sell_share_pct": 21.7,
+          "top5_sell_share_pct": 28.5,
+          "totals": {
+            "netBuy": 638,
+            "netSell": 783,
+            "net": -145
+          },
+          "top_buy_brokers": [
+            {
+              "broker_name": "美商高盛",
+              "broker_id": "1480",
+              "branch_id": "1480",
+              "net": 89,
+              "share_pct": 5.26
+            },
+            {
+              "broker_name": "致和-崇德",
+              "broker_id": "7030",
+              "branch_id": "0037003000330042",
+              "net": 83,
+              "share_pct": 4.91
+            },
+            {
+              "broker_name": "元大-大天母",
+              "broker_id": "9800",
+              "branch_id": "9893",
+              "net": 58,
+              "share_pct": 3.43
+            },
+            {
+              "broker_name": "新加坡商瑞銀",
+              "broker_id": "1650",
+              "branch_id": "1650",
+              "net": 53,
+              "share_pct": 3.13
+            },
+            {
+              "broker_name": "光和-溪湖",
+              "broker_id": "6380",
+              "branch_id": "6381",
+              "net": 47,
+              "share_pct": 2.78
+            }
+          ],
+          "top_sell_brokers": [
+            {
+              "broker_name": "富邦-桃園",
+              "broker_id": "9600",
+              "branch_id": "9665",
+              "net": 174,
+              "share_pct": 10.29
+            },
+            {
+              "broker_name": "元大-新竹經國",
+              "broker_id": "9800",
+              "branch_id": "9859",
+              "net": 128,
+              "share_pct": 7.57
+            },
+            {
+              "broker_name": "富邦-台北",
+              "broker_id": "9600",
+              "branch_id": "9623",
+              "net": 65,
+              "share_pct": 3.84
+            },
+            {
+              "broker_name": "國泰證券",
+              "broker_id": "8880",
+              "branch_id": "8880",
+              "net": 61,
+              "share_pct": 3.61
+            },
+            {
+              "broker_name": "台新-北中壢",
+              "broker_id": "9B00",
+              "branch_id": "003900420032004c",
+              "net": 54,
+              "share_pct": 3.19
+            }
+          ],
+          "source_url": "https://fubon-ebrokerdj.fbs.com.tw/z/zc/zco/zco.djhtm?a=3321&e=2026-11-2&f=2026-11-2"
+        },
+        "institutional_verification_required": true
+      },
+      "technical": {
+        "sma5": 20.01,
+        "sma20": 17.88,
+        "sma60": 18.04,
+        "above_sma5": true,
+        "above_sma20": true,
+        "above_sma60": true,
+        "previous_volume": 1417,
+        "volume_ratio_vs_previous": 1.19,
+        "low_liquidity": false
+      },
+      "follow_up": [
+        "核對上影線與主要賣方分點，是否形成短線壓力。",
+        "追蹤同泰次日外資、投信和融資變化；缺新聞時等待可核實之法說／公司公告，避免將市場交易方向誤當特定利多。"
+      ],
       "sources": []
     },
     {
       "code": "4912",
       "name": "聯德控股-KY",
       "change_pct": 5.55,
-      "reason_summary": "未找到可直接驗證的單一公開催化劑；先以族群輪動、價量與籌碼變化解讀，不把上漲本身倒果為因。",
+      "cause_type": "unknown",
+      "cause_tags": [
+        "unverified_catalyst"
+      ],
+      "evidence_strength": "none",
+      "reason_summary": "聯德控股-KY（4912）11/02收95.1元，漲5.55%，量1375張，前日量比5.39倍。聯德控股-KY量比逾5倍且股價上行，但外資賣超、融資減少，仍低於20日均線；放量不等於法人買盤支持。 外資賣超592張；投信無個股紀錄；自營商買超1張。融資減少118張，仍低於20日均線；收盤位置占當日高低區間92%。目前沒有足以確認直接漲因的公司新聞，不能倒推原因。",
       "evidence": [
-        "當日漲幅 +5.55%",
-        "成交量 1,375 張",
-        "當日5%以上股票 29 檔"
+        "官方日期化 Facts v3：收盤95.1元、漲幅5.55%、量1375張；量比5.39倍，仍低於20日均線。",
+        "同日法人檔：外資-592張、投信未見個股紀錄張、自營商+1張；投信 no_record 不等於0。",
+        "融資-118張；分點樣本買方前列統一-板橋、賣方前列摩根大通；樣本淨額-164張，非全市場淨流量。"
       ],
       "confidence": "low",
-      "follow_up": "優先比對法人、融資與後續2至5日價格延續性；若後續出現公司公告或產業消息，再提高原因可信度。",
+      "flow": {
+        "foreign": {
+          "net_shares": -592000,
+          "net_lots": -592,
+          "record_status": "reported",
+          "source_file": "data_twse_foreign_investors/20261102_twse_foreign_investors.json"
+        },
+        "investment_trust": {
+          "net_shares": null,
+          "net_lots": null,
+          "record_status": "no_record",
+          "source_file": "data_twse_investment_trust/20261102_twse_investment_trust.json"
+        },
+        "dealer": {
+          "net_shares": 1000,
+          "net_lots": 1,
+          "record_status": "reported",
+          "source_file": "data_twse_dealers/20261102_twse_dealers.json"
+        },
+        "margin": {
+          "margin_prev": 2845,
+          "margin_now": 2727,
+          "margin_delta": -118,
+          "short_prev": 0,
+          "short_now": 1,
+          "short_delta": 1
+        },
+        "broker": {
+          "status": "available",
+          "top3_buy_share_pct": 32.08,
+          "top5_buy_share_pct": 34.77,
+          "top3_sell_share_pct": 23.78,
+          "top5_sell_share_pct": 33.82,
+          "totals": {
+            "netBuy": 567,
+            "netSell": 731,
+            "net": -164
+          },
+          "top_buy_brokers": [
+            {
+              "broker_name": "統一-板橋",
+              "broker_id": "5850",
+              "branch_id": "0035003800350050",
+              "net": 289,
+              "share_pct": 21.02
+            },
+            {
+              "broker_name": "兆豐-南京",
+              "broker_id": "7000",
+              "branch_id": "0037003000300050",
+              "net": 102,
+              "share_pct": 7.42
+            },
+            {
+              "broker_name": "台新-西松",
+              "broker_id": "9B00",
+              "branch_id": "003900420032006e",
+              "net": 50,
+              "share_pct": 3.64
+            },
+            {
+              "broker_name": "永豐金-新店",
+              "broker_id": "9A00",
+              "branch_id": "0039004100390069",
+              "net": 22,
+              "share_pct": 1.6
+            },
+            {
+              "broker_name": "富邦-南京",
+              "broker_id": "9600",
+              "branch_id": "0039003600310043",
+              "net": 15,
+              "share_pct": 1.09
+            }
+          ],
+          "top_sell_brokers": [
+            {
+              "broker_name": "摩根大通",
+              "broker_id": "8440",
+              "branch_id": "8440",
+              "net": 138,
+              "share_pct": 10.04
+            },
+            {
+              "broker_name": "美商高盛",
+              "broker_id": "1480",
+              "branch_id": "1480",
+              "net": 104,
+              "share_pct": 7.56
+            },
+            {
+              "broker_name": "永豐金證券",
+              "broker_id": "9A00",
+              "branch_id": "0039004100300030",
+              "net": 85,
+              "share_pct": 6.18
+            },
+            {
+              "broker_name": "台灣摩根士丹利",
+              "broker_id": "1470",
+              "branch_id": "1470",
+              "net": 79,
+              "share_pct": 5.75
+            },
+            {
+              "broker_name": "凱基-台北",
+              "broker_id": "9200",
+              "branch_id": "9268",
+              "net": 59,
+              "share_pct": 4.29
+            }
+          ],
+          "source_url": "https://fubon-ebrokerdj.fbs.com.tw/z/zc/zco/zco.djhtm?a=4912&e=2026-11-2&f=2026-11-2"
+        },
+        "institutional_verification_required": true
+      },
+      "technical": {
+        "sma5": 93.28,
+        "sma20": 101.59,
+        "sma60": 96.66,
+        "above_sma5": true,
+        "above_sma20": false,
+        "above_sma60": false,
+        "previous_volume": 255,
+        "volume_ratio_vs_previous": 5.39,
+        "low_liquidity": false
+      },
+      "follow_up": [
+        "觀察放量後20日線是否收復，並追蹤外資調節是否結束。",
+        "追蹤聯德控股-KY次日外資、投信和融資變化；缺新聞時等待可核實之法說／公司公告，避免將市場交易方向誤當特定利多。"
+      ],
       "sources": []
     },
     {
       "code": "4195",
       "name": "基米-創",
       "change_pct": 5.48,
-      "reason_summary": "未找到可直接驗證的單一公開催化劑；成交量偏低，低流動性與短線籌碼可能放大價格波動，不宜硬解讀為基本面轉折。",
+      "cause_type": "low_liquidity",
+      "cause_tags": [
+        "low_liquidity"
+      ],
+      "evidence_strength": "none",
+      "reason_summary": "基米-創（4195）11/02收15.4元，漲5.48%，量160張，前日量比2.76倍。基米-創成交160張，量比雖提高但基數低；外資偏賣、20日線未站上，價格上揚不宜放大解讀。 外資賣超5張；投信無個股紀錄；自營商買超2張。融資增減資料不足，仍低於20日均線；收盤位置占當日高低區間65%。低流動性屬行情限制，並非已證實上漲催化。",
       "evidence": [
-        "當日漲幅 +5.48%",
-        "成交量 160 張",
-        "當日5%以上股票 29 檔"
+        "官方日期化 Facts v3：收盤15.4元、漲幅5.48%、量160張；量比2.76倍，仍低於20日均線。",
+        "同日法人檔：外資-5張、投信未見個股紀錄張、自營商+2張；投信 no_record 不等於0。",
+        "融資缺增減數據；分點樣本買方前列元大-竹北、賣方前列臺銀-新竹；樣本淨額14張，非全市場淨流量。"
       ],
       "confidence": "low",
-      "follow_up": "優先比對法人、融資與後續2至5日價格延續性；若後續出現公司公告或產業消息，再提高原因可信度。",
+      "flow": {
+        "foreign": {
+          "net_shares": -5000,
+          "net_lots": -5,
+          "record_status": "reported",
+          "source_file": "data_twse_foreign_investors/20261102_twse_foreign_investors.json"
+        },
+        "investment_trust": {
+          "net_shares": null,
+          "net_lots": null,
+          "record_status": "no_record",
+          "source_file": "data_twse_investment_trust/20261102_twse_investment_trust.json"
+        },
+        "dealer": {
+          "net_shares": 2000,
+          "net_lots": 2,
+          "record_status": "reported",
+          "source_file": "data_twse_dealers/20261102_twse_dealers.json"
+        },
+        "margin": {
+          "margin_prev": null,
+          "margin_now": null,
+          "margin_delta": null,
+          "short_prev": null,
+          "short_now": null,
+          "short_delta": null
+        },
+        "broker": {
+          "status": "available",
+          "top3_buy_share_pct": 45.63,
+          "top5_buy_share_pct": 53.14,
+          "top3_sell_share_pct": 25.63,
+          "top5_sell_share_pct": 35.63,
+          "totals": {
+            "netBuy": 110,
+            "netSell": 96,
+            "net": 14
+          },
+          "top_buy_brokers": [
+            {
+              "broker_name": "元大-竹北",
+              "broker_id": "9800",
+              "branch_id": "0039003800310042",
+              "net": 36,
+              "share_pct": 22.5
+            },
+            {
+              "broker_name": "新光-台中",
+              "broker_id": "8560",
+              "branch_id": "8561",
+              "net": 27,
+              "share_pct": 16.88
+            },
+            {
+              "broker_name": "致和-高雄",
+              "broker_id": "7030",
+              "branch_id": "7036",
+              "net": 10,
+              "share_pct": 6.25
+            },
+            {
+              "broker_name": "富邦-員林",
+              "broker_id": "9600",
+              "branch_id": "9672",
+              "net": 7,
+              "share_pct": 4.38
+            },
+            {
+              "broker_name": "美林",
+              "broker_id": "1440",
+              "branch_id": "1440",
+              "net": 5,
+              "share_pct": 3.13
+            }
+          ],
+          "top_sell_brokers": [
+            {
+              "broker_name": "臺銀-新竹",
+              "broker_id": "1040",
+              "branch_id": "1045",
+              "net": 15,
+              "share_pct": 9.38
+            },
+            {
+              "broker_name": "國泰-敦南",
+              "broker_id": "8880",
+              "branch_id": "8888",
+              "net": 14,
+              "share_pct": 8.75
+            },
+            {
+              "broker_name": "華南永昌-敦南",
+              "broker_id": "9300",
+              "branch_id": "9347",
+              "net": 12,
+              "share_pct": 7.5
+            },
+            {
+              "broker_name": "凱基-台北",
+              "broker_id": "9200",
+              "branch_id": "9268",
+              "net": 8,
+              "share_pct": 5
+            },
+            {
+              "broker_name": "凱基-內湖",
+              "broker_id": "9200",
+              "branch_id": "9287",
+              "net": 8,
+              "share_pct": 5
+            }
+          ],
+          "source_url": "https://fubon-ebrokerdj.fbs.com.tw/z/zc/zco/zco.djhtm?a=4195&e=2026-11-2&f=2026-11-2"
+        },
+        "institutional_verification_required": true
+      },
+      "technical": {
+        "sma5": 15.11,
+        "sma20": 15.61,
+        "sma60": 14.71,
+        "above_sma5": true,
+        "above_sma20": false,
+        "above_sma60": true,
+        "previous_volume": 58,
+        "volume_ratio_vs_previous": 2.76,
+        "low_liquidity": true
+      },
+      "follow_up": [
+        "優先補查具體公告與成交深度，避免低流動性造成判讀失真。",
+        "追蹤基米-創次日外資、投信和融資變化；缺新聞時等待可核實之法說／公司公告，避免將市場交易方向誤當特定利多。"
+      ],
       "sources": []
     },
     {
       "code": "1786",
       "name": "科妍",
       "change_pct": 5.36,
-      "reason_summary": "未找到可直接驗證的單一公開催化劑；先以族群輪動、價量與籌碼變化解讀，不把上漲本身倒果為因。",
+      "cause_type": "unknown",
+      "cause_tags": [
+        "unverified_catalyst"
+      ],
+      "evidence_strength": "none",
+      "reason_summary": "科妍（1786）11/02收50.1元，漲5.36%，量3646張，前日量比7.81倍。科妍放量至前一日近8倍，卻收在日內區間偏低位置；外資與自營商同向賣超，融資增加，須注意高量震盪風險。 外資賣超346張；投信無個股紀錄；自營商賣超221張。融資增加143張，站在20日均線之上；收盤位置占當日高低區間14%。目前沒有足以確認直接漲因的公司新聞，不能倒推原因。",
       "evidence": [
-        "當日漲幅 +5.36%",
-        "成交量 3,646 張",
-        "當日5%以上股票 29 檔"
+        "官方日期化 Facts v3：收盤50.1元、漲幅5.36%、量3646張；量比7.81倍，站在20日均線之上。",
+        "同日法人檔：外資-346張、投信未見個股紀錄張、自營商-221張；投信 no_record 不等於0。",
+        "融資+143張；分點樣本買方前列第一金-自由、賣方前列元大證券；樣本淨額-279張，非全市場淨流量。"
       ],
       "confidence": "low",
-      "follow_up": "優先比對法人、融資與後續2至5日價格延續性；若後續出現公司公告或產業消息，再提高原因可信度。",
+      "flow": {
+        "foreign": {
+          "net_shares": -346000,
+          "net_lots": -346,
+          "record_status": "reported",
+          "source_file": "data_twse_foreign_investors/20261102_twse_foreign_investors.json"
+        },
+        "investment_trust": {
+          "net_shares": null,
+          "net_lots": null,
+          "record_status": "no_record",
+          "source_file": "data_twse_investment_trust/20261102_twse_investment_trust.json"
+        },
+        "dealer": {
+          "net_shares": -220993,
+          "net_lots": -221,
+          "record_status": "reported",
+          "source_file": "data_twse_dealers/20261102_twse_dealers.json"
+        },
+        "margin": {
+          "margin_prev": 4503,
+          "margin_now": 4646,
+          "margin_delta": 143,
+          "short_prev": 7,
+          "short_now": 21,
+          "short_delta": 14
+        },
+        "broker": {
+          "status": "available",
+          "top3_buy_share_pct": 7.79,
+          "top5_buy_share_pct": 11.05,
+          "top3_sell_share_pct": 11.74,
+          "top5_sell_share_pct": 16.52,
+          "totals": {
+            "netBuy": 726,
+            "netSell": 1005,
+            "net": -279
+          },
+          "top_buy_brokers": [
+            {
+              "broker_name": "第一金-自由",
+              "broker_id": "5380",
+              "branch_id": "0035003300380045",
+              "net": 120,
+              "share_pct": 3.29
+            },
+            {
+              "broker_name": "群益金鼎-內湖",
+              "broker_id": "9100",
+              "branch_id": "0039003100380064",
+              "net": 95,
+              "share_pct": 2.61
+            },
+            {
+              "broker_name": "大昌-桃園",
+              "broker_id": "6460",
+              "branch_id": "6465",
+              "net": 69,
+              "share_pct": 1.89
+            },
+            {
+              "broker_name": "元大-板橋三民",
+              "broker_id": "9800",
+              "branch_id": "9879",
+              "net": 65,
+              "share_pct": 1.78
+            },
+            {
+              "broker_name": "台新-同大",
+              "broker_id": "9B00",
+              "branch_id": "0039004200320050",
+              "net": 54,
+              "share_pct": 1.48
+            }
+          ],
+          "top_sell_brokers": [
+            {
+              "broker_name": "元大證券",
+              "broker_id": "9800",
+              "branch_id": "9800",
+              "net": 236,
+              "share_pct": 6.47
+            },
+            {
+              "broker_name": "台灣摩根士丹利",
+              "broker_id": "1470",
+              "branch_id": "1470",
+              "net": 99,
+              "share_pct": 2.72
+            },
+            {
+              "broker_name": "美林",
+              "broker_id": "1440",
+              "branch_id": "1440",
+              "net": 93,
+              "share_pct": 2.55
+            },
+            {
+              "broker_name": "美商高盛",
+              "broker_id": "1480",
+              "branch_id": "1480",
+              "net": 87,
+              "share_pct": 2.39
+            },
+            {
+              "broker_name": "摩根大通",
+              "broker_id": "8440",
+              "branch_id": "8440",
+              "net": 87,
+              "share_pct": 2.39
+            }
+          ],
+          "source_url": "https://fubon-ebrokerdj.fbs.com.tw/z/zc/zco/zco.djhtm?a=1786&e=2026-11-2&f=2026-11-2"
+        },
+        "institutional_verification_required": true
+      },
+      "technical": {
+        "sma5": 43.85,
+        "sma20": 41.72,
+        "sma60": 45.25,
+        "above_sma5": true,
+        "above_sma20": true,
+        "above_sma60": true,
+        "previous_volume": 467,
+        "volume_ratio_vs_previous": 7.81,
+        "low_liquidity": false
+      },
+      "follow_up": [
+        "若大量後未能守住關鍵價格，觀察外資調節與新增融資是否擴大波動。",
+        "追蹤科妍次日外資、投信和融資變化；缺新聞時等待可核實之法說／公司公告，避免將市場交易方向誤當特定利多。"
+      ],
       "sources": []
     },
     {
       "code": "1907",
       "name": "永豐餘",
       "change_pct": 5.34,
-      "reason_summary": "未找到可直接驗證的單一公開催化劑；先以族群輪動、價量與籌碼變化解讀，不把上漲本身倒果為因。",
+      "cause_type": "unknown",
+      "cause_tags": [
+        "unverified_catalyst"
+      ],
+      "evidence_strength": "none",
+      "reason_summary": "永豐餘（1907）11/02收29.6元，漲5.34%，量3866張，前日量比1.39倍。永豐餘外資買超且融資下降，收盤靠近日高；籌碼相對健康但仍不能在沒有公告時推定紙業景氣轉強。 外資買超598張；投信無個股紀錄；自營商買超8張。融資減少61張，站在20日均線之上；收盤位置占當日高低區間89%。目前沒有足以確認直接漲因的公司新聞，不能倒推原因。",
       "evidence": [
-        "當日漲幅 +5.34%",
-        "成交量 3,866 張",
-        "當日5%以上股票 29 檔"
+        "官方日期化 Facts v3：收盤29.6元、漲幅5.34%、量3866張；量比1.39倍，站在20日均線之上。",
+        "同日法人檔：外資+598張、投信未見個股紀錄張、自營商+8張；投信 no_record 不等於0。",
+        "融資-61張；分點樣本買方前列摩根大通、賣方前列港商野村；樣本淨額423張，非全市場淨流量。"
       ],
       "confidence": "low",
-      "follow_up": "優先比對法人、融資與後續2至5日價格延續性；若後續出現公司公告或產業消息，再提高原因可信度。",
+      "flow": {
+        "foreign": {
+          "net_shares": 597687,
+          "net_lots": 598,
+          "record_status": "reported",
+          "source_file": "data_twse_foreign_investors/20261102_twse_foreign_investors.json"
+        },
+        "investment_trust": {
+          "net_shares": null,
+          "net_lots": null,
+          "record_status": "no_record",
+          "source_file": "data_twse_investment_trust/20261102_twse_investment_trust.json"
+        },
+        "dealer": {
+          "net_shares": 8000,
+          "net_lots": 8,
+          "record_status": "reported",
+          "source_file": "data_twse_dealers/20261102_twse_dealers.json"
+        },
+        "margin": {
+          "margin_prev": 24153,
+          "margin_now": 24092,
+          "margin_delta": -61,
+          "short_prev": 0,
+          "short_now": 2,
+          "short_delta": 2
+        },
+        "broker": {
+          "status": "available",
+          "top3_buy_share_pct": 16.21,
+          "top5_buy_share_pct": 23.48,
+          "top3_sell_share_pct": 10.52,
+          "top5_sell_share_pct": 13.67,
+          "totals": {
+            "netBuy": 1193,
+            "netSell": 770,
+            "net": 423
+          },
+          "top_buy_brokers": [
+            {
+              "broker_name": "摩根大通",
+              "broker_id": "8440",
+              "branch_id": "8440",
+              "net": 304,
+              "share_pct": 7.86
+            },
+            {
+              "broker_name": "新加坡商瑞銀",
+              "broker_id": "1650",
+              "branch_id": "1650",
+              "net": 173,
+              "share_pct": 4.47
+            },
+            {
+              "broker_name": "國泰證券",
+              "broker_id": "8880",
+              "branch_id": "8880",
+              "net": 150,
+              "share_pct": 3.88
+            },
+            {
+              "broker_name": "台灣摩根士丹利",
+              "broker_id": "1470",
+              "branch_id": "1470",
+              "net": 148,
+              "share_pct": 3.83
+            },
+            {
+              "broker_name": "兆豐-松德",
+              "broker_id": "7000",
+              "branch_id": "0037003000300069",
+              "net": 133,
+              "share_pct": 3.44
+            }
+          ],
+          "top_sell_brokers": [
+            {
+              "broker_name": "港商野村",
+              "broker_id": "1560",
+              "branch_id": "1560",
+              "net": 195,
+              "share_pct": 5.04
+            },
+            {
+              "broker_name": "元大-北三重",
+              "broker_id": "9800",
+              "branch_id": "0039003800390056",
+              "net": 123,
+              "share_pct": 3.18
+            },
+            {
+              "broker_name": "統一",
+              "broker_id": "5850",
+              "branch_id": "5850",
+              "net": 89,
+              "share_pct": 2.3
+            },
+            {
+              "broker_name": "台新-緯城",
+              "broker_id": "9B00",
+              "branch_id": "0039004200320041",
+              "net": 82,
+              "share_pct": 2.12
+            },
+            {
+              "broker_name": "元大-基隆",
+              "broker_id": "9800",
+              "branch_id": "0039003800390059",
+              "net": 40,
+              "share_pct": 1.03
+            }
+          ],
+          "source_url": "https://fubon-ebrokerdj.fbs.com.tw/z/zc/zco/zco.djhtm?a=1907&e=2026-11-2&f=2026-11-2"
+        },
+        "institutional_verification_required": true
+      },
+      "technical": {
+        "sma5": 28.73,
+        "sma20": 28.48,
+        "sma60": 29.24,
+        "above_sma5": true,
+        "above_sma20": true,
+        "above_sma60": true,
+        "previous_volume": 2778,
+        "volume_ratio_vs_previous": 1.39,
+        "low_liquidity": false
+      },
+      "follow_up": [
+        "核對紙價與公司營運公告，留意成交量與外資能否同步延續。",
+        "追蹤永豐餘次日外資、投信和融資變化；缺新聞時等待可核實之法說／公司公告，避免將市場交易方向誤當特定利多。"
+      ],
       "sources": []
     },
     {
       "code": "8996",
       "name": "高力",
       "change_pct": 5.23,
-      "reason_summary": "AI伺服器／高階運算供應鏈資金回流，電源、散熱、伺服器、ASIC與周邊零組件同時受惠資本支出與算力需求，偏大型成長主線。",
-      "evidence": [
-        "當日漲幅 +5.23%",
-        "成交量 3,245 張",
-        "當日共有 29 檔漲幅達5%"
+      "cause_type": "unknown",
+      "cause_tags": [
+        "unverified_catalyst"
       ],
-      "confidence": "high",
-      "follow_up": "觀察隔日是否續量、同族群是否維持多檔同步，以及法人買盤是否延續。",
-      "sources": [
-        {
-          "title": "中央社：AI功能升級帶動高階PCB與IC載板需求",
-          "url": "https://www.cna.com.tw/news/afe/202605140043.aspx",
-          "published_at": "2026-05-14"
-        }
-      ]
+      "evidence_strength": "none",
+      "reason_summary": "高力（8996）11/02收1510元，漲5.23%，量3245張，前日量比0.92倍。高力投信買超110張，但外資小幅賣超、融資增加，收盤仍在20日均線下方，法人觀點並非一致。 外資賣超37張；投信買超110張；自營商賣超9張。融資增加145張，仍低於20日均線；收盤位置占當日高低區間85%。目前沒有足以確認直接漲因的公司新聞，不能倒推原因。",
+      "evidence": [
+        "官方日期化 Facts v3：收盤1510元、漲幅5.23%、量3245張；量比0.92倍，仍低於20日均線。",
+        "同日法人檔：外資-37張、投信+110張、自營商-9張；投信 no_record 不等於0。",
+        "融資+145張；分點樣本買方前列統一、賣方前列美商高盛；樣本淨額139張，非全市場淨流量。"
+      ],
+      "confidence": "low",
+      "flow": {
+        "foreign": {
+          "net_shares": -37256,
+          "net_lots": -37,
+          "record_status": "reported",
+          "source_file": "data_twse_foreign_investors/20261102_twse_foreign_investors.json"
+        },
+        "investment_trust": {
+          "net_shares": 110000,
+          "net_lots": 110,
+          "record_status": "reported",
+          "source_file": "data_twse_investment_trust/20261102_twse_investment_trust.json"
+        },
+        "dealer": {
+          "net_shares": -9497,
+          "net_lots": -9,
+          "record_status": "reported",
+          "source_file": "data_twse_dealers/20261102_twse_dealers.json"
+        },
+        "margin": {
+          "margin_prev": 7075,
+          "margin_now": 7220,
+          "margin_delta": 145,
+          "short_prev": 85,
+          "short_now": 119,
+          "short_delta": 34
+        },
+        "broker": {
+          "status": "available",
+          "top3_buy_share_pct": 8.2,
+          "top5_buy_share_pct": 11.28,
+          "top3_sell_share_pct": 4.41,
+          "top5_sell_share_pct": 6.84,
+          "totals": {
+            "netBuy": 539,
+            "netSell": 400,
+            "net": 139
+          },
+          "top_buy_brokers": [
+            {
+              "broker_name": "統一",
+              "broker_id": "5850",
+              "branch_id": "5850",
+              "net": 99,
+              "share_pct": 3.05
+            },
+            {
+              "broker_name": "凱基-信義",
+              "broker_id": "9200",
+              "branch_id": "9216",
+              "net": 87,
+              "share_pct": 2.68
+            },
+            {
+              "broker_name": "華南永昌",
+              "broker_id": "9300",
+              "branch_id": "9300",
+              "net": 80,
+              "share_pct": 2.47
+            },
+            {
+              "broker_name": "新光-高雄",
+              "broker_id": "8560",
+              "branch_id": "8562",
+              "net": 60,
+              "share_pct": 1.85
+            },
+            {
+              "broker_name": "國泰-高雄",
+              "broker_id": "8880",
+              "branch_id": "8881",
+              "net": 40,
+              "share_pct": 1.23
+            }
+          ],
+          "top_sell_brokers": [
+            {
+              "broker_name": "美商高盛",
+              "broker_id": "1480",
+              "branch_id": "1480",
+              "net": 52,
+              "share_pct": 1.6
+            },
+            {
+              "broker_name": "大昌-新店",
+              "broker_id": "6460",
+              "branch_id": "6464",
+              "net": 47,
+              "share_pct": 1.45
+            },
+            {
+              "broker_name": "港商野村",
+              "broker_id": "1560",
+              "branch_id": "1560",
+              "net": 44,
+              "share_pct": 1.36
+            },
+            {
+              "broker_name": "台灣摩根士丹利",
+              "broker_id": "1470",
+              "branch_id": "1470",
+              "net": 42,
+              "share_pct": 1.29
+            },
+            {
+              "broker_name": "元大-鳳山",
+              "broker_id": "9800",
+              "branch_id": "003900380033005a",
+              "net": 37,
+              "share_pct": 1.14
+            }
+          ],
+          "source_url": "https://fubon-ebrokerdj.fbs.com.tw/z/zc/zco/zco.djhtm?a=8996&e=2026-11-2&f=2026-11-2"
+        },
+        "institutional_verification_required": false
+      },
+      "technical": {
+        "sma5": 1508,
+        "sma20": 1583.25,
+        "sma60": 1368.5,
+        "above_sma5": true,
+        "above_sma20": false,
+        "above_sma60": true,
+        "previous_volume": 3520,
+        "volume_ratio_vs_previous": 0.92,
+        "low_liquidity": false
+      },
+      "follow_up": [
+        "觀察投信是否連續加碼與20日均線壓力，並以實際營運公告確認產業需求。",
+        "追蹤高力次日外資、投信和融資變化；缺新聞時等待可核實之法說／公司公告，避免將市場交易方向誤當特定利多。"
+      ],
+      "sources": []
     },
     {
       "code": "6456",
       "name": "GIS-KY",
       "change_pct": 5.09,
-      "reason_summary": "面板／顯示器供應鏈出現族群性資金輪動；若同日群創、友達、彩晶等同步上漲，較適合解讀為低基期與產業循環反彈，而非單一公司消息。",
-      "evidence": [
-        "當日漲幅 +5.09%",
-        "成交量 37,084 張",
-        "當日共有 29 檔漲幅達5%"
+      "cause_type": "unknown",
+      "cause_tags": [
+        "unverified_catalyst"
       ],
-      "confidence": "medium",
-      "follow_up": "觀察隔日是否續量、同族群是否維持多檔同步，以及法人買盤是否延續。",
+      "evidence_strength": "none",
+      "reason_summary": "GIS-KY（6456）11/02收97元，漲5.09%，量37084張，前日量比1.58倍。GIS-KY成交達3萬7千多張、量比擴大，外資與融資同向增加；高量推升也代表需要留意短線籌碼擁擠。 外資買超525張；投信無個股紀錄；自營商賣超1張。融資增加396張，站在20日均線之上；收盤位置占當日高低區間80%。目前沒有足以確認直接漲因的公司新聞，不能倒推原因。",
+      "evidence": [
+        "官方日期化 Facts v3：收盤97元、漲幅5.09%、量37084張；量比1.58倍，站在20日均線之上。",
+        "同日法人檔：外資+525張、投信未見個股紀錄張、自營商-1張；投信 no_record 不等於0。",
+        "融資+396張；分點樣本買方前列凱基-台北、賣方前列元大-三重；樣本淨額831張，非全市場淨流量。"
+      ],
+      "confidence": "low",
+      "flow": {
+        "foreign": {
+          "net_shares": 525321,
+          "net_lots": 525,
+          "record_status": "reported",
+          "source_file": "data_twse_foreign_investors/20261102_twse_foreign_investors.json"
+        },
+        "investment_trust": {
+          "net_shares": null,
+          "net_lots": null,
+          "record_status": "no_record",
+          "source_file": "data_twse_investment_trust/20261102_twse_investment_trust.json"
+        },
+        "dealer": {
+          "net_shares": -1000,
+          "net_lots": -1,
+          "record_status": "reported",
+          "source_file": "data_twse_dealers/20261102_twse_dealers.json"
+        },
+        "margin": {
+          "margin_prev": 30204,
+          "margin_now": 30600,
+          "margin_delta": 396,
+          "short_prev": 456,
+          "short_now": 576,
+          "short_delta": 120
+        },
+        "broker": {
+          "status": "available",
+          "top3_buy_share_pct": 4.83,
+          "top5_buy_share_pct": 6.15,
+          "top3_sell_share_pct": 3.57,
+          "top5_sell_share_pct": 4.93,
+          "totals": {
+            "netBuy": 3554,
+            "netSell": 2723,
+            "net": 831
+          },
+          "top_buy_brokers": [
+            {
+              "broker_name": "凱基-台北",
+              "broker_id": "9200",
+              "branch_id": "9268",
+              "net": 793,
+              "share_pct": 2.14
+            },
+            {
+              "broker_name": "台灣摩根士丹利",
+              "broker_id": "1470",
+              "branch_id": "1470",
+              "net": 501,
+              "share_pct": 1.35
+            },
+            {
+              "broker_name": "永豐金-豐原",
+              "broker_id": "9A00",
+              "branch_id": "0039004100390051",
+              "net": 498,
+              "share_pct": 1.34
+            },
+            {
+              "broker_name": "統一-內湖",
+              "broker_id": "5850",
+              "branch_id": "0035003800350062",
+              "net": 296,
+              "share_pct": 0.8
+            },
+            {
+              "broker_name": "群益金鼎-東大",
+              "broker_id": "9100",
+              "branch_id": "9135",
+              "net": 194,
+              "share_pct": 0.52
+            }
+          ],
+          "top_sell_brokers": [
+            {
+              "broker_name": "元大-三重",
+              "broker_id": "9800",
+              "branch_id": "0039003800380043",
+              "net": 502,
+              "share_pct": 1.35
+            },
+            {
+              "broker_name": "凱基-信義",
+              "broker_id": "9200",
+              "branch_id": "9216",
+              "net": 462,
+              "share_pct": 1.25
+            },
+            {
+              "broker_name": "美商高盛",
+              "broker_id": "1480",
+              "branch_id": "1480",
+              "net": 360,
+              "share_pct": 0.97
+            },
+            {
+              "broker_name": "港商野村",
+              "broker_id": "1560",
+              "branch_id": "1560",
+              "net": 304,
+              "share_pct": 0.82
+            },
+            {
+              "broker_name": "元大-雙和",
+              "broker_id": "9800",
+              "branch_id": "9874",
+              "net": 200,
+              "share_pct": 0.54
+            }
+          ],
+          "source_url": "https://fubon-ebrokerdj.fbs.com.tw/z/zc/zco/zco.djhtm?a=6456&e=2026-11-2&f=2026-11-2"
+        },
+        "institutional_verification_required": true
+      },
+      "technical": {
+        "sma5": 99.42,
+        "sma20": 95.59,
+        "sma60": 77.72,
+        "above_sma5": false,
+        "above_sma20": true,
+        "above_sma60": true,
+        "previous_volume": 23529,
+        "volume_ratio_vs_previous": 1.58,
+        "low_liquidity": false
+      },
+      "follow_up": [
+        "確認放量後是否穩住支撐，以及新增融資是否帶來賣壓。",
+        "追蹤GIS-KY次日外資、投信和融資變化；缺新聞時等待可核實之法說／公司公告，避免將市場交易方向誤當特定利多。"
+      ],
       "sources": []
     },
     {
       "code": "6757",
       "name": "台灣虎航",
       "change_pct": 5.04,
-      "reason_summary": "未找到可直接驗證的單一公開催化劑；先以族群輪動、價量與籌碼變化解讀，不把上漲本身倒果為因。",
-      "evidence": [
-        "當日漲幅 +5.04%",
-        "成交量 1,773 張",
-        "當日5%以上股票 29 檔"
+      "cause_type": "company_event",
+      "cause_tags": [
+        "earnings"
       ],
-      "confidence": "low",
-      "follow_up": "優先比對法人、融資與後續2至5日價格延續性；若後續出現公司公告或產業消息，再提高原因可信度。",
-      "sources": []
+      "evidence_strength": "direct",
+      "reason_summary": "台灣虎航（6757）11/02收54.2元，漲5.04%，量1773張，前日量比2.87倍。台灣虎航第三季獲利資訊具有具體公司證據，外資買超與融資增加同時出現；股價上漲可能反映財報展望，但不能證實所有買盤因財報而來。 外資買超628張；投信無個股紀錄；自營商賣超6張。融資增加229張，站在20日均線之上；收盤位置占當日高低區間84%。新聞題材與價量／籌碼僅能交叉支持觀察，不宣稱單一因果。 ",
+      "evidence": [
+        "官方日期化 Facts v3：收盤54.2元、漲幅5.04%、量1773張；量比2.87倍，站在20日均線之上。",
+        "同日法人檔：外資+628張、投信未見個股紀錄張、自營商-6張；投信 no_record 不等於0。",
+        "融資+229張；分點樣本買方前列摩根大通、賣方前列新光-台中；樣本淨額756張，非全市場淨流量。",
+        "近期來源：MoneyDJ：台灣虎航Q3獲利與展望，日期2026-11-02。",
+        "原始強勢股清單確認漲幅5.04%，但不代表已證實股價因果。"
+      ],
+      "confidence": "high",
+      "flow": {
+        "foreign": {
+          "net_shares": 628044,
+          "net_lots": 628,
+          "record_status": "reported",
+          "source_file": "data_twse_foreign_investors/20261102_twse_foreign_investors.json"
+        },
+        "investment_trust": {
+          "net_shares": null,
+          "net_lots": null,
+          "record_status": "no_record",
+          "source_file": "data_twse_investment_trust/20261102_twse_investment_trust.json"
+        },
+        "dealer": {
+          "net_shares": -6000,
+          "net_lots": -6,
+          "record_status": "reported",
+          "source_file": "data_twse_dealers/20261102_twse_dealers.json"
+        },
+        "margin": {
+          "margin_prev": 2999,
+          "margin_now": 3228,
+          "margin_delta": 229,
+          "short_prev": 1,
+          "short_now": 4,
+          "short_delta": 3
+        },
+        "broker": {
+          "status": "available",
+          "top3_buy_share_pct": 33.67,
+          "top5_buy_share_pct": 48.56,
+          "top3_sell_share_pct": 6.72,
+          "top5_sell_share_pct": 9.59,
+          "totals": {
+            "netBuy": 1106,
+            "netSell": 350,
+            "net": 756
+          },
+          "top_buy_brokers": [
+            {
+              "broker_name": "摩根大通",
+              "broker_id": "8440",
+              "branch_id": "8440",
+              "net": 256,
+              "share_pct": 14.44
+            },
+            {
+              "broker_name": "第一金-桃園",
+              "broker_id": "5380",
+              "branch_id": "5385",
+              "net": 178,
+              "share_pct": 10.04
+            },
+            {
+              "broker_name": "華南永昌-竹北",
+              "broker_id": "9300",
+              "branch_id": "9339",
+              "net": 163,
+              "share_pct": 9.19
+            },
+            {
+              "broker_name": "新加坡商瑞銀",
+              "broker_id": "1650",
+              "branch_id": "1650",
+              "net": 135,
+              "share_pct": 7.61
+            },
+            {
+              "broker_name": "凱基-台北",
+              "broker_id": "9200",
+              "branch_id": "9268",
+              "net": 129,
+              "share_pct": 7.28
+            }
+          ],
+          "top_sell_brokers": [
+            {
+              "broker_name": "新光-台中",
+              "broker_id": "8560",
+              "branch_id": "8561",
+              "net": 51,
+              "share_pct": 2.88
+            },
+            {
+              "broker_name": "台灣摩根士丹利",
+              "broker_id": "1470",
+              "branch_id": "1470",
+              "net": 34,
+              "share_pct": 1.92
+            },
+            {
+              "broker_name": "新光",
+              "broker_id": "8560",
+              "branch_id": "8560",
+              "net": 34,
+              "share_pct": 1.92
+            },
+            {
+              "broker_name": "元大-新莊",
+              "broker_id": "9800",
+              "branch_id": "9898",
+              "net": 27,
+              "share_pct": 1.52
+            },
+            {
+              "broker_name": "國泰-松江",
+              "broker_id": "8880",
+              "branch_id": "8883",
+              "net": 24,
+              "share_pct": 1.35
+            }
+          ],
+          "source_url": "https://fubon-ebrokerdj.fbs.com.tw/z/zc/zco/zco.djhtm?a=6757&e=2026-11-2&f=2026-11-2"
+        },
+        "institutional_verification_required": true
+      },
+      "technical": {
+        "sma5": 52.46,
+        "sma20": 53.02,
+        "sma60": 54.47,
+        "above_sma5": true,
+        "above_sma20": true,
+        "above_sma60": false,
+        "previous_volume": 617,
+        "volume_ratio_vs_previous": 2.87,
+        "low_liquidity": false
+      },
+      "follow_up": [
+        "持續核對客運需求與獲利公告，留意外資買超是否延續、融資升溫是否帶來波動。",
+        "追蹤台灣虎航次日外資、投信和融資變化；缺新聞時等待可核實之法說／公司公告，避免將市場交易方向誤當特定利多。"
+      ],
+      "sources": [
+        {
+          "title": "MoneyDJ：台灣虎航Q3獲利、前三季EPS 5.07元",
+          "url": "https://www.moneydj.com/kmdj/news/newsviewer.aspx?a=0084a3a0-e1b3-4c03-9e7c-26a78891bbb9",
+          "published_at": "2026-11-02"
+        }
+      ]
     }
   ]
 }
