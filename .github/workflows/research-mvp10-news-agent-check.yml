@@ -1,0 +1,72 @@
+name: "[Research Only] MVP10 News Agent dry-run and contracts"
+on:
+  push:
+    branches:
+      - research/daily-video-mvp10-a-20261029
+    paths:
+      - scripts/research_mvp10_news_agent.js
+      - tests/research_mvp10_news_agent.test.js
+      - .github/workflows/research-mvp10-news-agent-check.yml
+permissions:
+  contents: read
+concurrency:
+  group: research-mvp10-news-agent-check
+  cancel-in-progress: true
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/research/daily-video-mvp10-a-20261029'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout isolated research code
+        uses: actions/checkout@v4
+        with:
+          ref: research/daily-video-mvp10-a-20261029
+          path: research
+          persist-credentials: false
+          sparse-checkout: |
+            scripts
+            tests
+            config
+          sparse-checkout-cone-mode: false
+      - name: Checkout real main inputs without write token
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: inputs
+          persist-credentials: false
+          sparse-checkout: |
+            data_daily_gain_over_5
+            scripts
+            config
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Compile and run isolated provider tests
+        working-directory: research
+        run: |
+          set -euo pipefail
+          node --check scripts/research_mvp10_news_agent.js
+          node --test tests/research_mvp10_news_agent.test.js
+      - name: Detect live missing Nov 2 news without invoking a model
+        run: |
+          set -euo pipefail
+          node research/scripts/research_mvp10_news_agent.js --date 20261102 --root inputs --output-root output/mvp10-news
+          test -s output/mvp10-news/receipt.json
+          jq -e '.status == "MISSING_AGENT_NOT_INVOKED" and .publication_authorized == false and .date == "20261102"' output/mvp10-news/receipt.json
+          test ! -e output/mvp10-news/data_daily_gain_over_5/analysis-news/20261102.json
+      - name: Record actual run identity
+        if: always()
+        run: |
+          mkdir -p output/mvp10-news
+          jq -n --arg id "$GITHUB_RUN_ID" --arg sha "$GITHUB_SHA" --arg url "https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" '{run_id:($id|tonumber),sha:$sha,url:$url,api_invoked:false,main_modified:false,pages:false,youtube:false}' > output/mvp10-news/runner.json
+          echo "MVP10 news agent safety-test Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve dry-run receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: research-mvp10-news-agent-dryrun
+          path: output/mvp10-news
+          if-no-files-found: warn
+          retention-days: 14
