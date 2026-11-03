@@ -64,9 +64,31 @@ function marketOpeningSlide(scene){
  <text x="117" y="975" font-size="23" fill="#94a3b8" font-family="Noto Sans CJK TC,sans-serif">來源：TWSE MI_INDEX／FMTQIK／BFI82U　｜　資料日期 2026/11/02</text>
  </svg>`;
 }
+
+function closingSummarySlide(scene){
+ const bullets=scene.bullets;
+ if(!Array.isArray(bullets)||bullets.length<3||bullets.length>5)throw Error('Closing summary requires 3-5 observations');
+ if((scene.stock_codes||[]).length)throw Error('Closing summary cannot contain stock rows');
+ const labels=['市場結論','資金與籌碼','下一交易日觀察','風險提醒','補充觀察'];
+ const cards=bullets.map((value,i)=>{
+   const y=286+i*101;
+   return '<rect x="116" y="'+(y-44)+'" width="1318" height="85" rx="14" fill="'+(i%2?'#172b43':'#13243b')+'" stroke="#334155"/>'+
+   '<rect x="119" y="'+(y-42)+'" width="7" height="81" rx="3" fill="#38bdf8"/>'+
+   '<text x="153" y="'+(y+5)+'" font-size="25" font-family="Noto Sans CJK TC,sans-serif" fill="#7dd3fc">'+esc(labels[i])+'</text>'+
+   '<text x="435" y="'+(y+5)+'" font-size="27" font-family="Noto Sans CJK TC,sans-serif" fill="#f8fafc">'+esc(short(value,46))+'</text>';
+ }).join('');
+ return '<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">'+
+ '<rect width="1920" height="1080" fill="#07111f"/><rect width="1920" height="14" fill="#38bdf8"/>'+
+ '<text x="115" y="94" fill="#e2e8f0" font-family="Noto Sans CJK TC,sans-serif" font-size="27">TAIWAN STOCK｜'+esc(date.slice(0,4)+'/'+date.slice(4,6)+'/'+date.slice(6,8))+'｜收盤觀察</text>'+
+ '<text x="115" y="161" fill="#fff" font-family="Noto Sans CJK TC,sans-serif" font-size="54" font-weight="bold">'+esc(short(scene.title,26))+'</text>'+
+ '<text x="115" y="210" fill="#9ddbf8" font-family="Noto Sans CJK TC,sans-serif" font-size="27">'+esc(short(scene.subtitle,50))+'</text>'+
+ cards+'<text x="118" y="975" fill="#94a3b8" font-size="23" font-family="Noto Sans CJK TC,sans-serif">'+esc(short(scene.footer||'',65))+'</text></svg>';
+}
+
 function slide(scene,si){
  const codes=(scene.stock_codes||[]).map(String);
- const selected=codes.length?codes.map(c=>{const s=all.get(c);if(!s)throw Error('Unknown stock '+c);return s}):facts.stocks.slice(26,29);
+ if(scene.scene_type!=='stock_list'||!codes.length)throw Error('Stock list scene requires explicit nonempty codes');
+ const selected=codes.map(c=>{const s=all.get(c);if(!s)throw Error('Unknown stock '+c);return s});
  if(selected.length>3)throw Error('At most 3 stocks per list scene; respect progress and subtitle safe areas');
  const headers=[{x:148,t:'個股／代號'},{x:518,t:'漲幅'},{x:706,t:'外資(張)'},{x:895,t:'投信(張)'},{x:1057,t:'融資(張)'},{x:1230,t:'分點買／賣'}];
  const subtitle=short(scene.subtitle||'',65);
@@ -79,13 +101,17 @@ function slide(scene,si){
  <rect x="116" y="226" width="1320" height="45" rx="12" fill="#0e2035"/>
  ${headers.map(h=>`<text x="${h.x}" y="257" font-size="22" fill="#cbd5e1" font-family="Noto Sans CJK TC,sans-serif">${esc(h.t)}</text>`).join('')}
  ${selected.map(row).join('')}
- <text x="118" y="778" font-size="22" fill="#94a3b8" font-family="Noto Sans CJK TC,sans-serif">投信「無紀錄」不等於 0；分點為樣本，非全市場淨額。</text>
+
  <text x="118" y="977" font-size="25" fill="#94a3b8" font-family="Noto Sans CJK TC,sans-serif">資料：TWSE／當日 Facts v3　｜　${esc(short(scene.footer||'',70))}</text>
  </svg>`;
 }
 for(const [i,scene] of plan.scenes.entries()){
  const file=path.join(out,'slides',String(scene.id).padStart(2,'0')+'.svg');
- fs.writeFileSync(file,scene.scene_type==='market_opening'?marketOpeningSlide(scene):slide(scene,i));
+ if(!['market_opening','stock_list','summary','closing_summary'].includes(scene.scene_type))throw Error('Invalid or missing scene type: '+scene.id);
+ if(scene.scene_type==='market_opening' && i!==0)throw Error('Market opening must be first');
+ if(['summary','closing_summary'].includes(scene.scene_type) && i!==plan.scenes.length-1)throw Error('Closing summary must be last');
+ const visual=scene.scene_type==='market_opening'?marketOpeningSlide(scene):(['summary','closing_summary'].includes(scene.scene_type)?closingSummarySlide(scene):slide(scene,i));
+ fs.writeFileSync(file,visual);
 }
 // Fail before TTS/render if the list header intersects any data card or the timeline.
 const rowTop=340-35,headerBottom=226+45,lastRowBottom=340+2*124+76;
@@ -93,5 +119,6 @@ if(rowTop<=headerBottom+16||lastRowBottom>=815)throw Error('Dashboard content in
 const manifest={target_date:date,dashboard:'owner-approved-multi-stock-list-only',scene_count:plan.scenes.length,stock_codes:[...new Set(plan.scenes.flatMap(x=>x.stock_codes||[]).map(String))],opening_scene_count:plan.scenes.filter(x=>x.scene_type==='market_opening').length,source_facts:'data_daily_gain_over_5/analysis-facts/'+date+'.json'};
 fs.writeFileSync(path.join(out,'list-dashboard-manifest.json'),JSON.stringify(manifest,null,2)+'\n');
 if(manifest.opening_scene_count!==1||plan.scenes[0].scene_type!=='market_opening')throw Error('Missing first market opening scene');
+if(plan.scenes.filter(s=>['summary','closing_summary'].includes(s.scene_type)).length!==1||!['summary','closing_summary'].includes(plan.scenes.at(-1).scene_type))throw Error('Missing last closing summary');
 if(manifest.stock_codes.length!==29)throw Error('List dashboard missing stock coverage: '+manifest.stock_codes.length);
 console.log(JSON.stringify(manifest));
