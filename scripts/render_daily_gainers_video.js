@@ -291,6 +291,12 @@ const renderedScenes = timings.map(timing => {
   measuredCursor += duration;
   return record;
 });
+// The timeline label is burned before final concatenation. Fail closed when its
+// preflight estimate disagrees with the actual MP4 rather than reporting only
+// a correct QA JSON label while the visible video still shows the wrong time.
+if (mmss(fullDuration) !== mmss(finalDuration)) {
+  throw new Error('Burned total-duration label differs from measured MP4: '+mmss(fullDuration)+' vs '+mmss(finalDuration));
+}
 if (Math.abs(measuredCursor-finalDuration) > 0.30) {
   throw new Error('Rendered scene/MP4 timeline divergence: '+measuredCursor+' vs '+finalDuration);
 }
