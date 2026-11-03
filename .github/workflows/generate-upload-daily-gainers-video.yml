@@ -56,7 +56,7 @@ jobs:
           fi
           ffmpeg -version | head -1
           rsvg-convert --version
-          timeout 180s python -m pip install --disable-pip-version-check --no-cache-dir --retries 4 --timeout 30 edge-tts gTTS mutagen pypinyin
+          timeout 180s python -m pip install --disable-pip-version-check --no-cache-dir --retries 4 --timeout 30 edge-tts gTTS mutagen pypinyin pillow
 
       - name: Resolve target date
         id: date
@@ -84,6 +84,9 @@ jobs:
 
       - name: Build video content package
         run: node scripts/build_daily_gainers_video_package.js "${{ steps.date.outputs.date }}"
+
+      - name: Apply immutable seven-row Market Opening Master and current list Dashboard
+        run: node scripts/build_daily_gainers_list_dashboard_slides.js "${{ steps.date.outputs.date }}"
 
       - name: Validate dynamic stock chapter timestamps
         run: node tests/daily_gainers_video_timestamps.test.js
@@ -115,6 +118,14 @@ jobs:
         run: |
           date="${{ steps.date.outputs.date }}"
           python scripts/build_daily_gainers_srt.py "output/daily-gainers-video/${date}/plan.json"
+
+      - name: Burn aligned zh-TW subtitles into final MP4 and verify visual region
+        shell: bash
+        run: |
+          set -euo pipefail
+          date="${{ steps.date.outputs.date }}"
+          node scripts/burn_daily_gainers_subtitles.js "$date"
+          python scripts/verify_daily_gainers_burned_caption.py "$date"
 
       - name: Video QA
         id: qa
@@ -194,6 +205,9 @@ jobs:
             output/daily-gainers-video/${{ steps.date.outputs.date }}/subtitle-manifest.json
             output/daily-gainers-video/${{ steps.date.outputs.date }}/render-timings.json
             output/daily-gainers-video/${{ steps.date.outputs.date }}/lipsync.json
+            output/daily-gainers-video/${{ steps.date.outputs.date }}/list-dashboard-manifest.json
+            output/daily-gainers-video/${{ steps.date.outputs.date }}/burned-caption-proof.json
+            output/daily-gainers-video/${{ steps.date.outputs.date }}/render-only-visual-check.json
             output/daily-gainers-video/${{ steps.date.outputs.date }}/daily-gainers-${{ steps.date.outputs.date }}.zh-TW.srt
             output/daily-gainers-video/${{ steps.date.outputs.date }}/daily-gainers-${{ steps.date.outputs.date }}.mp4
           if-no-files-found: warn
