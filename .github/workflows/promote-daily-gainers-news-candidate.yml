@@ -1,0 +1,98 @@
+name: "[07 研究] Validate Agent news candidate before main promotion"
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'research_pending/daily-gainers-news/*.json'
+permissions:
+  contents: write
+  actions: write
+concurrency:
+  group: daily-gainers-news-candidate-promote
+  cancel-in-progress: false
+jobs:
+  validate-and-promote:
+    name: Validate actual Node.js contract before canonical news write
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Locate pending dates and validate with the original repository validator
+        id: preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/validate_daily_gainers_news_analysis.js
+          dates=""
+          shopt -s nullglob
+          for pending in research_pending/daily-gainers-news/20??????.json; do
+            date="${pending##*/}"; date="${date%.json}"
+            [[ "$date" =~ ^20[0-9]{6}$ ]] || exit 1
+            node scripts/validate_daily_gainers_news_analysis.js "$date" "$pending"
+            dates="$dates $date"
+          done
+          test -n "$dates" || { echo "No news candidate found"; exit 1; }
+          echo "dates=$dates" >> "$GITHUB_OUTPUT"
+      - name: Revalidate on fresh main and publish only meaningfully changed canonical news
+        id: promote
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          changed_dates=""
+          for date in ${{ steps.preflight.outputs.dates }}; do
+            pending="research_pending/daily-gainers-news/$date.json"
+            target="data_daily_gain_over_5/analysis-news/$date.json"
+            success=false
+            for attempt in 1 2 3 4 5; do
+              git fetch origin main
+              git reset --hard origin/main
+              test -s "$pending"
+              test -s "data_daily_gain_over_5/$date.json"
+              node scripts/validate_daily_gainers_news_analysis.js "$date" "$pending"
+              if [ -s "$target" ] && cmp -s "$pending" "$target"; then
+                echo "No content delta for $date: no commit, no downstream dispatch."
+                success=true
+                break
+              fi
+              mkdir -p "$(dirname "$target")"
+              cp "$pending" "$target"
+              node scripts/validate_daily_gainers_news_analysis.js "$date"
+              git add -- "$target"
+              if git diff --cached --quiet; then
+                echo "No staged delta for $date"
+                success=true
+                break
+              fi
+              git commit -m "analysis: promote validated ChatGPT news update for $date"
+              if git push origin HEAD:main; then
+                echo "Promoted $date to main after original Validator PASS."
+                changed_dates="$changed_dates $date"
+                success=true
+                break
+              fi
+              sleep 3
+            done
+            test "$success" = true || { echo "Unable to publish verified $date" >&2; exit 1; }
+          done
+          echo "changed_dates=$changed_dates" >> "$GITHUB_OUTPUT"
+      - name: Explicitly invoke original news summary publisher for committed dates
+        if: steps.promote.outputs.changed_dates != ''
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for date in ${{ steps.promote.outputs.changed_dates }}; do
+            gh workflow run publish-daily-gainers-news-summary.yml --ref main -f date="$date"
+            echo "Validated $date and dispatched existing summary workflow" >> "$GITHUB_STEP_SUMMARY"
+          done
