@@ -21,7 +21,9 @@ assert scenes[0]["scene_type"]=="market_opening"
 assert scenes[-1]["scene_type"] in ("summary","closing_summary")
 stockscenes=[s for s in scenes if s["scene_type"]=="stock_list"]
 codes=[str(c) for s in stockscenes for c in s["stock_codes"]]
-assert len(codes)==len(set(codes))==29
+raw=json.loads((Path("data_daily_gain_over_5")/f"{date}.json").read_text())
+assert raw["target_date"]==date
+assert len(codes)==len(set(codes))==raw["stock_count"]
 assert not scenes[0]["stock_codes"] and not scenes[-1]["stock_codes"]
 assert 30<=timing["scenes"][0]["duration_seconds"]<=90
 assert proof["status"]=="BURN_EXECUTED_VISUAL_QA_PENDING"
