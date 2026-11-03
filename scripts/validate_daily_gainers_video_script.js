@@ -20,8 +20,25 @@ check(script.schema_version === 1 && script.methodology_version === 'chatgpt-vid
 check(typeof script.source_summary_generated_at === 'string' && !Number.isNaN(Date.parse(script.source_summary_generated_at)), 'missing or invalid original source timestamp');
 check(Array.isArray(script.scenes) && script.scenes.length >= 5 && script.scenes.length <= 20, 'scene count must be 5-20');
 const codes = new Set(raw.stocks.map(s => String(s.code)));
+const allowedTypes=new Set(['market_opening','stock_list','summary','closing_summary']);
+const seenCodes=[];
+let closingCount=0;
 let chars = 0;
 for (const [i,s] of script.scenes.entries()) {
+  check(allowedTypes.has(s.scene_type),'missing/invalid scene_type '+i);
+  if(i===0)check(s.scene_type==='market_opening','first scene must be market opening');
+  if(i>0)check(s.scene_type!=='market_opening','duplicate market opening');
+  if(['summary','closing_summary'].includes(s.scene_type)){
+    closingCount++;
+    check(i===script.scenes.length-1,'closing summary must be last');
+    check(Array.isArray(s.stock_codes)&&s.stock_codes.length===0,'closing summary must not list stocks');
+    check(s.bullets?.length>=3,'closing summary lacks synthesis');
+  }
+  if(s.scene_type==='stock_list'){
+    check(i>0&&i<script.scenes.length-1,'stock list must be between opening and closing');
+    check(Array.isArray(s.stock_codes)&&s.stock_codes.length>=1&&s.stock_codes.length<=3,'stock list needs 1-3 codes');
+    seenCodes.push(...s.stock_codes.map(String));
+  }
   check(typeof s.title === 'string' && s.title.trim().length > 0 && s.title.length <= 85, 'invalid scene title ' + i);
   check(typeof s.subtitle === 'string' && s.subtitle.length <= 160, 'invalid scene subtitle ' + i);
   check(Array.isArray(s.bullets) && s.bullets.length <= 5 && s.bullets.every(b=>typeof b === 'string' && b.length <= 220), 'invalid bullets ' + i);
@@ -31,6 +48,8 @@ for (const [i,s] of script.scenes.entries()) {
   if (i === 0) assertOpening(effectiveNarration);
   chars += [...effectiveNarration].length;
 }
+check(closingCount===1,'exactly one closing summary required');
+check(seenCodes.length===raw.stock_count && new Set(seenCodes).size===raw.stock_count && seenCodes.every(x=>codes.has(x)),'stock-list coverage must be exactly the complete set');
 check(chars >= 1100 && chars <= 5500, 'narration length outside video bounds: ' + chars);
 // Mandatory genuine market opening, before the first stock-list scene.
 // Do not confuse official TWSE '股票' breadth with the 29 strong-stock subset.
