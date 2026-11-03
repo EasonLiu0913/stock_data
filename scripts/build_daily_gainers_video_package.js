@@ -39,6 +39,8 @@ const scenes = videoScript.scenes.map((s, i) => ({
   bullets: s.bullets,
   narration: normalizeNarrationRepetition(i === 0 ? addOpening(s.narration) : s.narration),
   stock_codes: Array.isArray(s.stock_codes) ? s.stock_codes.map(String) : [],
+  scene_type: s.scene_type || 'stock_list',
+  market_opening_claims: s.scene_type === 'market_opening' ? s.market_opening_claims : undefined,
   footer: s.footer || ''
 }));
 assertOpening(scenes[0].narration);
