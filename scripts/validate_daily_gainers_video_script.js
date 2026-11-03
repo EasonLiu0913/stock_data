@@ -84,7 +84,7 @@ check(script.scenes.slice(1).some(x=>Array.isArray(x.stock_codes)&&x.stock_codes
 // Keep the seven immutable dashboard rows a required visual contract, not an AI choice.
 const openingLayoutPath=path.join('scripts','build_daily_gainers_list_dashboard_slides.js');
 const layoutSource=fs.readFileSync(openingLayoutPath,'utf8');
-const fixedRowMatch=layoutSource.match(/const fixedFields=(\\[[^;]+\\]);/);
+const fixedRowMatch=layoutSource.match(/const fixedFields=(\[[^;]+\]);/);
 check(Boolean(fixedRowMatch),'fixed opening row contract missing');
 const foundRowFields=JSON.parse(fixedRowMatch[1].replace(/'/g,'"'));
 check(JSON.stringify(foundRowFields)===JSON.stringify(displayFields),'fixed opening dashboard row order differs from owner approval');
