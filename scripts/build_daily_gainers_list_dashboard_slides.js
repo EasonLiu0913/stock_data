@@ -51,17 +51,26 @@ function marketOpeningSlide(scene){
   [fixedFields[1],billion(m.trading.turnover_twd)+' 億元','前 5 個交易日均值之 '+(m.trading.turnover_ratio_ma5*100).toFixed(1)+'%'],
   [fixedFields[2],m.breadth.advancers+' 家／'+m.breadth.decliners+' 家','TWSE 上市股票欄'],
   [fixedFields[3],m.breadth.unchanged+' 家／'+m.breadth.limit_up+' 家','TWSE MI_INDEX'],
-  [fixedFields[4],'外資 '+flow(m.institutional.foreign_net_twd),'投信 '+flow(m.institutional.investment_trust_net_twd)+'｜自營商 '+flow(m.institutional.dealers_net_twd)],
+  [fixedFields[4],'外資：'+flow(m.institutional.foreign_net_twd),'投信：'+flow(m.institutional.investment_trust_net_twd),'自營商：'+flow(m.institutional.dealers_net_twd)],
   [fixedFields[5],flow(m.institutional.total_net_twd),'三大法人合計買賣超／新臺幣'],
   [fixedFields[6],marketTone,'依上市漲跌家數、指數與法人資金方向綜合判讀']
  ];
  for(const [i,r] of rows.entries())if(r.some(v=>!v||String(v).includes('NaN')||String(v).includes('undefined')))throw Error('Missing fixed opening dashboard field '+fixedFields[i]);
  const rowSvg=rows.map((r,i)=>{
-  const y=265+i*75,small=i===4||i===6;
+  const y=265+i*75,small=i===6;
   const font=small?23:29;
-  return '<rect x="116" y="'+(y-38)+'" width="1318" height="69" rx="12" fill="'+(i%2?'#172b43':'#13243b')+'" stroke="#334155"/>'+
+  const panel='<rect x="116" y="'+(y-38)+'" width="1318" height="69" rx="12" fill="'+(i%2?'#172b43':'#13243b')+'" stroke="#334155"/>'+
    '<rect x="118" y="'+(y-36)+'" width="7" height="65" rx="3" fill="#38bdf8"/>'+
-   '<text x="150" y="'+(y+2)+'" font-size="25" font-family="Noto Sans CJK TC,sans-serif" fill="#cbd5e1">'+esc(r[0])+'</text>'+
+   '<text x="150" y="'+(y+2)+'" font-size="25" font-family="Noto Sans CJK TC,sans-serif" fill="#cbd5e1">'+esc(r[0])+'</text>';
+  // Three equal-weight primary values; no institution is relegated to the secondary caption.
+  if(i===4){
+   const x=[520,818,1116],entries=r.slice(1);
+   if(entries.length!==3)throw Error('Market institutions must include foreign, investment trust, dealers');
+   return panel+entries.map((value,j)=>
+    '<text x="'+x[j]+'" y="'+(y+3)+'" font-size="23" font-weight="700" font-family="Noto Sans CJK TC,sans-serif" fill="#f8fafc">'+esc(value)+'</text>'
+   ).join('');
+  }
+  return panel+
    '<text x="520" y="'+(y-5)+'" font-size="'+font+'" font-weight="700" font-family="Noto Sans CJK TC,sans-serif" fill="#f8fafc">'+esc(r[1])+'</text>'+
    '<text x="520" y="'+(y+21)+'" font-size="17" font-family="Noto Sans CJK TC,sans-serif" fill="#94a3b8">'+esc(r[2])+'</text>';
  }).join('');
