@@ -19,7 +19,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: main
-          fetch-depth: 0
+          fetch-depth: 1
+          sparse-checkout: |
+            scripts
+            config
+            research_pending/daily-gainers-news
+            data_daily_gain_over_5/analysis-news
+            data_daily_gain_over_5/20??????.json
+          sparse-checkout-cone-mode: false
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
