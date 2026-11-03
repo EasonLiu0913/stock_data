@@ -61,6 +61,37 @@ for scene_name,(start,end) in samples:
  evidence.append({"scene":scene_name,"second":round(sec,2),"changed_pixels_fraction":round(ratio,5)})
  if ratio<0.001:
   raise AssertionError(f"No convincing burned-caption pixel difference in {scene_name}: {ratio}")
+ # Compare the *whole* frame against the original pre-burn frame.
+ # The timeline ends at y=928. Captions must be confined below that line;
+ # mere detection of burned pixels in a lower crop is not visual QA.
+ def full_frame(fp):
+  cmd=["ffmpeg","-v","error","-ss",str(sec),"-i",str(fp),"-frames:v","1",
+       "-f","image2pipe","-vcodec","png","-"]
+  p=subprocess.run(cmd,capture_output=True,check=True)
+  return Image.open(BytesIO(p.stdout)).convert("RGB")
+ full_before=full_frame(pre)
+ full_after=full_frame(video)
+ px1,px2=full_before.load(),full_after.load()
+ unsafe=0
+ glyph_x=[]
+ glyph_y=[]
+ for yy in range(565,1060,3):
+  for xx in range(190,1500,3):
+   if sum(abs(u-v) for u,v in zip(px1[xx,yy],px2[xx,yy]))>=170:
+    glyph_x.append(xx)
+    glyph_y.append(yy)
+    if yy<930:
+     unsafe+=1
+ if not glyph_y:
+  raise AssertionError(f"No caption glyphs independently detected for {scene_name}")
+ if unsafe>250:
+  raise AssertionError(f"Burned subtitles overlap dashboard/timeline in {scene_name}: {unsafe} high-contrast pixels above safe baseline")
+ caption_center=(min(glyph_x)+max(glyph_x))/2
+ if abs(caption_center-960)>150:
+  raise AssertionError(f"Burned caption horizontal centering failed in {scene_name}: {caption_center}")
+ evidence[-1].update({"unsafe_pixels_above_y930":unsafe,
+                     "caption_bbox":[min(glyph_x),min(glyph_y),max(glyph_x),max(glyph_y)],
+                     "caption_center_x":caption_center})
  report=root/"render-only-visual-check.json"
 report.write_text(json.dumps({"target_date":date,"status":"PASS_STATIC_AND_PIXEL_DELTA_VISUAL_REVIEW_PENDING","samples":evidence,"publication_authorized":False},ensure_ascii=False,indent=2)+"\n")
 print(report.read_text())
