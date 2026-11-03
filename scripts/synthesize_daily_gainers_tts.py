@@ -53,6 +53,9 @@ async def main():
             raise RuntimeError("M5_RESUME_MANIFEST_INVALID")
     for scene in plan["scenes"]:
         sid = int(scene["id"])
+        # Avoid consecutive Edge websocket requests overwhelming the remote service.
+        if sid > 1 and not resume:
+            await asyncio.sleep(2.5)
         out_path = out_dir / f"{sid:02d}.mp3"
         text = normalize_spoken_text(scene["speech_text"] if plan.get("schema_version") == 2 else scene["narration"])
         if resume and sid <= 5:
@@ -66,7 +69,7 @@ async def main():
         engine = None
         errors = []
         boundaries = []
-        max_attempts = 4
+        max_attempts = 6
         for attempt in range(1, max_attempts + 1):
             out_path.unlink(missing_ok=True)
             try:
@@ -86,7 +89,7 @@ async def main():
                         f"WordBoundary-required subtitles preserved; no unsynchronized fallback. "
                         f"Last error: {type(e).__name__}: {e}"
                     ) from e
-                delay = min(20, 2 ** attempt + random.uniform(0, 1.5))
+                delay = min(35, 3 ** attempt + random.uniform(0, 2.0))
                 print(f"scene {sid:02d}: transient Edge TTS failure attempt {attempt}/{max_attempts} "
                       f"({type(e).__name__}: {e}); retry in {delay:.1f}s", flush=True)
                 await asyncio.sleep(delay)
