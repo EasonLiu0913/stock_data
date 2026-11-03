@@ -25,7 +25,7 @@ tts_manifest = json.loads(tts_manifest_path.read_text(encoding="utf-8"))
 tts_scenes = {int(item["id"]): item for item in tts_manifest["scenes"]}
 
 
-def split_long_sentence(sentence, max_chars=38, min_fragment_chars=8):
+def split_long_sentence(sentence, max_chars=30, min_fragment_chars=6):
     sentence = sentence.strip()
     if len(sentence) <= max_chars:
         return [sentence]
@@ -53,7 +53,7 @@ def split_long_sentence(sentence, max_chars=38, min_fragment_chars=8):
         remaining = remaining[cut:].strip()
 
     if remaining:
-        if parts and len(remaining) < min_fragment_chars:
+        if parts and len(remaining) < min_fragment_chars and len(parts[-1]) + len(remaining) <= max_chars:
             parts[-1] = f"{parts[-1]}{remaining}"
         else:
             parts.append(remaining)
@@ -61,7 +61,7 @@ def split_long_sentence(sentence, max_chars=38, min_fragment_chars=8):
     return [p for p in parts if p]
 
 
-def split_text(text, max_chars=38):
+def split_text(text, max_chars=30):
     normalized = re.sub(r"\s+", " ", str(text or "")).strip()
     if not normalized:
         return []
@@ -94,31 +94,28 @@ def split_text(text, max_chars=38):
     return chunks
 
 def wrap_caption_for_screen(text, max_columns=18):
-    """Punctuation-first visual wrapping; preserve every character and cue timing."""
+    """At most two centered SRT lines, punctuation-first, no dropped words."""
     import unicodedata
     def width(value):
         return sum(1 if unicodedata.east_asian_width(c) in ('F', 'W') else 0.55 for c in value)
-    source = str(text).replace(chr(10), '')
-    rest = source
-    lines = []
-    while width(rest) > max_columns:
-        cuts = [i + 1 for i, c in enumerate(rest) if c in '。！？；，、：,;:!?' and width(rest[:i+1]) <= max_columns]
-        preferred = [i for i in cuts if width(rest[:i]) >= max_columns * 0.45]
-        if preferred:
-            cut = preferred[-1]
-        elif cuts:
-            cut = cuts[-1]
-        else:
-            cut = 1
-            while cut < len(rest) and width(rest[:cut+1]) <= max_columns:
-                cut += 1
-        lines.append(rest[:cut])
-        rest = rest[cut:]
-    if rest:
-        lines.append(rest)
-    if ''.join(lines) != source or any(width(line) > max_columns for line in lines):
-        raise RuntimeError('Subtitle visual wrapping changed text or overflowed')
-    return chr(10).join(lines)
+    source = str(text).replace('\n', '')
+    if width(source) <= max_columns:
+        return source
+    if width(source) > 2 * max_columns:
+        raise RuntimeError('Subtitle >2-line safe capacity; resegment spoken cue')
+    eligible = [i for i in range(1, len(source))
+                if width(source[:i]) <= max_columns
+                and width(source[i:]) <= max_columns]
+    if not eligible:
+        raise RuntimeError('Subtitle cannot fit within two 18-column lines')
+    midpoint = width(source) / 2
+    punctuation = [i for i in eligible if source[i-1] in '。！？；，、：,;:!?']
+    candidates = punctuation if punctuation else eligible
+    cut = min(candidates, key=lambda i: abs(width(source[:i]) - midpoint))
+    lines = [source[:cut], source[cut:]]
+    if ''.join(lines) != source or len(lines) > 2 or any(width(line) > max_columns for line in lines):
+        raise RuntimeError('Subtitle wrapping altered text or left the caption safe area')
+    return '\n'.join(lines)
 
 def detect_silence_centers(audio_path):
     """Non-AI pause hints from ffmpeg; WordBoundary remains authoritative."""
@@ -235,6 +232,8 @@ for scene in plan.get("scenes", []):
                 return (percent_words.get(value, value) + "%")
             chunk = re.sub(r"百分之\s*(\d+(?:\.\d+)?|[零一二三四五六七八九十])",
                            display_percent, chunk)
+        # Display-only two-line wrapping; WordBoundary alignment used the original spoken chunk.
+        chunk = wrap_caption_for_screen(chunk, max_columns=18)
         end = min(end, rendered_duration)
         if end <= start:
             raise RuntimeError(f"Scene {sid}: subtitle exceeds actual rendered scene duration")
