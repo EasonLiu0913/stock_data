@@ -41,7 +41,7 @@ const tmp=path.join(out,'daily-gainers-'+date+'.burning.mp4');
 const archive=path.join(out,'daily-gainers-'+date+'.pre-burn.mp4');
 if(fs.existsSync(tmp)||fs.existsSync(archive))throw Error('Prior burn attempt must be reviewed first');
 const srtArg=srt.replace(/\\/g,'/').replace(/:/g,'\\:').replace(/'/g,"\\'");
-const force='FontName=Noto Sans CJK TC,FontSize=20,PrimaryColour=&H00FFFFFF,OutlineColour=&H00121A2B,BorderStyle=1,Outline=2,Shadow=0,Alignment=2,MarginL=90,MarginR=90,MarginV=16';
+const force='FontName=Noto Sans CJK TC,FontSize=28,PrimaryColour=&H00FFFFFF,OutlineColour=&H00121A2B,BorderStyle=1,Outline=2,Shadow=0,Alignment=2,MarginL=90,MarginR=90,MarginV=16';
 run('ffmpeg',['-y','-hide_banner','-loglevel','error','-i',video,
  '-vf',"subtitles="+srtArg+":force_style='"+force+"'",
  '-c:v','libx264','-preset','veryfast','-crf','19','-c:a','copy','-movflags','+faststart',tmp]);
