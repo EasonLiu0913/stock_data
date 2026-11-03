@@ -93,7 +93,7 @@ def split_text(text, max_chars=30):
 
     return chunks
 
-def wrap_caption_for_screen(text, max_columns=24):
+def wrap_caption_for_screen(text, max_columns=30):
     """At most two centered SRT lines, punctuation-first, no dropped words."""
     import unicodedata
     def width(value):
@@ -107,7 +107,7 @@ def wrap_caption_for_screen(text, max_columns=24):
                 if width(source[:i]) <= max_columns
                 and width(source[i:]) <= max_columns]
     if not eligible:
-        raise RuntimeError('Subtitle cannot fit within two 24-column lines')
+        raise RuntimeError('Subtitle cannot fit within two 30-column lines')
     midpoint = width(source) / 2
     punctuation = [i for i in eligible if source[i-1] in '。！？；，、：,;:!?']
     candidates = punctuation if punctuation else eligible
@@ -233,7 +233,7 @@ for scene in plan.get("scenes", []):
             chunk = re.sub(r"百分之\s*(\d+(?:\.\d+)?|[零一二三四五六七八九十])",
                            display_percent, chunk)
         # Display-only two-line wrapping; WordBoundary alignment used the original spoken chunk.
-        chunk = wrap_caption_for_screen(chunk, max_columns=24)
+        chunk = wrap_caption_for_screen(chunk, max_columns=30)
         end = min(end, rendered_duration)
         if end <= start:
             raise RuntimeError(f"Scene {sid}: subtitle exceeds actual rendered scene duration")
