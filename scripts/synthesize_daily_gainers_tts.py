@@ -49,7 +49,7 @@ async def main():
         if checkpoint or resume or not manifest_path.is_file():
             raise RuntimeError("SAFE_TTS_RETRY_NOT_ELIGIBLE")
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-        if (manifest.get("voice"), manifest.get("rate"), manifest.get("engine")) != (voice, rate, "edge-tts"):
+        if (manifest.get("voice"), manifest.get("rate")) != (voice, rate) or (manifest.get("engine") not in ("edge-tts", None)) or (manifest["scenes"] and manifest.get("engine") != "edge-tts"):
             raise RuntimeError("SAFE_TTS_RETRY_VOICE_DRIFT")
         if len(manifest.get("scenes", [])) > len(plan["scenes"]):
             raise RuntimeError("SAFE_TTS_RETRY_SCENE_OVERFLOW")
@@ -60,6 +60,8 @@ async def main():
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         if (manifest.get("voice"), manifest.get("rate"), manifest.get("engine")) != (voice, rate, "edge-tts") or len(manifest.get("scenes", [])) != 5:
             raise RuntimeError("M5_RESUME_MANIFEST_INVALID")
+    if not safe_retry and not resume:
+        manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     for scene in plan["scenes"]:
         sid = int(scene["id"])
         # Avoid consecutive Edge websocket requests overwhelming the remote service.
