@@ -61,7 +61,7 @@ function marketOpeningSlide(scene){
  <text x="115" y="210" fill="#9ddbf8" font-family="Noto Sans CJK TC,sans-serif" font-size="27">追蹤資金，解讀行情｜同日 TWSE 官方資料</text>
  ${rowSvg}
  <text x="117" y="781" font-size="21" fill="#94a3b8" font-family="Noto Sans CJK TC,sans-serif">漲跌家數採 TWSE「股票」欄；成交金額與法人採上市整體市場口徑。</text>
- <text x="117" y="975" font-size="23" fill="#94a3b8" font-family="Noto Sans CJK TC,sans-serif">來源：TWSE MI_INDEX／FMTQIK／BFI82U　｜　資料日期 2026/11/02</text>
+ 
  </svg>`;
 }
 
@@ -92,7 +92,7 @@ function closingSummarySlide(scene){
  '<text x="115" y="94" fill="#e2e8f0" font-family="Noto Sans CJK TC,sans-serif" font-size="27">TAIWAN STOCK｜'+esc(date.slice(0,4)+'/'+date.slice(4,6)+'/'+date.slice(6,8))+'｜收盤觀察</text>'+
  '<text x="115" y="161" fill="#fff" font-family="Noto Sans CJK TC,sans-serif" font-size="54" font-weight="bold">'+esc(short(scene.title,26))+'</text>'+
  '<text x="115" y="210" fill="#9ddbf8" font-family="Noto Sans CJK TC,sans-serif" font-size="27">'+esc(short(scene.subtitle,50))+'</text>'+
- cards+'<text x="118" y="975" fill="#94a3b8" font-size="23" font-family="Noto Sans CJK TC,sans-serif">'+esc(short(scene.footer||'',65))+'</text></svg>';
+ cards+'</svg>';
 }
 
 function slide(scene,si){
@@ -112,7 +112,7 @@ function slide(scene,si){
  ${headers.map(h=>`<text x="${h.x}" y="257" font-size="22" fill="#cbd5e1" font-family="Noto Sans CJK TC,sans-serif">${esc(h.t)}</text>`).join('')}
  ${selected.map(row).join('')}
 
- <text x="118" y="977" font-size="25" fill="#94a3b8" font-family="Noto Sans CJK TC,sans-serif">資料：TWSE／當日 Facts v3　｜　${esc(short(scene.footer||'',70))}</text>
+ 
  </svg>`;
 }
 for(const [i,scene] of plan.scenes.entries()){
