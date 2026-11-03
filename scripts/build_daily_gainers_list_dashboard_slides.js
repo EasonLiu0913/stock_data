@@ -45,20 +45,20 @@ function marketOpeningSlide(scene){
   ?'漲多於跌、指數與法人同向，盤勢偏強'
   :(m.breadth.advancers<m.breadth.decliners && m.index.change_points<0)
   ?'跌多於漲且指數回落，盤勢偏弱':'漲跌與資金方向不一致，盤勢分歧';
- const fixedFields=['加權指數','上漲／下跌','平盤／漲停','全市場成交金額','三大法人合計','外資／投信／自營商','市場強弱摘要'];
+ const fixedFields=['加權指數','全市場成交金額','上漲／下跌','平盤／漲停','外資／投信／自營商','三大法人合計','市場強弱摘要'];
  const rows=[
   [fixedFields[0],m.index.close.toLocaleString('en-US')+' 點',movement+' '+Math.abs(m.index.change_points).toFixed(2)+' 點／'+Math.abs(m.index.change_pct).toFixed(2)+'%'],
-  [fixedFields[1],m.breadth.advancers+' 家／'+m.breadth.decliners+' 家','TWSE 上市股票欄'],
-  [fixedFields[2],m.breadth.unchanged+' 家／'+m.breadth.limit_up+' 家','TWSE MI_INDEX'],
-  [fixedFields[3],billion(m.trading.turnover_twd)+' 億元','近 5 個交易日均值之 '+(m.trading.turnover_ratio_ma5*100).toFixed(1)+'%'],
-  [fixedFields[4],flow(m.institutional.total_net_twd),'合計買賣超，單位：新臺幣'],
-  [fixedFields[5],'外資 '+flow(m.institutional.foreign_net_twd),'投信 '+flow(m.institutional.investment_trust_net_twd)+'｜自營商 '+flow(m.institutional.dealers_net_twd)],
-  [fixedFields[6],marketTone,'依漲跌家數、加權指數及法人方向綜合判讀']
+  [fixedFields[1],billion(m.trading.turnover_twd)+' 億元','前 5 個交易日均值之 '+(m.trading.turnover_ratio_ma5*100).toFixed(1)+'%'],
+  [fixedFields[2],m.breadth.advancers+' 家／'+m.breadth.decliners+' 家','TWSE 上市股票欄'],
+  [fixedFields[3],m.breadth.unchanged+' 家／'+m.breadth.limit_up+' 家','TWSE MI_INDEX'],
+  [fixedFields[4],'外資 '+flow(m.institutional.foreign_net_twd),'投信 '+flow(m.institutional.investment_trust_net_twd)+'｜自營商 '+flow(m.institutional.dealers_net_twd)],
+  [fixedFields[5],flow(m.institutional.total_net_twd),'三大法人合計買賣超／新臺幣'],
+  [fixedFields[6],marketTone,'依上市漲跌家數、指數與法人資金方向綜合判讀']
  ];
  for(const [i,r] of rows.entries())if(r.some(v=>!v||String(v).includes('NaN')||String(v).includes('undefined')))throw Error('Missing fixed opening dashboard field '+fixedFields[i]);
  const rowSvg=rows.map((r,i)=>{
-  const y=265+i*75,small=i===5||i===6;
-  const font=small?24:30;
+  const y=265+i*75,small=i===4||i===6;
+  const font=small?23:29;
   return '<rect x="116" y="'+(y-38)+'" width="1318" height="69" rx="12" fill="'+(i%2?'#172b43':'#13243b')+'" stroke="#334155"/>'+
    '<rect x="118" y="'+(y-36)+'" width="7" height="65" rx="3" fill="#38bdf8"/>'+
    '<text x="150" y="'+(y+2)+'" font-size="25" font-family="Noto Sans CJK TC,sans-serif" fill="#cbd5e1">'+esc(r[0])+'</text>'+
@@ -135,7 +135,7 @@ for(const [i,scene] of plan.scenes.entries()){
 // Fail before TTS/render if the list header intersects any data card or the timeline.
 const rowTop=340-35,headerBottom=226+45,lastRowBottom=340+2*124+76;
 if(rowTop<=headerBottom+16||lastRowBottom>=815)throw Error('Dashboard content intersects header or progress timeline');
-const manifest={target_date:date,dashboard:'owner-approved-multi-stock-list-only',scene_count:plan.scenes.length,stock_codes:[...new Set(plan.scenes.flatMap(x=>x.stock_codes||[]).map(String))],opening_scene_count:plan.scenes.filter(x=>x.scene_type==='market_opening').length,source_facts:'data_daily_gain_over_5/analysis-facts/'+date+'.json'};
+const manifest={target_date:date,opening_dashboard_fields:['加權指數','全市場成交金額','上漲／下跌','平盤／漲停','外資／投信／自營商','三大法人合計','市場強弱摘要'],dashboard:'owner-approved-multi-stock-list-only',scene_count:plan.scenes.length,stock_codes:[...new Set(plan.scenes.flatMap(x=>x.stock_codes||[]).map(String))],opening_scene_count:plan.scenes.filter(x=>x.scene_type==='market_opening').length,source_facts:'data_daily_gain_over_5/analysis-facts/'+date+'.json'};
 fs.writeFileSync(path.join(out,'list-dashboard-manifest.json'),JSON.stringify(manifest,null,2)+'\n');
 if(manifest.opening_scene_count!==1||plan.scenes[0].scene_type!=='market_opening')throw Error('Missing first market opening scene');
 if(plan.scenes.filter(s=>['summary','closing_summary'].includes(s.scene_type)).length!==1||!['summary','closing_summary'].includes(plan.scenes.at(-1).scene_type))throw Error('Missing last closing summary');
