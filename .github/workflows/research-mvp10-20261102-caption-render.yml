@@ -1,0 +1,95 @@
+name: "[research] MVP10 20261102 isolated market opening + caption render"
+on:
+  push:
+    branches:
+      - research/mvp10-20261102-scene-caption-fix
+    paths:
+      - ".github/workflows/research-mvp10-20261102-caption-render.yml"
+      - "scripts/build_daily_gainers_list_dashboard_slides.js"
+      - "scripts/validate_daily_gainers_video_script.js"
+      - "scripts/burn_daily_gainers_subtitles.js"
+      - "scripts/verify_daily_gainers_burned_caption.py"
+permissions:
+  contents: read
+concurrency:
+  group: research-mvp10-20261102-caption-render
+  cancel-in-progress: false
+jobs:
+  render:
+    if: github.ref == 'refs/heads/research/mvp10-20261102-scene-caption-fix'
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      DATE: "20261102"
+      YOUTUBE_VTUBER_ENABLED: "1"
+      YOUTUBE_TTS_VOICE: "zh-TW-YunJheNeural"
+      YOUTUBE_TTS_RATE: "+15%"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/mvp10-20261102-scene-caption-fix
+          persist-credentials: false
+          sparse-checkout: |
+            scripts
+            tests
+            assets/daily-gainers-vtuber-sprite.webp
+            data_daily_gain_over_5
+            research_pending/daily-gainers-video-scripts
+            video_scripts
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install isolated media dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg librsvg2-bin fonts-noto-cjk espeak-ng
+          python -m pip install --disable-pip-version-check edge-tts==7.3.1 gTTS mutagen pypinyin pillow
+      - name: Materialize date-only verified script without repository write
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s research_pending/daily-gainers-video-scripts/20261102.json
+          mkdir -p video_scripts/daily-gainers
+          cp research_pending/daily-gainers-video-scripts/20261102.json video_scripts/daily-gainers/20261102.json
+          node scripts/validate_daily_gainers_video_script.js "$DATE"
+          node scripts/build_daily_gainers_video_package.js "$DATE"
+          node scripts/build_daily_gainers_list_dashboard_slides.js "$DATE"
+          node tests/daily_gainers_video_timestamps.test.js
+          python -m unittest discover -s tests -p test_daily_gainers_subtitle_alignment.py
+      - name: Real YunJhe TTS, VTuber and 1080p render
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/synthesize_daily_gainers_tts.py "output/daily-gainers-video/$DATE/plan.json"
+          python scripts/build_daily_gainers_lipsync.py "output/daily-gainers-video/$DATE/plan.json"
+          node scripts/render_daily_gainers_video.js "$DATE"
+      - name: Create aligned SRT and burn into MP4
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/build_daily_gainers_srt.py "output/daily-gainers-video/$DATE/plan.json"
+          node scripts/burn_daily_gainers_subtitles.js "$DATE"
+          python scripts/verify_daily_gainers_burned_caption.py "$DATE"
+          ffmpeg -y -v error -ss 12 -i "output/daily-gainers-video/$DATE/daily-gainers-$DATE.mp4" -frames:v 1 "output/daily-gainers-video/$DATE/verified-opening-frame.png"
+          ffmpeg -y -v error -sseof -12 -i "output/daily-gainers-video/$DATE/daily-gainers-$DATE.mp4" -frames:v 1 "output/daily-gainers-video/$DATE/verified-closing-frame.png"
+          cd "output/daily-gainers-video/$DATE"
+          sha256sum *.mp4 *.srt *.json > checked-sha256sums.txt
+      - name: Upload isolated proof even on failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mvp10-20261102-isolated-caption-render
+          if-no-files-found: warn
+          retention-days: 7
+          path: |
+            output/daily-gainers-video/20261102/*.mp4
+            output/daily-gainers-video/20261102/*.srt
+            output/daily-gainers-video/20261102/*.json
+            output/daily-gainers-video/20261102/*.png
+            output/daily-gainers-video/20261102/*.txt
