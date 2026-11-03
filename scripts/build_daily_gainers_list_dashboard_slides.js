@@ -33,6 +33,37 @@ function row(s,i){
  ${vals.map(v=>`<text x="${v.x}" y="${y+13}" font-size="${v.size}" font-weight="600" font-family="Noto Sans CJK TC,sans-serif" fill="${v.color}">${esc(v.t)}</text>`).join('')}
  <text x="1230" y="${y+48}" font-size="17" font-family="Noto Sans CJK TC,sans-serif" fill="#94a3b8">賣：${esc(short(sell,8))}</text>`;
 }
+function marketOpeningSlide(scene){
+ const m=JSON.parse(fs.readFileSync(path.join(root,'data_daily_gain_over_5/market-opening-video',date+'.json'),'utf8'));
+ if(m.target_date!==date||m.status!=='verified_official_market_aggregate')throw Error('Missing verified official market opening');
+ const billion=n=>(Math.abs(n)/1e8).toFixed(2);
+ const amount=n=>(n<0?'賣超':'買超')+billion(n)+' 億元';
+ const rows=[
+  ['上漲／下跌',m.breadth.advancers+' 家／'+m.breadth.decliners+' 家','上市股票欄'],
+  ['平盤／漲停',m.breadth.unchanged+' 家／'+m.breadth.limit_up+' 家','TWSE MI_INDEX'],
+  ['加權指數',m.index.close.toLocaleString('en-US')+' 點','下跌 '+Math.abs(m.index.change_points).toFixed(2)+' 點／'+Math.abs(m.index.change_pct).toFixed(2)+'%'],
+  ['全市場成交金額',billion(m.trading.turnover_twd)+' 億元','相較前 5 個交易日均值 '+(m.trading.turnover_ratio_ma5*100).toFixed(1)+'%'],
+  ['三大法人合計',amount(m.institutional.total_net_twd),'外資 '+amount(m.institutional.foreign_net_twd)+'｜投信 '+amount(m.institutional.investment_trust_net_twd)+'｜自營商 '+amount(m.institutional.dealers_net_twd)]
+ ];
+ const rowSvg=rows.map((r,i)=>{
+  const y=295+i*94;
+  const font=i===4?28:33;
+  return `<rect x="116" y="${y-45}" width="1318" height="82" rx="14" fill="${i%2?'#172b43':'#13243b'}" stroke="#334155"/>
+ <rect x="118" y="${y-43}" width="7" height="78" rx="3" fill="#38bdf8"/>
+ <text x="152" y="${y+4}" font-size="29" font-family="Noto Sans CJK TC,sans-serif" fill="#cbd5e1">${esc(r[0])}</text>
+ <text x="580" y="${y+4}" font-size="${font}" font-weight="700" font-family="Noto Sans CJK TC,sans-serif" fill="#f8fafc">${esc(r[1])}</text>
+ <text x="580" y="${y+29}" font-size="17" font-family="Noto Sans CJK TC,sans-serif" fill="#94a3b8">${esc(r[2])}</text>`;
+ }).join('');
+ return `<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+ <rect width="1920" height="1080" fill="#07111f"/><rect width="1920" height="14" fill="#38bdf8"/>
+ <text x="115" y="91" fill="#e2e8f0" font-family="Noto Sans CJK TC,sans-serif" font-size="27">TAIWAN STOCK｜2026/11/02｜上市盤勢</text>
+ <text x="115" y="160" fill="#fff" font-family="Noto Sans CJK TC,sans-serif" font-size="54" font-weight="bold">今日市場概況</text>
+ <text x="115" y="210" fill="#9ddbf8" font-family="Noto Sans CJK TC,sans-serif" font-size="27">追蹤資金，解讀行情｜同日 TWSE 官方資料</text>
+ ${rowSvg}
+ <text x="117" y="781" font-size="21" fill="#94a3b8" font-family="Noto Sans CJK TC,sans-serif">漲跌家數採 TWSE「股票」欄；成交金額與法人採上市整體市場口徑。</text>
+ <text x="117" y="975" font-size="23" fill="#94a3b8" font-family="Noto Sans CJK TC,sans-serif">來源：TWSE MI_INDEX／FMTQIK／BFI82U　｜　資料日期 2026/11/02</text>
+ </svg>`;
+}
 function slide(scene,si){
  const codes=(scene.stock_codes||[]).map(String);
  const selected=codes.length?codes.map(c=>{const s=all.get(c);if(!s)throw Error('Unknown stock '+c);return s}):facts.stocks.slice(26,29);
@@ -54,12 +85,13 @@ function slide(scene,si){
 }
 for(const [i,scene] of plan.scenes.entries()){
  const file=path.join(out,'slides',String(scene.id).padStart(2,'0')+'.svg');
- fs.writeFileSync(file,slide(scene,i));
+ fs.writeFileSync(file,scene.scene_type==='market_opening'?marketOpeningSlide(scene):slide(scene,i));
 }
 // Fail before TTS/render if the list header intersects any data card or the timeline.
 const rowTop=340-35,headerBottom=226+45,lastRowBottom=340+2*124+76;
 if(rowTop<=headerBottom+16||lastRowBottom>=815)throw Error('Dashboard content intersects header or progress timeline');
-const manifest={target_date:date,dashboard:'owner-approved-multi-stock-list-only',scene_count:plan.scenes.length,stock_codes:[...new Set(plan.scenes.flatMap(x=>x.stock_codes||[]).map(String))],source_facts:'data_daily_gain_over_5/analysis-facts/'+date+'.json'};
+const manifest={target_date:date,dashboard:'owner-approved-multi-stock-list-only',scene_count:plan.scenes.length,stock_codes:[...new Set(plan.scenes.flatMap(x=>x.stock_codes||[]).map(String))],opening_scene_count:plan.scenes.filter(x=>x.scene_type==='market_opening').length,source_facts:'data_daily_gain_over_5/analysis-facts/'+date+'.json'};
 fs.writeFileSync(path.join(out,'list-dashboard-manifest.json'),JSON.stringify(manifest,null,2)+'\n');
+if(manifest.opening_scene_count!==1||plan.scenes[0].scene_type!=='market_opening')throw Error('Missing first market opening scene');
 if(manifest.stock_codes.length!==29)throw Error('List dashboard missing stock coverage: '+manifest.stock_codes.length);
 console.log(JSON.stringify(manifest));
