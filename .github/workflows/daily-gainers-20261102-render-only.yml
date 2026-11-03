@@ -5,6 +5,7 @@ on:
     paths:
       - 'research_pending/daily-gainers-video-scripts/20261102.json'
       - 'scripts/build_daily_gainers_list_dashboard_slides.js'
+      - 'scripts/build_daily_gainers_srt.py'
       - '.github/workflows/daily-gainers-20261102-render-only.yml'
   workflow_dispatch:
 permissions:
@@ -91,6 +92,11 @@ jobs:
           dir="output/daily-gainers-video/$DATE"
           test -s "$dir/daily-gainers-$DATE.mp4"
           test -s "$dir/daily-gainers-$DATE.zh-TW.srt"
+          if grep -Eq '百分之[0-9]' "$dir/daily-gainers-$DATE.zh-TW.srt"; then
+            echo "Display subtitle still contains spoken numeric percent" >&2
+            exit 1
+          fi
+          grep -Fq '9.96%' "$dir/daily-gainers-$DATE.zh-TW.srt" || { echo "Missing 9.96% display subtitle" >&2; exit 1; }
           node - "$dir" <<'NODE'
           const fs=require('node:fs'),path=require('node:path');
           const d=process.argv[2],q=JSON.parse(fs.readFileSync(path.join(d,'qa.json')));
