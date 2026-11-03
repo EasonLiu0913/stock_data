@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import asyncio, json, os, subprocess, sys, random
+import asyncio, json, os, subprocess, sys, random, hashlib
 from pathlib import Path
 from daily_gainers_spoken_text import normalize_spoken_text
 
@@ -44,6 +44,15 @@ async def main():
     checkpoint = plan.get("schema_version") == 2
     manifest_path = plan_path.parent / "tts-manifest.json"
     resume = os.environ.get("M5_VERIFIED_PARTIAL_RESUME") == "1"
+    safe_retry = os.environ.get("TAIWAN_STOCK_TTS_RESUME") == "1"
+    if safe_retry:
+        if checkpoint or resume or not manifest_path.is_file():
+            raise RuntimeError("SAFE_TTS_RETRY_NOT_ELIGIBLE")
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if (manifest.get("voice"), manifest.get("rate"), manifest.get("engine")) != (voice, rate, "edge-tts"):
+            raise RuntimeError("SAFE_TTS_RETRY_VOICE_DRIFT")
+        if len(manifest.get("scenes", [])) > len(plan["scenes"]):
+            raise RuntimeError("SAFE_TTS_RETRY_SCENE_OVERFLOW")
     if resume:
         marker = json.loads((plan_path.parent / "m5-verified-resume.json").read_text(encoding="utf-8"))
         if not checkpoint or marker.get("source_run") != 38062405623 or marker.get("source_artifact_id") != 11674007334 or marker.get("scene_count") != 5 or marker.get("publication_authorized") is not False:
@@ -58,6 +67,15 @@ async def main():
             await asyncio.sleep(2.5)
         out_path = out_dir / f"{sid:02d}.mp3"
         text = normalize_spoken_text(scene["speech_text"] if plan.get("schema_version") == 2 else scene["narration"])
+        if safe_retry and sid <= len(manifest["scenes"]):
+            record = manifest["scenes"][sid-1]
+            actual_sha = hashlib.sha256(out_path.read_bytes()).hexdigest() if out_path.is_file() else None
+            if (record.get("id") != sid or record.get("spoken_text") != text
+                    or record.get("engine") != "edge-tts" or not record.get("word_boundaries")
+                    or record.get("sha256") != actual_sha or not actual_sha or out_path.stat().st_size < 1000):
+                raise RuntimeError(f"SAFE_TTS_RETRY_SCENE_DRIFT_{sid}")
+            print(f"scene {sid:02d}: reuse verified Edge MP3 and WordBoundary", flush=True)
+            continue
         if resume and sid <= 5:
             record = manifest["scenes"][sid-1]
             import hashlib
@@ -97,9 +115,11 @@ async def main():
             raise RuntimeError(f"TTS output invalid for scene {sid}: {out_path}")
         print(f"scene {sid:02d}: {engine} -> {out_path} ({out_path.stat().st_size} bytes)")
         manifest["engine"] = manifest["engine"] or engine
-        manifest["scenes"].append({"id": sid, "engine": engine, "file": str(out_path), "errors": errors, "spoken_text": text, "word_boundaries": boundaries})
-        if checkpoint:
-            manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        manifest["scenes"].append({"id": sid, "engine": engine, "file": str(out_path), "errors": errors, "spoken_text": text, "word_boundaries": boundaries,
+                                   "sha256": hashlib.sha256(out_path.read_bytes()).hexdigest()})
+        # Per-scene checkpoint remains local to this isolated Render-only runner.
+        # Prior successful scenes are reused only after SHA, transcript, voice and boundary checks.
+        manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 asyncio.run(main())
