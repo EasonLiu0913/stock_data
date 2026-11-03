@@ -224,6 +224,17 @@ for scene in plan.get("scenes", []):
                           'pause_nearby': distance is not None and distance <= 0.20})
 
     for chunk, (start, end) in zip(chunks, cue_intervals):
+        # v1 aligns the *spoken* chunks first.  Change display text only AFTER
+        # WordBoundary alignment so speech remains 百分之9.96 and captions show 9.96%.
+        if plan.get("schema_version") == 1:
+            percent_words = {"零": "0", "一": "1", "二": "2", "三": "3", "四": "4",
+                             "五": "5", "六": "6", "七": "7", "八": "8",
+                             "九": "9", "十": "10"}
+            def display_percent(match):
+                value = match.group(1)
+                return (percent_words.get(value, value) + "%")
+            chunk = re.sub(r"百分之\\s*(\\d+(?:\\.\\d+)?|[零一二三四五六七八九十])",
+                           display_percent, chunk)
         end = min(end, rendered_duration)
         if end <= start:
             raise RuntimeError(f"Scene {sid}: subtitle exceeds actual rendered scene duration")
