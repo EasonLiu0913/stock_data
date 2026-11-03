@@ -81,6 +81,25 @@ const officialClaims={advancers:market.breadth.advancers,decliners:market.breadt
 for(const [key,value] of Object.entries(officialClaims))check(first.market_opening_claims[key]===value,'market opening claim differs from official snapshot: '+key);
 for(const [key,value] of Object.entries(first.spoken_values||{}))check(typeof value==='string' && first.narration.includes(value),'spoken market value missing from narration: '+key);
 for(const key of ['advancers','decliners','unchanged','limit_up','index_close','index_change_points','index_change_pct','turnover_twd','foreign_net_twd','investment_trust_net_twd','dealers_net_twd','total_net_twd'])check(typeof first.spoken_values?.[key]==='string' && first.spoken_values[key].length>0,'market value spoken evidence absent: '+key);
+// Narration must follow the approved list-row Dashboard, not merely mention all values.
+const orderedSpokenGroups=[
+ ['index_close','index_change_points','index_change_pct'],
+ ['turnover_twd'],
+ ['advancers','decliners'],
+ ['unchanged','limit_up'],
+ ['foreign_net_twd','investment_trust_net_twd','dealers_net_twd'],
+ ['total_net_twd']
+];
+let previousGroupEnd=-1;
+for(const [groupIndex,keys] of orderedSpokenGroups.entries()){
+ const positions=keys.map(key=>first.narration.indexOf(first.spoken_values[key]));
+ check(positions.every(pos=>pos>=0),'opening spoken group missing '+groupIndex);
+ check(positions[0]>previousGroupEnd,'market-opening narration order differs from Dashboard at group '+groupIndex);
+ for(let i=1;i<positions.length;i++)check(positions[i]>positions[i-1],'market-opening narration field order differs from Dashboard: '+keys[i]);
+ previousGroupEnd=positions.at(-1);
+}
+check(/市場|盤勢|資金分歧|偏強|偏弱|震盪/.test(first.narration.slice(previousGroupEnd+first.spoken_values.total_net_twd.length)),
+ 'market-strength synthesis must follow institutional total');
 check(script.scenes.slice(1).some(x=>Array.isArray(x.stock_codes)&&x.stock_codes.length>0),'market opening has no subsequent stock chapter');
 // Keep the seven immutable dashboard rows a required visual contract, not an AI choice.
 const openingLayoutPath=path.join('scripts','build_daily_gainers_list_dashboard_slides.js');
