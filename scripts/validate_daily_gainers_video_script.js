@@ -69,11 +69,21 @@ check(first?.scene_type==='market_opening' && (!first.stock_codes || first.stock
 check(first.title.includes('市場') || first.title.includes('大盤'),'market opening title missing');
 const requiredSpoken=['上漲','下跌','平盤','漲停','加權指數','成交金額','外資','投信','自營商','合計'];
 for(const word of requiredSpoken)check(first.narration.includes(word),'market-opening narration missing '+word);
+const displayFields=['加權指數','上漲／下跌','平盤／漲停','全市場成交金額','三大法人合計','外資／投信／自營商','市場強弱摘要'];
+check(Number.isFinite(market.trading.turnover_ma5_twd) && market.trading.turnover_ma5_twd>0,'missing 5-trading-day turnover average');
+check(Number.isFinite(market.trading.turnover_ratio_ma5),'missing 5-trading-day turnover comparison');
+check(Math.abs(market.trading.turnover_twd/market.trading.turnover_ma5_twd-market.trading.turnover_ratio_ma5)<0.0001,'five-day turnover ratio mismatch');
+check(/市場|盤勢|資金分歧|偏強|偏弱|震盪/.test(first.narration.slice(-120)),'market strength summary absent from opening commentary');
+check(typeof first.narration==='string' && first.narration.length>0,'missing opening script');
 check(first.market_opening_claims && typeof first.market_opening_claims==='object','market-opening claims missing');
 const officialClaims={advancers:market.breadth.advancers,decliners:market.breadth.decliners,unchanged:market.breadth.unchanged,limit_up:market.breadth.limit_up,index_close:market.index.close,index_change_points:market.index.change_points,index_change_pct:market.index.change_pct,turnover_twd:market.trading.turnover_twd,foreign_net_twd:market.institutional.foreign_net_twd,investment_trust_net_twd:market.institutional.investment_trust_net_twd,dealers_net_twd:market.institutional.dealers_net_twd,total_net_twd:market.institutional.total_net_twd};
 for(const [key,value] of Object.entries(officialClaims))check(first.market_opening_claims[key]===value,'market opening claim differs from official snapshot: '+key);
 for(const [key,value] of Object.entries(first.spoken_values||{}))check(typeof value==='string' && first.narration.includes(value),'spoken market value missing from narration: '+key);
 for(const key of ['advancers','decliners','unchanged','limit_up','index_close','index_change_points','index_change_pct','turnover_twd','foreign_net_twd','investment_trust_net_twd','dealers_net_twd','total_net_twd'])check(typeof first.spoken_values?.[key]==='string' && first.spoken_values[key].length>0,'market value spoken evidence absent: '+key);
 check(script.scenes.slice(1).some(x=>Array.isArray(x.stock_codes)&&x.stock_codes.length>0),'market opening has no subsequent stock chapter');
+// Keep the seven immutable dashboard rows a required visual contract, not an AI choice.
+const openingLayoutPath=path.join('scripts','build_daily_gainers_list_dashboard_slides.js');
+const layoutSource=fs.readFileSync(openingLayoutPath,'utf8');
+for(const label of displayFields)check(layoutSource.includes("'"+label+"'"),'fixed opening visual field missing: '+label);
 check(script.privacy_status === 'private', 'video must be private');
 console.log(JSON.stringify({target_date:date,scenes:script.scenes.length,narration_chars:chars,status:'PASS'}));
