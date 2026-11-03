@@ -41,7 +41,7 @@ const tmp=path.join(out,'daily-gainers-'+date+'.burning.mp4');
 const archive=path.join(out,'daily-gainers-'+date+'.pre-burn.mp4');
 if(fs.existsSync(tmp)||fs.existsSync(archive))throw Error('Prior burn attempt must be reviewed first');
 const srtArg=srt.replace(/\\/g,'/').replace(/:/g,'\\:').replace(/'/g,"\\'");
-const force='FontName=Noto Sans CJK TC,FontSize=14,PrimaryColour=&H00FFFFFF,OutlineColour=&H00333333,BorderStyle=1,Outline=1,Shadow=0,Alignment=2,MarginL=120,MarginR=120,MarginV=10';
+const force='FontName=Noto Sans CJK TC,FontSize=21,PrimaryColour=&H00FFFFFF,OutlineColour=&H00333333,BorderStyle=1,Outline=1,Shadow=0,Alignment=2,MarginL=60,MarginR=60,MarginV=10';
 run('ffmpeg',['-y','-hide_banner','-loglevel','error','-i',video,
  '-vf',"subtitles="+srtArg+":force_style='"+force+"'",
  '-c:v','libx264','-preset','veryfast','-crf','19','-c:a','copy','-movflags','+faststart',tmp]);
@@ -51,6 +51,6 @@ if(check.streams.find(x=>x.codec_type==='video')?.width!==1920||check.streams.fi
 fs.renameSync(video,archive);
 fs.renameSync(tmp,video);
 const hash=file=>crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
-const proof={target_date:date,status:'BURN_EXECUTED_VISUAL_QA_PENDING',cues:blocks.length,source_duration:sourceDuration,burned_duration:newDuration,mp4_sha256:hash(video),srt_sha256:hash(srt),preburn_sha256:hash(archive),subtitle_region:{alignment:'bottom-center',margin_left:120,margin_right:120,margin_bottom:10,font_size:14,ass_outline:1,max_lines:2},publication_authorized:false};
+const proof={target_date:date,status:'BURN_EXECUTED_VISUAL_QA_PENDING',cues:blocks.length,source_duration:sourceDuration,burned_duration:newDuration,mp4_sha256:hash(video),srt_sha256:hash(srt),preburn_sha256:hash(archive),subtitle_region:{alignment:'bottom-center',margin_left:60,margin_right:60,margin_bottom:10,font_size:21,ass_outline:1,max_lines:2},publication_authorized:false};
 fs.writeFileSync(path.join(out,'burned-caption-proof.json'),JSON.stringify(proof,null,2)+'\n');
 console.log(JSON.stringify(proof,null,2));
