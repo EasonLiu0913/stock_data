@@ -11,7 +11,7 @@ const out=path.join(root,'output/daily-gainers-video',date);
 const plan=JSON.parse(fs.readFileSync(path.join(out,'plan.json'),'utf8'));
 const facts=JSON.parse(fs.readFileSync(path.join(root,'data_daily_gain_over_5/analysis-facts',date+'.json'),'utf8'));
 const all=new Map(facts.stocks.map(s=>[String(s.code),s]));
-if(plan.target_date!==date||facts.target_date!==date||facts.stock_count!==29)throw Error('Date/facts mismatch');
+if(plan.target_date!==date||facts.target_date!==date||!Number.isInteger(facts.stock_count)||facts.stock_count<1)throw Error('Date/facts mismatch');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
 const short=(s,n=16)=>[...String(s??'')].slice(0,n).join('');
 function signed(v){if(v===null||v===undefined)return '無紀錄';let n=Number(v);return Number.isFinite(n)?(n>0?'+':'')+n.toLocaleString('en-US'):'缺資料'}
@@ -114,7 +114,7 @@ function slide(scene,si){
  return `<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
  <rect width="1920" height="1080" fill="#07111f"/>
  <rect width="1920" height="14" fill="#38bdf8"/>
- <text x="115" y="94" fill="#e2e8f0" font-family="Noto Sans CJK TC,sans-serif" font-size="27" letter-spacing="3">TAIWAN STOCK｜2026/11/02｜上市 5% 強勢股</text>
+ <text x="115" y="94" fill="#e2e8f0" font-family="Noto Sans CJK TC,sans-serif" font-size="27" letter-spacing="3">TAIWAN STOCK｜${date.slice(0,4)}/${date.slice(4,6)}/${date.slice(6,8)}｜上市 5% 強勢股</text>
  <text x="115" y="161" fill="#ffffff" font-family="Noto Sans CJK TC,sans-serif" font-size="54" font-weight="bold">${esc(short(scene.title,26))}</text>
  <text x="115" y="210" fill="#9ddbf8" font-family="Noto Sans CJK TC,sans-serif" font-size="27">${esc(subtitle)}</text>
  <rect x="116" y="226" width="1320" height="45" rx="12" fill="#0e2035"/>
@@ -139,5 +139,5 @@ const manifest={target_date:date,opening_dashboard_fields:['加權指數','全�
 fs.writeFileSync(path.join(out,'list-dashboard-manifest.json'),JSON.stringify(manifest,null,2)+'\n');
 if(manifest.opening_scene_count!==1||plan.scenes[0].scene_type!=='market_opening')throw Error('Missing first market opening scene');
 if(plan.scenes.filter(s=>['summary','closing_summary'].includes(s.scene_type)).length!==1||!['summary','closing_summary'].includes(plan.scenes.at(-1).scene_type))throw Error('Missing last closing summary');
-if(manifest.stock_codes.length!==29)throw Error('List dashboard missing stock coverage: '+manifest.stock_codes.length);
+if(manifest.stock_codes.length!==facts.stock_count)throw Error('List dashboard missing stock coverage: '+manifest.stock_codes.length);
 console.log(JSON.stringify(manifest));
