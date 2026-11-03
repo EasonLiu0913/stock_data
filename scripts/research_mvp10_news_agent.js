@@ -23,7 +23,7 @@ function exactMatch(rows,stocks){
   assert(CONTRACT.cause_types.includes(a.cause_type)&&CONTRACT.evidence_strength_values.includes(a.evidence_strength)&&CONTRACT.confidence_values.includes(a.confidence),'NEWS_ENUM_INVALID');
   assert(Array.isArray(a.sources)&&Array.isArray(a.evidence)&&Array.isArray(a.follow_up)&&Array.isArray(a.cause_tags),'NEWS_FIELDS_INVALID');
   if(['direct','corroborated'].includes(a.evidence_strength))assert(a.sources.length>0,'NEWS_UNSOURCED_STRONG_CLAIM');
-  for(const u of a.sources){assert(u.title&&/^https?:\\/\\//.test(u.url||''),'NEWS_INVALID_LINK')}
+  for(const u of a.sources){let valid=false;try{const parsed=new URL(String(u.url||''));valid=Boolean(u.title)&&['http:','https:'].includes(parsed.protocol)}catch{}assert(valid,'NEWS_INVALID_LINK')}
   if(['unknown','low_liquidity'].includes(a.cause_type))assert(a.confidence==='low','NEWS_UNKNOWN_CONFIDENCE');
  }
 }
