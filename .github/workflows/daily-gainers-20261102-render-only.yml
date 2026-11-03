@@ -6,6 +6,8 @@ on:
       - '.github/workflows/daily-gainers-20261102-render-only.yml'
       - 'scripts/build_daily_gainers_list_dashboard_slides.js'
       - 'scripts/validate_daily_gainers_video_script.js'
+      - 'scripts/materialize_daily_gainers_dual_track.js'
+      - 'tests/daily_gainers_dual_track.test.js'
       - 'scripts/burn_daily_gainers_subtitles.js'
       - 'scripts/verify_daily_gainers_burned_caption.py'
       - 'research_pending/daily-gainers-video-scripts/20261102.json'
@@ -41,6 +43,7 @@ jobs:
             tests/test_daily_gainers_caption_segments.py
             tests/daily_gainers_video_timestamps.test.js
             tests/daily_gainers_video_date_gate.test.js
+            tests/daily_gainers_dual_track.test.js
           sparse-checkout-cone-mode: false
       - uses: actions/setup-node@v4
         with:
@@ -60,7 +63,8 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p video_scripts/daily-gainers
-          cp "research_pending/daily-gainers-video-scripts/$DATE.json" "video_scripts/daily-gainers/$DATE.json"
+          node --test tests/daily_gainers_dual_track.test.js
+          node scripts/materialize_daily_gainers_dual_track.js "$DATE"
           sha256sum "video_scripts/daily-gainers/$DATE.json"
           node scripts/validate_daily_gainers_video_script.js "$DATE"
           node scripts/build_daily_gainers_video_package.js "$DATE"
