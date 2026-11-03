@@ -233,7 +233,7 @@ for scene in plan.get("scenes", []):
             def display_percent(match):
                 value = match.group(1)
                 return (percent_words.get(value, value) + "%")
-            chunk = re.sub(r"百分之\\s*(\\d+(?:\\.\\d+)?|[零一二三四五六七八九十])",
+            chunk = re.sub(r"百分之\s*(\d+(?:\.\d+)?|[零一二三四五六七八九十])",
                            display_percent, chunk)
         end = min(end, rendered_duration)
         if end <= start:
