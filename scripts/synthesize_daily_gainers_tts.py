@@ -80,7 +80,6 @@ async def main():
             continue
         if resume and sid <= 5:
             record = manifest["scenes"][sid-1]
-            import hashlib
             expected_hash = marker["files"][f"audio/{sid:02d}.mp3"]
             if record["id"] != sid or record["spoken_text"] != text or record["engine"] != "edge-tts" or not record["word_boundaries"] or not out_path.is_file() or hashlib.sha256(out_path.read_bytes()).hexdigest() != expected_hash:
                 raise RuntimeError(f"M5_RESUME_SCENE_DRIFT_{sid}")
