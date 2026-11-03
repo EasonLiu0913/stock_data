@@ -69,8 +69,18 @@ function closingSummarySlide(scene){
  const bullets=scene.bullets;
  if(!Array.isArray(bullets)||bullets.length<3||bullets.length>5)throw Error('Closing summary requires 3-5 observations');
  if((scene.stock_codes||[]).length)throw Error('Closing summary cannot contain stock rows');
- const labels=['市場結論','資金與籌碼','下一交易日觀察','風險提醒','補充觀察'];
- const cards=bullets.map((value,i)=>{
+ const m=JSON.parse(fs.readFileSync(path.join(root,'data_daily_gain_over_5/market-opening-video',date+'.json'),'utf8'));
+ if(m.target_date!==date||m.status!=='verified_official_market_aggregate')throw Error('Closing market data incomplete');
+ const marketDirection=m.index.change_points<0?'下跌':(m.index.change_points>0?'上漲':'持平');
+ const flows=m.institutional.total_net_twd<0?'賣超':(m.institutional.total_net_twd>0?'買超':'持平');
+ const cardsContent=[
+   '加權指數'+marketDirection+Math.abs(m.index.change_points).toFixed(2)+'點；上漲'+m.breadth.advancers+'家／下跌'+m.breadth.decliners+'家',
+   '三大法人合計'+flows+(Math.abs(m.institutional.total_net_twd)/1e8).toFixed(2)+'億元；資金方向分歧',
+   '觀察後續成交量、法人連續性與強勢股能否站穩均線',
+   '低量股留意滑價，放量股留意短線震盪與融資風險'
+ ];
+ const labels=['市場結論','資金流向','下一交易日觀察','風險提醒'];
+ const cards=cardsContent.map((value,i)=>{
    const y=286+i*101;
    return '<rect x="116" y="'+(y-44)+'" width="1318" height="85" rx="14" fill="'+(i%2?'#172b43':'#13243b')+'" stroke="#334155"/>'+
    '<rect x="119" y="'+(y-42)+'" width="7" height="81" rx="3" fill="#38bdf8"/>'+
