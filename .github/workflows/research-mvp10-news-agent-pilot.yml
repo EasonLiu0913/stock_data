@@ -1,0 +1,107 @@
+name: "[Research Only] MVP10 20261102 missing-news agent pilot"
+# Branch-only request file; no main writer, Pages, YouTube or video dispatch.
+on:
+  push:
+    branches:
+      - research/daily-video-mvp10-a-20261029
+    paths:
+      - research-requests/mvp10-news/20261102.json
+      - .github/workflows/research-mvp10-news-agent-pilot.yml
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "Research date (20261102 only)"
+        required: true
+        default: "20261102"
+permissions:
+  contents: read
+concurrency:
+  group: research-mvp10-news-pilot-20261102
+  cancel-in-progress: false
+jobs:
+  pilot:
+    if: github.ref == 'refs/heads/research/daily-video-mvp10-a-20261029'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout research code and request without retained credentials
+        uses: actions/checkout@v4
+        with:
+          ref: research/daily-video-mvp10-a-20261029
+          path: research
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/research_mvp10_news_agent.js
+            tests/research_mvp10_news_agent.test.js
+            config/daily-gainers-ai-contract.json
+            research-requests/mvp10-news/20261102.json
+          sparse-checkout-cone-mode: false
+      - name: Checkout current main solely as source snapshot
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: inputs
+          persist-credentials: false
+          sparse-checkout: |
+            data_daily_gain_over_5
+            scripts
+            config
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Enforce exact-date request, original source and research-only safety
+        id: gate
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          DISPATCH_DATE: ${{ inputs.date }}
+        run: |
+          set -euo pipefail
+          mkdir -p output/mvp10-news
+          node --check research/scripts/research_mvp10_news_agent.js
+          node --test research/tests/research_mvp10_news_agent.test.js
+          test "$GITHUB_REF_NAME" = "research/daily-video-mvp10-a-20261029"
+          test -s research/research-requests/mvp10-news/20261102.json
+          jq -e '.date=="20261102" and .goal=="goal-v3/MVP-10DAY-v1" and .scope=="research_only" and .upload==false and .publish==false' research/research-requests/mvp10-news/20261102.json
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            test "$DISPATCH_DATE" = "20261102"
+          fi
+          git -C inputs rev-parse HEAD > output/mvp10-news/source-main-sha.txt
+          test -s inputs/data_daily_gain_over_5/20261102.json
+          if [ -s inputs/data_daily_gain_over_5/analysis-news/20261102.json ]; then
+            echo "News already exists on current main; no paid duplicate invocation."
+            echo "execute=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "execute=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Produce requested missing-date news using bounded web-research model
+        if: steps.gate.outputs.execute == 'true'
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          MVP10_NEWS_MODEL: ${{ vars.MVP10_NEWS_MODEL }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${OPENAI_API_KEY:-}" ]; then
+            printf '%s\n' '{"status":"WAITING_PERMISSION","reason":"OPENAI_API_KEY GitHub Actions secret not configured","date":"20261102","publication_authorized":false}' > output/mvp10-news/receipt.json
+            echo "MVP10 news pilot WAITING_PERMISSION: configure OPENAI_API_KEY Actions secret." >> "$GITHUB_STEP_SUMMARY"
+            exit 2
+          fi
+          node research/scripts/research_mvp10_news_agent.js --date 20261102 --root inputs --output-root output/mvp10-news --execute
+          jq -e '.status=="VALIDATOR_PASS_RESEARCH_ONLY" and .date=="20261102" and .stock_count==29 and .publication_authorized==false and .main_write_authorized==false' output/mvp10-news/receipt.json
+      - name: Record actual GitHub Run and safety state
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p output/mvp10-news
+          jq -n --arg id "$GITHUB_RUN_ID" --arg attempt "$GITHUB_RUN_ATTEMPT" --arg sha "$GITHUB_SHA" --arg url "https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" '{run_id:($id|tonumber),attempt:($attempt|tonumber),research_sha:$sha,url:$url,main_write:false,pages:false,youtube:false,publication_authorized:false}' > output/mvp10-news/runner.json
+          echo "News pilot Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" >> "$GITHUB_STEP_SUMMARY"
+      - name: Always preserve receipts and generated news for independent review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: research-mvp10-news-20261102-pilot
+          path: output/mvp10-news/
+          retention-days: 14
+          if-no-files-found: warn
