@@ -6,6 +6,9 @@ on:
       - '.github/workflows/daily-gainers-20261102-render-only.yml'
       - 'scripts/build_daily_gainers_list_dashboard_slides.js'
       - 'scripts/validate_daily_gainers_video_script.js'
+      - 'scripts/validate_daily_gainers_news_narration.js'
+      - 'tests/daily_gainers_news_narration.test.js'
+      - 'scripts/build_daily_gainers_video_package.js'
       - 'scripts/materialize_daily_gainers_dual_track.js'
       - 'tests/daily_gainers_dual_track.test.js'
       - 'scripts/build_daily_gainers_srt.py'
@@ -45,6 +48,7 @@ jobs:
             tests/daily_gainers_video_timestamps.test.js
             tests/daily_gainers_video_date_gate.test.js
             tests/daily_gainers_dual_track.test.js
+            tests/daily_gainers_news_narration.test.js
           sparse-checkout-cone-mode: false
       - uses: actions/setup-node@v4
         with:
@@ -68,7 +72,9 @@ jobs:
           node scripts/materialize_daily_gainers_dual_track.js "$DATE"
           sha256sum "video_scripts/daily-gainers/$DATE.json"
           node scripts/validate_daily_gainers_video_script.js "$DATE"
+          node --test tests/daily_gainers_news_narration.test.js
           node scripts/build_daily_gainers_video_package.js "$DATE"
+          node scripts/validate_daily_gainers_news_narration.js "$DATE" | tee "output/daily-gainers-video/$DATE/news-narration-qa.json"
           node scripts/build_daily_gainers_list_dashboard_slides.js "$DATE"
           node - <<'NODE'
           const fs=require('node:fs');
@@ -151,6 +157,7 @@ jobs:
           path: |
             output/daily-gainers-video/20261102/plan.json
             output/daily-gainers-video/20261102/qa.json
+            output/daily-gainers-video/20261102/news-narration-qa.json
             output/daily-gainers-video/20261102/tts-manifest.json
             output/daily-gainers-video/20261102/subtitle-manifest.json
             output/daily-gainers-video/20261102/render-timings.json
