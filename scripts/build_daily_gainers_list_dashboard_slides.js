@@ -37,32 +37,41 @@ function marketOpeningSlide(scene){
  const m=JSON.parse(fs.readFileSync(path.join(root,'data_daily_gain_over_5/market-opening-video',date+'.json'),'utf8'));
  if(m.target_date!==date||m.status!=='verified_official_market_aggregate')throw Error('Missing verified official market opening');
  const billion=n=>(Math.abs(n)/1e8).toFixed(2);
- const amount=n=>(n<0?'賣超':'買超')+billion(n)+' 億元';
+ const flow=n=>(n<0?'賣超':n>0?'買超':'持平')+(n===0?'':billion(n)+' 億元');
+ const movement=m.index.change_points<0?'下跌':m.index.change_points>0?'上漲':'持平';
+ const marketTone=(m.breadth.advancers>m.breadth.decliners && m.index.change_points<0 && m.institutional.total_net_twd<0)
+  ?'個股漲多於跌，但指數與法人偏弱，資金分歧'
+  :(m.breadth.advancers>m.breadth.decliners && m.index.change_points>=0 && m.institutional.total_net_twd>=0)
+  ?'漲多於跌、指數與法人同向，盤勢偏強'
+  :(m.breadth.advancers<m.breadth.decliners && m.index.change_points<0)
+  ?'跌多於漲且指數回落，盤勢偏弱':'漲跌與資金方向不一致，盤勢分歧';
+ const fixedFields=['加權指數','上漲／下跌','平盤／漲停','全市場成交金額','三大法人合計','外資／投信／自營商','市場強弱摘要'];
  const rows=[
-  ['上漲／下跌',m.breadth.advancers+' 家／'+m.breadth.decliners+' 家','上市股票欄'],
-  ['平盤／漲停',m.breadth.unchanged+' 家／'+m.breadth.limit_up+' 家','TWSE MI_INDEX'],
-  ['加權指數',m.index.close.toLocaleString('en-US')+' 點','下跌 '+Math.abs(m.index.change_points).toFixed(2)+' 點／'+Math.abs(m.index.change_pct).toFixed(2)+'%'],
-  ['全市場成交金額',billion(m.trading.turnover_twd)+' 億元','相較前 5 個交易日均值 '+(m.trading.turnover_ratio_ma5*100).toFixed(1)+'%'],
-  ['三大法人合計',amount(m.institutional.total_net_twd),'外資 '+amount(m.institutional.foreign_net_twd)+'｜投信 '+amount(m.institutional.investment_trust_net_twd)+'｜自營商 '+amount(m.institutional.dealers_net_twd)]
+  [fixedFields[0],m.index.close.toLocaleString('en-US')+' 點',movement+' '+Math.abs(m.index.change_points).toFixed(2)+' 點／'+Math.abs(m.index.change_pct).toFixed(2)+'%'],
+  [fixedFields[1],m.breadth.advancers+' 家／'+m.breadth.decliners+' 家','TWSE 上市股票欄'],
+  [fixedFields[2],m.breadth.unchanged+' 家／'+m.breadth.limit_up+' 家','TWSE MI_INDEX'],
+  [fixedFields[3],billion(m.trading.turnover_twd)+' 億元','近 5 個交易日均值之 '+(m.trading.turnover_ratio_ma5*100).toFixed(1)+'%'],
+  [fixedFields[4],flow(m.institutional.total_net_twd),'合計買賣超，單位：新臺幣'],
+  [fixedFields[5],'外資 '+flow(m.institutional.foreign_net_twd),'投信 '+flow(m.institutional.investment_trust_net_twd)+'｜自營商 '+flow(m.institutional.dealers_net_twd)],
+  [fixedFields[6],marketTone,'依漲跌家數、加權指數及法人方向綜合判讀']
  ];
+ for(const [i,r] of rows.entries())if(r.some(v=>!v||String(v).includes('NaN')||String(v).includes('undefined')))throw Error('Missing fixed opening dashboard field '+fixedFields[i]);
  const rowSvg=rows.map((r,i)=>{
-  const y=295+i*94;
-  const font=i===4?28:33;
-  return `<rect x="116" y="${y-45}" width="1318" height="82" rx="14" fill="${i%2?'#172b43':'#13243b'}" stroke="#334155"/>
- <rect x="118" y="${y-43}" width="7" height="78" rx="3" fill="#38bdf8"/>
- <text x="152" y="${y+4}" font-size="29" font-family="Noto Sans CJK TC,sans-serif" fill="#cbd5e1">${esc(r[0])}</text>
- <text x="580" y="${y+4}" font-size="${font}" font-weight="700" font-family="Noto Sans CJK TC,sans-serif" fill="#f8fafc">${esc(r[1])}</text>
- <text x="580" y="${y+29}" font-size="17" font-family="Noto Sans CJK TC,sans-serif" fill="#94a3b8">${esc(r[2])}</text>`;
+  const y=265+i*75,small=i===5||i===6;
+  const font=small?24:30;
+  return '<rect x="116" y="'+(y-38)+'" width="1318" height="69" rx="12" fill="'+(i%2?'#172b43':'#13243b')+'" stroke="#334155"/>'+
+   '<rect x="118" y="'+(y-36)+'" width="7" height="65" rx="3" fill="#38bdf8"/>'+
+   '<text x="150" y="'+(y+2)+'" font-size="25" font-family="Noto Sans CJK TC,sans-serif" fill="#cbd5e1">'+esc(r[0])+'</text>'+
+   '<text x="520" y="'+(y-5)+'" font-size="'+font+'" font-weight="700" font-family="Noto Sans CJK TC,sans-serif" fill="#f8fafc">'+esc(r[1])+'</text>'+
+   '<text x="520" y="'+(y+21)+'" font-size="17" font-family="Noto Sans CJK TC,sans-serif" fill="#94a3b8">'+esc(r[2])+'</text>';
  }).join('');
- return `<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
- <rect width="1920" height="1080" fill="#07111f"/><rect width="1920" height="14" fill="#38bdf8"/>
- <text x="115" y="91" fill="#e2e8f0" font-family="Noto Sans CJK TC,sans-serif" font-size="27">TAIWAN STOCK｜2026/11/02｜上市盤勢</text>
- <text x="115" y="160" fill="#fff" font-family="Noto Sans CJK TC,sans-serif" font-size="54" font-weight="bold">今日市場概況</text>
- <text x="115" y="210" fill="#9ddbf8" font-family="Noto Sans CJK TC,sans-serif" font-size="27">追蹤資金，解讀行情｜同日 TWSE 官方資料</text>
- ${rowSvg}
- <text x="117" y="781" font-size="21" fill="#94a3b8" font-family="Noto Sans CJK TC,sans-serif">漲跌家數採 TWSE「股票」欄；成交金額與法人採上市整體市場口徑。</text>
- 
- </svg>`;
+ const dateLabel=date.slice(0,4)+'/'+date.slice(4,6)+'/'+date.slice(6,8);
+ return '<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">'+
+ '<rect width="1920" height="1080" fill="#07111f"/><rect width="1920" height="14" fill="#38bdf8"/>'+
+ '<text x="115" y="91" fill="#e2e8f0" font-family="Noto Sans CJK TC,sans-serif" font-size="27">TAIWAN STOCK｜'+esc(dateLabel)+'｜上市盤勢</text>'+
+ '<text x="115" y="156" fill="#fff" font-family="Noto Sans CJK TC,sans-serif" font-size="52" font-weight="bold">今日市場概況</text>'+
+ '<text x="115" y="204" fill="#9ddbf8" font-family="Noto Sans CJK TC,sans-serif" font-size="26">追蹤資金，解讀行情｜TWSE 官方資料</text>'+
+ rowSvg+'<text x="117" y="800" font-size="18" fill="#94a3b8" font-family="Noto Sans CJK TC,sans-serif">來源：TWSE MI_INDEX／FMTQIK／BFI82U；漲跌家數與全市場成交口徑分開。</text></svg>';
 }
 
 function closingSummarySlide(scene){
