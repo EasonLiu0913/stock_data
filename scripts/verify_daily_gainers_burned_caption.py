@@ -40,7 +40,7 @@ for block in re.split(r"\n\s*\n",srt.strip()):
   times.append((v[0]*3600+v[1]*60+v[2]+v[3]/1000,v[4]*3600+v[5]*60+v[6]+v[7]/1000))
 assert times and times[-1][1]<=qa["duration_seconds"]+0.6
 def frame(fp,sec):
- p=subprocess.run(["ffmpeg","-v","error","-ss",str(sec),"-i",str(fp),"-vf","crop=1200:190:130:625","-frames:v","1","-f","image2pipe","-vcodec","png","-"],capture_output=True,check=True)
+ p=subprocess.run(["ffmpeg","-v","error","-ss",str(sec),"-i",str(fp),"-vf","crop=1200:190:130:840","-frames:v","1","-f","image2pipe","-vcodec","png","-"],capture_output=True,check=True)
  return Image.open(BytesIO(p.stdout)).convert("RGB")
 samples=[("opening",times[0]),("closing",times[-1])]
 evidence=[]
