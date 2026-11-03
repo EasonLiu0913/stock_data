@@ -14,8 +14,6 @@ on:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 # Serialize with every other workflow that can write the same market-summary artifact.
 # The retry/regenerate loop below remains as a second defense against unrelated main writers.
@@ -155,11 +153,10 @@ jobs:
           done
           exit 1
 
-  deploy:
-    needs: publish
-    if: needs.publish.result == 'success' && needs.publish.outputs.changed == 'true'
-    uses: ./.github/workflows/deploy-pages.yml
-    # Research dates are not prediction dates; deploy the latest complete prediction site.
+  # The news/summary job commits its validated artifacts to main.
+  # Changes to data_daily_gain_over_5/market-summary/** already trigger the
+  # canonical [00 網站部署] deploy-pages.yml push workflow. Do not invoke
+  # deploy-pages.yml again here: it creates a redundant full Pages build.
 
   schedule-timing-summary:
     # schedule-timing-summary:v1
