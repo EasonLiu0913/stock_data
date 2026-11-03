@@ -42,3 +42,9 @@ test('market opening narration is independent from news-to-voice verification',(
  a.scenes[0].narration='GitHub owns this opening';
  assert.equal(verify(a,news,ai).status,'PASS');
 });
+test('source name must match cited article, not merely any approved link',()=>{
+ const a=structuredClone(script);
+ const row=news.analyses.find(x=>x.code==='2468');
+ a.scenes[2].news_attributions.find(x=>x.code==='2468').url=row.sources.find(x=>x.title.includes('永豐金')).url;
+ assert.throws(()=>verify(a,news,ai),/spoken publisher does not match cited article title/);
+});
