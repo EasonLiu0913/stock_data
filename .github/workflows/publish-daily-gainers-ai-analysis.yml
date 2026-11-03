@@ -14,6 +14,7 @@ on:
       - 'scripts/publish_daily_gainers_unified_analysis.js'
       - 'scripts/build_daily_gainers_market_summary.js'
       - 'scripts/validate_daily_gainers_market_summary.js'
+      - '.github/workflows/publish-daily-gainers-ai-analysis.yml'
   schedule:
     - cron: '50 10 * * 1-5'
     - cron: '20 11 * * 1-5'
@@ -44,13 +45,27 @@ jobs:
       publish_ready: ${{ steps.pending.outputs.ready }}
     steps:
       - name: Checkout main with facts history
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0
+          filter: blob:none
+          sparse-checkout: |
+            scripts
+            config
+            data_daily_gain_over_5
+            research_pending/daily-gainers-ai
+            data_fubon
+            data_fubon_broker_details
+            data_twse_margin_balance
+            data_twse_mi_index
+            data_twse_foreign_investors
+            data_twse_investment_trust
+            data_twse_dealers
+          sparse-checkout-cone-mode: true
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@v4
         with:
           node-version: '24'
 
@@ -97,12 +112,25 @@ jobs:
               target_date="$(basename "$changed_path" .json)"
               mode="${mode:-pending_push}"
             else
-              target_date=""
-              mode="code_or_workflow_push"
-              echo "No pending AI file changed in this push after payload and git-diff checks; skip data publication."
-              echo "target_date=" >> "$GITHUB_OUTPUT"
-              echo "mode=$mode" >> "$GITHUB_OUTPUT"
-              exit 0
+              # A workflow-only change is an explicit retry of the newest existing pending AI candidate.
+              workflow_changed="$(jq -r '[.commits[]? | (.added[]?, .modified[]?)] | any(. == ".github/workflows/publish-daily-gainers-ai-analysis.yml")' "$GITHUB_EVENT_PATH")"
+              if [ "$workflow_changed" = true ]; then
+                target_date="$(find research_pending/daily-gainers-ai -maxdepth 1 -type f -name '20??????.json' -printf '%f\n' 2>/dev/null | sed 's/\.json$//' | sort | tail -1)"
+                mode="workflow_recheck"
+                echo "Workflow retry for latest pending date: $target_date"
+                if [ -z "$target_date" ]; then
+                  echo "target_date=" >> "$GITHUB_OUTPUT"
+                  echo "mode=$mode" >> "$GITHUB_OUTPUT"
+                  exit 0
+                fi
+              else
+                target_date=""
+                mode="code_or_workflow_push"
+                echo "No pending AI file changed in this push after payload and git-diff checks; skip data publication."
+                echo "target_date=" >> "$GITHUB_OUTPUT"
+                echo "mode=$mode" >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
             fi
           elif [ "$EVENT_NAME" = "schedule" ]; then
             occurrence_json="$(node scripts/resolve_scheduled_collection_date.js \
