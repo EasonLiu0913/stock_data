@@ -21,6 +21,8 @@ function verify(script,news,ai){
    if(!chapter.stock_codes.map(String).includes(String(entry.code)))throw Error('news attribution outside scene: '+entry.code);
    const row=all.get(String(entry.code));if(!row)throw Error('missing official researched stock news: '+entry.code);
    if(!row.sources?.some(s=>s.url===entry.url&&s.published_at===entry.published_at))throw Error('news source/time not grounded: '+entry.code);
+   const matched=row.sources.find(s=>s.url===entry.url&&s.published_at===entry.published_at);
+   if(!matched.title?.includes(entry.source))throw Error('spoken publisher does not match cited article title: '+entry.code);
    if(!entry.source||!entry.spoken_anchor||!text.includes(entry.source)||!text.includes(entry.spoken_anchor))throw Error('news source or key event not spoken: '+entry.code);
    if(Date.parse(entry.published_at)>Date.parse(script.target_date.slice(0,4)+'-'+script.target_date.slice(4,6)+'-'+script.target_date.slice(6,8)+'T13:30:00+08:00')&&
       !/收盤後|晚於當日收盤|已經過了收盤/.test(text))throw Error('after-close news must not imply intraday catalyst: '+entry.code);
