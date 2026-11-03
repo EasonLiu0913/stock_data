@@ -27,6 +27,10 @@ assert len(codes)==len(set(codes))==raw["stock_count"]
 assert not scenes[0]["stock_codes"] and not scenes[-1]["stock_codes"]
 assert 30<=timing["scenes"][0]["duration_seconds"]<=90
 assert proof["status"]=="BURN_EXECUTED_VISUAL_QA_PENDING"
+assert proof["subtitle_region"]["font_size"]==21
+assert proof["subtitle_region"]["margin_left"]==proof["subtitle_region"]["margin_right"]==60
+assert proof["subtitle_region"]["ass_outline"]==1
+assert proof["subtitle_region"]["max_lines"]==2
 assert video.exists() and pre.exists()
 assert hashlib.sha256(video.read_bytes()).hexdigest()==proof["mp4_sha256"]
 assert hashlib.sha256((root/f"daily-gainers-{date}.zh-TW.srt").read_bytes()).hexdigest()==proof["srt_sha256"]
