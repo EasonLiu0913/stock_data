@@ -114,6 +114,11 @@ jobs:
             else
               # A workflow-only change is an explicit retry of the newest existing pending AI candidate.
               workflow_changed="$(jq -r '[.commits[]? | (.added[]?, .modified[]?)] | any(. == ".github/workflows/publish-daily-gainers-ai-analysis.yml")' "$GITHUB_EVENT_PATH")"
+              # GitHub push payload may omit/truncate commits on large repositories.
+              # Verify the HEAD tree delta without relaxing the facts snapshot gate.
+              if [ "$workflow_changed" != true ] && git diff-tree --no-commit-id --name-only -r HEAD | grep -Fxq '.github/workflows/publish-daily-gainers-ai-analysis.yml'; then
+                workflow_changed=true
+              fi
               if [ "$workflow_changed" = true ]; then
                 target_date="$(find research_pending/daily-gainers-ai -maxdepth 1 -type f -name '20??????.json' -printf '%f\n' 2>/dev/null | sed 's/\.json$//' | sort | tail -1)"
                 mode="workflow_recheck"
