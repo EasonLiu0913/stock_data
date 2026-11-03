@@ -32,5 +32,29 @@ for (const [i,s] of script.scenes.entries()) {
   chars += [...effectiveNarration].length;
 }
 check(chars >= 1100 && chars <= 5500, 'narration length outside video bounds: ' + chars);
+// Mandatory genuine market opening, before the first stock-list scene.
+// Do not confuse official TWSE '股票' breadth with the 29 strong-stock subset.
+const openingPath=path.join(root,'market-opening-video',date+'.json');
+check(fs.existsSync(openingPath),'missing date-specific official market opening: '+openingPath);
+const market=read(openingPath),first=script.scenes[0];
+check(market.target_date===date && market.status==='verified_official_market_aggregate','market-opening data is not date-verified');
+check(market.market==='TWSE' && market.breadth?.scope==='TWSE_MI_INDEX_OFFICIAL_STOCK_COLUMN' && market.trading?.scope==='TWSE_WHOLE_MARKET' && market.institutional?.scope==='TWSE_BFI82U_TWD','invalid market scopes');
+for(const [group,keys] of Object.entries({breadth:['advancers','decliners','unchanged','limit_up'],index:['close','change_points','change_pct'],trading:['turnover_twd'],institutional:['foreign_net_twd','investment_trust_net_twd','dealers_net_twd','total_net_twd']})){
+  check(market[group]?.source_date===date,'market date mismatch: '+group);
+  for(const key of keys)check(Number.isFinite(market[group]?.[key]),'missing market field '+group+'.'+key);
+}
+check(market.source_manifest?.length>=3 && market.source_manifest.every(x=>x.source_date===date && x.source && x.url),'missing market source provenance');
+check(Math.abs(market.institutional.foreign_net_twd+market.institutional.investment_trust_net_twd+market.institutional.dealers_net_twd-market.institutional.total_net_twd)<1,'institutional net mismatch');
+check(Math.abs(market.index.close-market.index.previous_close-market.index.change_points)<0.02,'index mismatch');
+check(first?.scene_type==='market_opening' && (!first.stock_codes || first.stock_codes.length===0),'first scene must be market opening, no individual stocks');
+check(first.title.includes('市場') || first.title.includes('大盤'),'market opening title missing');
+const requiredSpoken=['上漲','下跌','平盤','漲停','加權指數','成交金額','外資','投信','自營商','合計'];
+for(const word of requiredSpoken)check(first.narration.includes(word),'market-opening narration missing '+word);
+check(first.market_opening_claims && typeof first.market_opening_claims==='object','market-opening claims missing');
+const officialClaims={advancers:market.breadth.advancers,decliners:market.breadth.decliners,unchanged:market.breadth.unchanged,limit_up:market.breadth.limit_up,index_close:market.index.close,index_change_points:market.index.change_points,index_change_pct:market.index.change_pct,turnover_twd:market.trading.turnover_twd,foreign_net_twd:market.institutional.foreign_net_twd,investment_trust_net_twd:market.institutional.investment_trust_net_twd,dealers_net_twd:market.institutional.dealers_net_twd,total_net_twd:market.institutional.total_net_twd};
+for(const [key,value] of Object.entries(officialClaims))check(first.market_opening_claims[key]===value,'market opening claim differs from official snapshot: '+key);
+for(const [key,value] of Object.entries(first.spoken_values||{}))check(typeof value==='string' && first.narration.includes(value),'spoken market value missing from narration: '+key);
+for(const key of ['advancers','decliners','unchanged','limit_up','index_close','index_change_points','index_change_pct','turnover_twd','foreign_net_twd','investment_trust_net_twd','dealers_net_twd','total_net_twd'])check(typeof first.spoken_values?.[key]==='string' && first.spoken_values[key].length>0,'market value spoken evidence absent: '+key);
+check(script.scenes.slice(1).some(x=>Array.isArray(x.stock_codes)&&x.stock_codes.length>0),'market opening has no subsequent stock chapter');
 check(script.privacy_status === 'private', 'video must be private');
 console.log(JSON.stringify({target_date:date,scenes:script.scenes.length,narration_chars:chars,status:'PASS'}));
