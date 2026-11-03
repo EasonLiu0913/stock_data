@@ -81,6 +81,6 @@ async function execute({root=ROOT,date,executeAgent=false,key=process.env.OPENAI
 }
 if(require.main===module){
  const a=process.argv.slice(2),v=k=>a.includes(k)?a[a.indexOf(k)+1]:null;
- execute({date:v('--date'),executeAgent:a.includes('--execute')}).then(x=>console.log(JSON.stringify(x))).catch(e=>{console.error(e.message);process.exitCode=1});
+ execute({root:v('--root')||ROOT,date:v('--date'),executeAgent:a.includes('--execute'),outputRoot:v('--output-root')||process.env.MVP10_OUTPUT_ROOT||'/tmp/mvp10-news-agent'}).then(x=>console.log(JSON.stringify(x))).catch(e=>{console.error(e.message);process.exitCode=1});
 }
 module.exports={parseDate,sourceData,exactMatch,extractJson,responseText,execute,generateBatch};
