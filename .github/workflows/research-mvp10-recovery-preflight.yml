@@ -59,7 +59,12 @@ jobs:
         with:
           node-version: '24'
       - name: Reuse Recovery v2 nine-case missing-only tests
-        run: node recovery-v2/scripts/research/experiment02_missing_only.test.js
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p output/mvp10-recovery
+          git -C recovery-v2 rev-parse HEAD > output/mvp10-recovery/recovery-v2-source-sha.txt
+          node recovery-v2/scripts/research/experiment02_missing_only.test.js | tee output/mvp10-recovery/recovery-v2-test.log
       - name: Run fifteen offline negative and resumption tests
         working-directory: research
         run: |
