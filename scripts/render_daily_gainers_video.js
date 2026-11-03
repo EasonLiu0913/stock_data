@@ -130,9 +130,9 @@ const timings = plan.scenes.map(scene => {
 let fullDuration = 0;
 for (const timing of timings) {
   timing.start = fullDuration;
-  fullDuration += timing.duration + 0.15;
+  fullDuration += timing.duration;
 }
-// ChatGPT-authored scripts choose scene titles and counts freely.
+// Displayed total must not add the 0.15-second render padding for each scene.\n// The final MP4 length is independently measured and validated after render.\n// ChatGPT-authored scripts choose scene titles and counts freely.
 // Use every actual scene as a progress segment; never assume legacy fixed headings.
 if (!Array.isArray(plan.scenes) || plan.scenes.length < 1) {
   throw new Error('Video plan has no scenes');
@@ -141,7 +141,7 @@ const segments = timings.map((timing, index) => ({
   index: index + 1,
   title: String(timing.scene.title || `第 ${index + 1} 段`),
   start: timing.start,
-  end: timing.start + timing.duration + 0.15
+  end: timing.start + timing.duration
 }));
 const segmentCount = segments.length;
 const activeDefs = segments.map(seg => ({
