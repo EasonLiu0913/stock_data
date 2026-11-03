@@ -28,3 +28,22 @@ Owner approval: 2026-10-11. Canonical durable rule for the active `daily-gainers
 
 ## Rule retention and change control
 This file is the durable source of truth for the owner's editorial/delivery decisions, not chat memory. `AGENTS.md` makes it a required read; the canonical Handoff records its adoption and implementation status. Future changes require an explicit owner-approved versioned amendment on remote main; never silently overwrite the intent or mistake example figures for daily constants.
+
+
+## Market Opening Master fixed-row successor — owner-approved 2026-11-03
+
+For **every trading-date ChatGPT Agent script**, the `market_opening` first scene MUST use the date-verified TWSE market-opening snapshot as one semantic source. The Agent may author thoughtful analysis but MUST NOT choose or reorder the display fields. The single approved Dashboard remains the **current list-row design**, including the opening and closing scene; do not restore historical quadrant/card dashboards. The seven row labels, exact order, and required interpretation are:
+
+1. **加權指數** — official closing level, change points, and change percent (correct direction).
+2. **上漲／下跌** — TWSE official stock-column breadth with 家.
+3. **平盤／漲停** — stock-column unchanged and limit-up counts with 家.
+4. **全市場成交金額** — TWSE whole-market TWD value, and ratio to the previous five trading-day average.
+5. **三大法人合計** — same-day combined institutional buy/sell net amount in TWD.
+6. **外資／投信／自營商** — separately label each same-day group's buy/sell net TWD amount, not an inferred flow of individual-stock shares.
+7. **市場強弱摘要** — a sourced, conditional, concise qualitative conclusion based jointly on breadth, index, turnover and institutions; do not force strength/weakness when directions disagree.
+
+**Agent prompt — mandatory content contract:** Before writing narration, retrieve the date-specific official `market-opening-video/YYYYMMDD.json`; inspect `breadth`, `index`, `trading`, and `institutional` and their dates/scopes. Produce scene one with `scene_type: market_opening`, `stock_codes: []`, `market_opening_claims` and `spoken_values` for all 12 numeric fields (advancers, decliners, unchanged, limit_up, index_close, index_change_points, index_change_pct, turnover_twd, foreign_net_twd, investment_trust_net_twd, dealers_net_twd, total_net_twd). The spoken script MUST explicitly mention ALL these values in natural Mandarin, their direction and units; also mention the turnover's prior-five-session comparison, and conclude with market-strength/weakness/dispersion reasoning. Preserve the four approved opening lines, 30–90 seconds real audio and exact spoken-to-caption semantic parity. Treat the dashboard as a render of verified data, never as prose supplied by the Agent. Do not invent numerical facts, copy previous trading day, drop any required field, or infer market-wide counterparty activity. Subsequent scenes must cover all date-verified eligible stocks, and closing summary cannot display an arbitrary stock list.
+
+**Fail-closed policy:** Validator must verify each required `spoken_values` phrase really appears in the narration, corresponding `market_opening_claims` equal same-date source fields, five-day average ratio is arithmetically consistent, and fixed row order/value coverage appears in the dashboard; missing or contradictory fields cannot PASS. Missing official input must fail and request source recovery. This successor governs future scripts; older successful MP4s are historical evidence, not retroactively rewritten.
+
+**Embedded zh-TW subtitle policy:** 1080p, centered with symmetric left/right margins, larger readable white text with dark outline, maximum two lines inside the reserved lower subtitle zone beneath the progress bar without overlapping any card or VTuber. Preserve independent SRT; actual FFmpeg burned-in text must be verified with frame evidence. Media and upload gates remain unchanged; main is the single intended integrated implementation, and an isolated test does not substitute for main proof.
