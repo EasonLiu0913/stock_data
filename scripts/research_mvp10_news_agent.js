@@ -48,7 +48,7 @@ async function execute({root=ROOT,date,executeAgent=false,key=process.env.OPENAI
  const existing=path.join(root,'data_daily_gain_over_5','analysis-news',date+'.json');
  const dest=path.join(outputRoot,'data_daily_gain_over_5','analysis-news',date+'.json');
  const receiptFile=path.join(outputRoot,'receipt.json');
- assert(path.resolve(outputRoot)!==path.resolve(root)&&!path.resolve(root).startsWith(path.resolve(outputRoot)+path.sep),'ISOLATED_OUTPUT_REQUIRED');
+ assert(path.resolve(outputRoot)!==path.resolve(root)&&!path.resolve(outputRoot).startsWith(path.resolve(root)+path.sep)&&!path.resolve(root).startsWith(path.resolve(outputRoot)+path.sep),'ISOLATED_OUTPUT_REQUIRED');
  fs.mkdirSync(path.dirname(dest),{recursive:true});
  if(fs.existsSync(existing)){
   const p=JSON.parse(fs.readFileSync(existing,'utf8'));
