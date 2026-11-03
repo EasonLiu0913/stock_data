@@ -43,7 +43,7 @@ if(fs.existsSync(tmp)||fs.existsSync(archive))throw Error('Prior burn attempt mu
 const srtArg=srt.replace(/\\/g,'/').replace(/:/g,'\\:').replace(/'/g,"\\'");
 const force='FontName=Noto Sans CJK TC,FontSize=35,PrimaryColour=&H00FFFFFF,OutlineColour=&H00121A2B,BorderStyle=1,Outline=2,Shadow=0,Alignment=2,MarginL=130,MarginR=500,MarginV=260';
 run('ffmpeg',['-y','-hide_banner','-loglevel','error','-i',video,
- '-vf','subtitles='+srtArg+':force_style='+force,
+ '-vf',"subtitles="+srtArg+":force_style='"+force+"'",
  '-c:v','libx264','-preset','veryfast','-crf','19','-c:a','copy','-movflags','+faststart',tmp]);
 const check=probe(tmp),newDuration=Number(check.format.duration);
 if(Math.abs(newDuration-sourceDuration)>0.25)throw Error('Burn changed duration unexpectedly');
