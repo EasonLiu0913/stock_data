@@ -74,6 +74,7 @@ check(Number.isFinite(market.trading.turnover_ma5_twd) && market.trading.turnove
 check(Number.isFinite(market.trading.turnover_ratio_ma5),'missing 5-trading-day turnover comparison');
 check(Math.abs(market.trading.turnover_twd/market.trading.turnover_ma5_twd-market.trading.turnover_ratio_ma5)<0.0001,'five-day turnover ratio mismatch');
 check(/市場|盤勢|資金分歧|偏強|偏弱|震盪/.test(first.narration.slice(-120)),'market strength summary absent from opening commentary');
+check(/前五個交易日|前 5 個交易日|近五個交易日|近 5 個交易日|五日均值|5日均值/.test(first.narration),'five-day turnover comparison missing from spoken opening');
 check(typeof first.narration==='string' && first.narration.length>0,'missing opening script');
 check(first.market_opening_claims && typeof first.market_opening_claims==='object','market-opening claims missing');
 const officialClaims={advancers:market.breadth.advancers,decliners:market.breadth.decliners,unchanged:market.breadth.unchanged,limit_up:market.breadth.limit_up,index_close:market.index.close,index_change_points:market.index.change_points,index_change_pct:market.index.change_pct,turnover_twd:market.trading.turnover_twd,foreign_net_twd:market.institutional.foreign_net_twd,investment_trust_net_twd:market.institutional.investment_trust_net_twd,dealers_net_twd:market.institutional.dealers_net_twd,total_net_twd:market.institutional.total_net_twd};
