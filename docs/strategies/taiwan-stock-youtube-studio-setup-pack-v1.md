@@ -30,7 +30,7 @@
 - `banner_safe_area_preview.png`：2560 × 1440，安全區外框預覽，僅供驗收，**不要上傳成正式 Banner**。
 - `asset_manifest.json`：檔案尺寸／大小／SHA-256 清冊。
 
-本次交付素材包採 **`TAIWAN_STOCK_brand_assets_v1_no_circle_preview.zip`**，不包含 `avatar_circle_preview.png`；其餘檔案依原尺寸維持。這些二進位圖片在本次 ChatGPT 產出作為可下載交付，**尚未聲稱已保存進 GitHub 倉庫**。Owner 已完成頭像、Banner 及整包素材視覺驗收；**仍未授權直接上傳 YouTube**。進行正式 GitHub 入庫時，應將確認後主圖與 SHA 綁定到固定資產路徑，不能只保存 Prompt。
+本次交付素材包採 **`TAIWAN_STOCK_brand_assets_v1_no_circle_preview.zip`**，不包含 `avatar_circle_preview.png`；其餘檔案依原尺寸維持。目前三張正式 PNG 已實際保存到 GitHub main，並經 Git Blob SHA 與 byte size 驗證，Commit `60fa00783c4c2fdeb8c6f69fadc72c94fb672ab8`。Owner 已完成頭像、Banner 及整包素材視覺驗收；**仍未授權直接上傳 YouTube**。進行正式 GitHub 入庫時，應將確認後主圖與 SHA 綁定到固定資產路徑，不能只保存 Prompt。
 
 **色彩及尺寸**：詳見主文件第 12 節；Logo 不是重新設計，保持一條 N 型紅色折線、向右上箭頭、白色 TS、深海軍藍全幅底。
 
@@ -58,14 +58,22 @@ Logo 放左側。Banner 不填未經驗證的固定發布時間，避免日後�
 
 ## 7. 安全界線
 
-不修改現有 YouTube 頻道；不將 `GiWA60DJoWI` 從私人改公開；不擴大現有單次私人試傳的授權；不改動日常影片來源／事實／字幕／市場開場 A/B 與發佈安全鎖。此設定包僅供 Owner 核准後再逐項套用。
+僅限經 Owner 2026-11-04 新授權的 Banner／繁體中文簡介修改；不將 `GiWA60DJoWI` 從私人改公開；不擴大現有單次私人試傳的授權；不改動日常影片來源／事實／字幕／市場開場 A/B 與發佈安全鎖。此設定包僅供 Owner 核准後再逐項套用。
 
 ## 8. 2026-11-04 頭像驗收補充
 
-Owner 確認採用 **`youtube_avatar_800.png`**；不需要 **`avatar_circle_preview.png`**。正式 YouTube 頭像保持正方形源圖，YouTube 介面可能施加圓形顯示遮罩，但**不另外製作、顯示或交付圓形預覽圖片**。Banner 與現有素材包已由 Owner 核准（2026-11-04）；目前未套用 YouTube。此變更僅限文件及交付素材，不修改 YouTube 頻道。
+Owner 確認採用 **`youtube_avatar_800.png`**；不需要 **`avatar_circle_preview.png`**。正式 YouTube 頭像保持正方形源圖，YouTube 介面可能施加圓形顯示遮罩，但**不另外製作、顯示或交付圓形預覽圖片**。Banner 與現有素材包已由 Owner 核准（2026-11-04）；Banner 之後已完成 YouTube API 寫入與獨立讀回驗證。頭像仍待 YouTube Studio 套用。此變更僅限文件及交付素材，不修改 YouTube 頻道。
 
 ## 9. 2026-11-04 Banner 與素材包最終視覺驗收
 
 Owner 確認：**`youtube_banner_2560x1440.png` 可以採用，且 `TAIWAN_STOCK_brand_assets_v1_no_circle_preview.zip` 內目前素材全數 OK。** `youtube_avatar_800.png` 維持唯一採用的正式頭像；**不使用、也不重新交付 `avatar_circle_preview.png`**。後續品牌素材以此版本作為已驗收基準，不再無故重新設計。
 
-驗收屬於**設計內容與交付版本**；尚未核實圖片二進位內容已入庫 GitHub，更未修改 YouTube 頻道。待使用者另外授權後才處理實際頻道上傳、Handle、簡介與首頁設定。
+驗收屬於**設計內容與交付版本**；三張正式 PNG 於同日完成 GitHub 入庫；YouTube Banner 與頻道簡介也已寫入並經 API 讀回。頻道名稱、Handle、頭像及首頁設定尚待後續完成。
+
+## 10. 2026-11-04 GitHub 原始圖片入庫及 YouTube 實際設定回讀（取代前述舊狀態）
+
+**GitHub 已完成**：Approved PNG 主檔、800×800 頭像與 2560×1440 Banner 三張以未修改原始 bytes 傳入 `assets/youtube-brand/approved/`，Commit `60fa00783c4c2fdeb8c6f69fadc72c94fb672ab8`；官方 Git Tree 回讀 Blob SHA 各為 `0fc1b58d0de5e1e0c2fc4d96161b36a6f3a92244`、`0b6d480fcf525d8081b72d185aeb210d17cc6925`、`23e86b67555b6afcc8a91d7420f93be0e9733dd9`。沒有採用 `avatar_circle_preview.png`。
+
+**YouTube 已完成並讀回（官方 OAuth GET）**：頻道 ID `UCL9fFDhPlFZDTu2AeydDRBw`，本次一次性更新 Banner 和繁體中文頻道簡介。寫入 Run `41812817809` 因**立即讀回延遲**於最後一步報 `DESCRIPTION_READBACK_MISMATCH`，其後獨立唯讀 Run `41812910495` SUCCESS，顯示說明欄 234 個字元、Banner 已配置；官方回讀的完整簡介 SHA-256 `713dd9087d95803efd494df5fa5ad8a2185bdfa1c4f8f2f728b9420ba8c370d8`，與本次寫入文字一致。原私人影片 `GiWA60DJoWI` 仍維持 `private`。這是「外部狀態已生效、原寫入 CI 即時驗證失敗」的情況，不應把原 CI 當完整 PASS，也不應因此重複寫入。
+
+**仍待 YouTube Studio 手動設定**：目前官方回讀頻道顯示名稱仍是 `TAIWANSTOCK`（Owner 指定值 `TAIWAN STOCK｜台股資金觀察` 尚未套用）、現有 Handle `@user-mx6if9rd6h`（候選 `@TaiwanStockTW` 可用性未確認）、頻道頭像尚未套用已核准的 `youtube_avatar_800.png`。YouTube Data API `channels.update` 不提供主要顯示名稱、Handle 或頭像圖的直接修改；這些需 YouTube Studio UI。首頁播放清單及公開影片授權亦未修改。
