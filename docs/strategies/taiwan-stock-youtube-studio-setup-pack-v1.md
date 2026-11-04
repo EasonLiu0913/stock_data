@@ -24,13 +24,13 @@
 ## 3. 已準備的圖片規格與交付說明
 
 - `logo_master_1024.png`：1024 × 1024，從使用者選定的最後一張 Logo 原圖等比例高品質縮圖。
-- `youtube_avatar_800.png`：800 × 800，上傳用正方形頭像。
-- `avatar_circle_preview.png`：800 × 800，模擬圓形頭像裁切，僅供驗收。
+- **`youtube_avatar_800.png`：800 × 800，Owner 已核准的唯一頭像成品**，保留正方形背景，不另做圓形版本。
+- **`avatar_circle_preview.png`：Owner 明確不要，已從新版品牌素材包及正式交付清單排除；不再呈現或建議使用。**
 - `youtube_banner_2560x1440.png`：2560 × 1440，使用選定 Logo、深藍／紅／白品牌色、已核准中文名稱的 Banner 草稿；全部重要字與 Logo 位於中央安全區。
 - `banner_safe_area_preview.png`：2560 × 1440，安全區外框預覽，僅供驗收，**不要上傳成正式 Banner**。
 - `asset_manifest.json`：檔案尺寸／大小／SHA-256 清冊。
 
-這些二進位圖片在本次 ChatGPT 產出作為可下載交付，**尚未聲稱已保存進 GitHub 倉庫**。未經 Owner 視覺驗收，不得直接上傳 YouTube。進行正式 GitHub 入庫時，應將確認後主圖與 SHA 綁定到固定資產路徑，不能只保存 Prompt。
+本次交付素材包採 **`TAIWAN_STOCK_brand_assets_v1_no_circle_preview.zip`**，不包含 `avatar_circle_preview.png`；其餘檔案依原尺寸維持。這些二進位圖片在本次 ChatGPT 產出作為可下載交付，**尚未聲稱已保存進 GitHub 倉庫**。未經 Owner 視覺驗收，不得直接上傳 YouTube。進行正式 GitHub 入庫時，應將確認後主圖與 SHA 綁定到固定資產路徑，不能只保存 Prompt。
 
 **色彩及尺寸**：詳見主文件第 12 節；Logo 不是重新設計，保持一條 N 型紅色折線、向右上箭頭、白色 TS、深海軍藍全幅底。
 
@@ -59,3 +59,7 @@ Logo 放左側。Banner 不填未經驗證的固定發布時間，避免日後�
 ## 7. 安全界線
 
 不修改現有 YouTube 頻道；不將 `GiWA60DJoWI` 從私人改公開；不擴大現有單次私人試傳的授權；不改動日常影片來源／事實／字幕／市場開場 A/B 與發佈安全鎖。此設定包僅供 Owner 核准後再逐項套用。
+
+## 8. 2026-11-04 頭像驗收補充
+
+Owner 確認採用 **`youtube_avatar_800.png`**；不需要 **`avatar_circle_preview.png`**。正式 YouTube 頭像保持正方形源圖，YouTube 介面可能施加圓形顯示遮罩，但**不另外製作、顯示或交付圓形預覽圖片**。Banner 仍是草稿、尚待核准。此變更僅限文件及交付素材，不修改 YouTube 頻道。
