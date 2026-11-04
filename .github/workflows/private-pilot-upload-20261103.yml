@@ -1,0 +1,124 @@
+name: "[08 影片] 20261103 owner-approved one-time PRIVATE YouTube pilot"
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'video_upload_jobs/daily-gainers/20261103-owner-private-pilot.json'
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: youtube-private-pilot-20261103
+  cancel-in-progress: false
+jobs:
+  private-upload:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - name: Checkout upload scripts and explicit owner request
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          sparse-checkout: |
+            scripts/upload_youtube.js
+            scripts/upload_youtube_caption.js
+            video_upload_jobs/daily-gainers/20261103-owner-private-pilot.json
+          sparse-checkout-cone-mode: false
+      - name: Confirm exact once-only scope and no prior receipt
+        id: guard
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs=require('fs');
+          const r=JSON.parse(fs.readFileSync('video_upload_jobs/daily-gainers/20261103-owner-private-pilot.json','utf8'));
+          if(r.target_date!=='20261103'||r.source_run_id!==41803482114||r.privacy!=='private'||r.approval!=='owner_requested_one_time_private_upload')throw Error('Owner request scope drift');
+          NODE
+          if gh api "repos/$GITHUB_REPOSITORY/contents/video_upload_receipts/daily-gainers/20261103.json?ref=main" >/dev/null 2>&1; then
+            echo "Receipt already exists. Never upload duplicate."
+            echo "already=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "already=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Download immutable successful Render-only artifact
+        if: steps.guard.outputs.already == 'false'
+        uses: actions/download-artifact@v4
+        with:
+          name: daily-gainers-20261103-render-only
+          path: pilot
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: EasonLiu0913/stock_data
+          run-id: 41803482114
+      - name: Verify artifact SHA, 5 instruments, opening, duration and SRT ending
+        if: steps.guard.outputs.already == 'false'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs=require('fs'),crypto=require('crypto'),p='pilot/';
+          const load=f=>JSON.parse(fs.readFileSync(p+f,'utf8'));
+          const sum=fs.readFileSync(p+'sha256sums.txt','utf8').trim().split(/\n/);
+          for(const line of sum){const [hash,file]=line.trim().split(/\s+/);const name=file.split('/').pop();const actual=crypto.createHash('sha256').update(fs.readFileSync(p+name)).digest('hex');if(actual!==hash)throw Error('SHA_FAIL:'+name);}
+          const hash=f=>crypto.createHash('sha256').update(fs.readFileSync(p+f)).digest('hex');
+          if(hash('daily-gainers-20261103.mp4')!=='3d5d1f2fcdaf6d3a57575faadd807bec8abdc54fc3c4d8665dffa571c2fa4aad')throw Error('SOURCE_VIDEO_DRIFT');
+          if(hash('daily-gainers-20261103.zh-TW.srt')!=='4334cc05b559cd3bba053280e37897f04ee6d94938507ea97e23781f82bd8398')throw Error('SOURCE_CAPTION_DRIFT');
+          const q=load('qa.json'),plan=load('plan.json'),db=load('list-dashboard-manifest.json');
+          if(q.target_date!=='20261103'||!q.duration_pass||q.duration_seconds<300||q.duration_seconds>600||q.scene_count!==5||q.video_size_stage!=='final_burned_mp4'||fs.statSync(p+'daily-gainers-20261103.mp4').size!==q.file_size_bytes)throw Error('QA_FAIL');
+          if(plan.target_date!=='20261103'||plan.scenes.length!==5||plan.scenes[0].scene_type!=='market_opening'||plan.scenes.at(-1).scene_type!=='summary')throw Error('SCENE_FAIL');
+          if(db.dashboard!=='owner-approved-multi-stock-list-only'||JSON.stringify(db.stock_codes)!==JSON.stringify(['6467','6431','1802','1435','00686R']))throw Error('STOCK_COVERAGE_FAIL');
+          const srt=fs.readFileSync(p+'daily-gainers-20261103.zh-TW.srt','utf8');
+          if(!srt.trimEnd().endsWith('追蹤資金，解讀行情。感謝收看，我們下次見。'))throw Error('ENDING_FAIL');
+          if(load('burned-caption-proof.json').publication_authorized!==false)throw Error('UNEXPECTED_RELEASE_STATE');
+          console.log('PRIVATE_PILOT_SOURCE_QA_PASS');
+          NODE
+          node - <<'NODE'
+          const fs=require('fs');fs.writeFileSync('pilot/metadata.json',JSON.stringify({
+            title:'【私人試傳】2026/11/03 TAIWAN STOCK｜5% 強勢標的',
+            description:'2026/11/03 TAIWAN STOCK 每日強勢標的研究。\n涵蓋 6467 泰合、6431 光麗-KY、1802 台玻、1435 中福及 00686R 群益臺灣加權反1（反向ETF）。\n影片為私人驗收用途；資訊僅供研究參考，非投資建議。\n影片包含內嵌繁體中文字幕，並另附繁體中文 CC。',
+            tags:['台股','TAIWAN STOCK','5%強勢標的','00686R'],
+            categoryId:'25',privacyStatus:'private'
+          },null,2)+'\n');
+          NODE
+      - name: Upload exactly one PRIVATE YouTube video
+        if: steps.guard.outputs.already == 'false'
+        id: youtube
+        env:
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: node scripts/upload_youtube.js pilot/daily-gainers-20261103.mp4 pilot/metadata.json
+      - name: Persist video ID immediately to prevent duplicate uploads
+        if: steps.guard.outputs.already == 'false' && steps.youtube.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VIDEO_ID: ${{ steps.youtube.outputs.video_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$VIDEO_ID"
+          path="video_upload_receipts/daily-gainers/20261103.json"
+          if gh api "repos/$GITHUB_REPOSITORY/contents/$path?ref=main" >/dev/null 2>&1; then echo 'Duplicate receipt; abort'; exit 1; fi
+          json="$(jq -n --arg id "$VIDEO_ID" '{target_date:"20261103",youtube_video_id:$id,source_run_id:"41803482114",upload_status:"video_uploaded_captions_pending",privacy:"private",owner_authorization:"2026-11-04 one-time private pilot"}')"
+          gh api -X PUT "repos/$GITHUB_REPOSITORY/contents/$path" -f message="video: receipt for owner-approved private 20261103 upload" -f content="$(printf '%s' "$json" | base64 -w0)" -f branch=main >/dev/null
+      - name: Upload independent Traditional Chinese caption track
+        if: steps.guard.outputs.already == 'false' && steps.youtube.outcome == 'success'
+        env:
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: node scripts/upload_youtube_caption.js "${{ steps.youtube.outputs.video_id }}" pilot/daily-gainers-20261103.zh-TW.srt zh-TW 繁體中文
+      - name: Mark receipt complete after caption upload
+        if: steps.guard.outputs.already == 'false' && steps.youtube.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          path="video_upload_receipts/daily-gainers/20261103.json"
+          current="$(gh api "repos/$GITHUB_REPOSITORY/contents/$path?ref=main")"
+          sha="$(printf '%s' "$current" | jq -r '.sha')"
+          json="$(printf '%s' "$current" | jq -r '.content' | base64 -d | jq '.upload_status="complete" | .captions="zh-TW"')"
+          gh api -X PUT "repos/$GITHUB_REPOSITORY/contents/$path" -f message="video: complete private YouTube pilot with CC" -f sha="$sha" -f content="$(printf '%s' "$json" | base64 -w0)" -f branch=main >/dev/null
+          echo "PRIVATE_VIDEO_UPLOADED: https://www.youtube.com/watch?v=${{ steps.youtube.outputs.video_id }}" >> "$GITHUB_STEP_SUMMARY"
