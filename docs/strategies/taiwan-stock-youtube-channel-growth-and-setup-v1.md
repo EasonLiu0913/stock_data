@@ -323,3 +323,11 @@ YouTube Studio → **自訂（Customization）** → **個人資料（Profile）
 **2026-11-04 頭像交付決策**：Owner 明確核准 `youtube_avatar_800.png`，並拒絕 `avatar_circle_preview.png`。自此正式頭像素材包不納入圓形預覽圖；這不影響 YouTube 平台本身可能採用圓形遮罩的顯示方式。Banner 於同日已完成 Owner 驗收。下載素材包以 `TAIWAN_STOCK_brand_assets_v1_no_circle_preview.zip` 為準。
 
 **2026-11-04 品牌素材整包驗收**：Owner 已確認 `youtube_banner_2560x1440.png` 與整份 `TAIWAN_STOCK_brand_assets_v1_no_circle_preview.zip` 均 OK。`youtube_avatar_800.png` 為已核准正式頭像，排除 `avatar_circle_preview.png`；日後製作沿用此定案版本。此核准**不等同於已將圖片二進位主檔存入 GitHub、已修改 YouTube Studio 或已取得公開發布權限**。
+
+## 14. 2026-11-04 實際 GitHub 入庫與 YouTube 頻道設定進度（最新）
+
+- **GitHub 品牌圖片已保存**：`assets/youtube-brand/approved/logo_master_1024.png`、`youtube_avatar_800.png`、`youtube_banner_2560x1440.png`，入庫 Commit `60fa00783c4c2fdeb8c6f69fadc72c94fb672ab8`；Git Blob SHA 和本機原始圖片 SHA／大小驗證相符；無圓形預覽。前面「尚未入庫」的歷史描述以本節最新驗證結果取代。
+- **YouTube Banner／頻道簡介已生效**：官方 OAuth 連線寫入 Run `41812817809` 因即時讀回延遲而結束 failure；後續獨立唯讀 Run `41812910495` SUCCESS，官方 API 已回傳深藍品牌 Banner 已配置與完整 234 字元繁體中文簡介，原影片 `GiWA60DJoWI` 保持私人。不得誤以為第一輪 CI 綠燈，也不得為解決舊讀回誤差重複覆寫。
+- **仍待手動設定**：頻道名稱目前 `TAIWANSTOCK`，核准目標 `TAIWAN STOCK｜台股資金觀察`；Handle 目前 `@user-mx6if9rd6h`，候選 `@TaiwanStockTW` 尚待確認；核准頭像 `youtube_avatar_800.png` 未套用。這三項需要 YouTube Studio 操作，不能聲稱已完成。
+- **暫不擅改**：首頁分區、播放清單、預告片、公開影片權限、正式自動上傳與發布鎖。
+- **設定與驗收紀錄細節**：見 [YouTube Studio 設定包](taiwan-stock-youtube-studio-setup-pack-v1.md) 第 10 節。
