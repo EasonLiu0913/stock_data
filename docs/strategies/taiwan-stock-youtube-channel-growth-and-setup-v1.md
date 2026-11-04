@@ -241,7 +241,7 @@ YouTube Studio → **自訂（Customization）** → **個人資料（Profile）
 - **2026-11-04 / v1.0**：Owner 選定最後一張紅色單線 N 型箭頭＋白色 TS＋深海軍藍正方形 Logo；將完整生成 Prompt、尺寸、安全裁切與後續品牌圖片共用規則寫入本文件。
 
 
-**2026-11-04 Owner 確定：最終頻道名稱為 `TAIWAN STOCK｜台股資金觀察`，不再作二選一。** 頻道設定可貼用版本及品牌圖片準備狀態另見 [`taiwan-stock-youtube-studio-setup-pack-v1.md`](taiwan-stock-youtube-studio-setup-pack-v1.md)；正式頭像 1024／800 PNG、Banner 2560×1440 與裁切預覽目前僅於本次對話作為可下載檔案，尚未保證二進位圖像已入庫 GitHub。尚未修改現有 YouTube 頻道或私人影片。
+**2026-11-04 Owner 確定：最終頻道名稱為 `TAIWAN STOCK｜台股資金觀察`，不再作二選一。** 頻道設定可貼用版本及品牌圖片準備狀態另見 [`taiwan-stock-youtube-studio-setup-pack-v1.md`](taiwan-stock-youtube-studio-setup-pack-v1.md)；正式頭像 1024／800 PNG、Banner 2560×1440 及 Banner 安全區預覽目前僅於本次對話作為可下載檔案，尚未保證二進位圖像已入庫 GitHub。尚未修改現有 YouTube 頻道或私人影片。
 
 ## 13. 頻道設定資料補齊盤點與可用文案（2026-11-04）
 
@@ -252,7 +252,7 @@ YouTube Studio → **自訂（Customization）** → **個人資料（Profile）
 | 項目 | 階段 | 下一步 |
 |---|---|---|
 | 頻道定位、核心觀眾、價值主張 | **文件已完成** | Owner 最終確認後納入頻道介紹 |
-| 頭像 Logo 視覺決策與生成 Prompt | **設計已定案** | 將 owner 確認的實際 PNG 1024、800 兩種尺寸永久保存並檢視圓形遮罩 |
+| 頭像 Logo 視覺決策與生成 Prompt | **設計已定案** | 將 Owner 確認的 `youtube_avatar_800.png` 與 PNG 1024 主檔永久保存；不交付圓形頭像預覽 |
 | 頻道名稱 | **Owner 已定案，尚未寫入 YouTube** | 唯一設定值：TAIWAN STOCK｜台股資金觀察 |
 | Handle | **候選未驗證** | 查 `@TaiwanStockTW`、`@TaiwanStock` 或沿用現值；不可假稱可用 |
 | 頻道簡介 | **可直接貼用草案** | 經 owner 確認第 4.1 節文字後才設定 |
@@ -319,3 +319,5 @@ YouTube Studio → **自訂（Customization）** → **個人資料（Profile）
 ---
 
 **版本維護規則**：未經 Owner 審閱的想法放在「待驗證假說」中，不取代現行實作；之後每次更新記錄版本、日期、決策、變更原因及引用證據。正式頻道設定與發佈變更需分開執行和驗收。
+
+**2026-11-04 頭像交付決策**：Owner 明確核准 `youtube_avatar_800.png`，並拒絕 `avatar_circle_preview.png`。自此正式頭像素材包不納入圓形預覽圖；這不影響 YouTube 平台本身可能採用圓形遮罩的顯示方式。Banner 仍需另外驗收。下載素材包以 `TAIWAN_STOCK_brand_assets_v1_no_circle_preview.zip` 為準。
