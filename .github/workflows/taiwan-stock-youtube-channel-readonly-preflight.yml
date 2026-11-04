@@ -1,0 +1,35 @@
+name: "[08 頻道] TAIWAN STOCK read-only channel settings preflight"
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/strategies/taiwan-stock-youtube-readonly-check.json'
+permissions:
+  contents: read
+jobs:
+  inspect-channel:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - name: Checkout verified preflight probe
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          sparse-checkout: |
+            scripts/youtube_channel_readonly_preflight.js
+            docs/strategies/taiwan-stock-youtube-readonly-check.json
+          sparse-checkout-cone-mode: false
+      - name: Read OAuth channel profile without mutation
+        env:
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: node scripts/youtube_channel_readonly_preflight.js
+      - name: Upload redacted channel snapshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: taiwan-stock-channel-current-settings
+          path: output/channel-readonly-snapshot.json
+          if-no-files-found: warn
+          retention-days: 7
