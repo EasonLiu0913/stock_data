@@ -1,0 +1,50 @@
+name: "[08 品牌] Import approved TAIWAN STOCK PNGs from uploaded ZIP"
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'assets/youtube-brand/import/TAIWAN_STOCK_brand_assets_v1_no_circle_preview.zip'
+permissions:
+  contents: write
+concurrency:
+  group: taiwan-stock-approved-brand-asset-import
+  cancel-in-progress: false
+jobs:
+  import-exact-approved-pngs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout exact approved asset manifest and uploader ZIP
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+      - name: Verify immutable owner-approved archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          zip='assets/youtube-brand/import/TAIWAN_STOCK_brand_assets_v1_no_circle_preview.zip'
+          test -s "$zip"
+          printf '%s  %s\n' '3d01c9bdf134f59c03152766206319ed0eae2591171e08e7c6b513fc0990c895' "$zip" | sha256sum -c -
+          if unzip -Z1 "$zip" | grep -E '(^/|\.\.|avatar_circle_preview|\\)' ; then
+            echo 'UNSAFE_ARCHIVE_CONTENTS' >&2; exit 1
+          fi
+          mkdir -p /tmp/approved-ts-images
+          unzip -q -j "$zip" -d /tmp/approved-ts-images
+          for file in logo_master_1024.png youtube_avatar_800.png youtube_banner_2560x1440.png; do
+            test -s "/tmp/approved-ts-images/$file"
+            install -m 644 "/tmp/approved-ts-images/$file" "assets/youtube-brand/approved/$file"
+          done
+          node scripts/verify_youtube_brand_assets.js
+          echo 'Verified exactly approved image hashes and sizes'
+      - name: Publish exact approved PNG assets to GitHub main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/youtube-brand/approved/logo_master_1024.png assets/youtube-brand/approved/youtube_avatar_800.png assets/youtube-brand/approved/youtube_banner_2560x1440.png
+          if git diff --cached --quiet; then echo 'Approved assets already match'; exit 0; fi
+          git commit -m 'assets: import owner-approved TAIWAN STOCK avatar and banner PNGs'
+          git push origin HEAD:main
+          echo 'Uploaded approved asset hashes to main' >> "$GITHUB_STEP_SUMMARY"
