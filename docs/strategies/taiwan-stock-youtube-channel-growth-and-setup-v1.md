@@ -257,8 +257,8 @@ YouTube Studio → **自訂（Customization）** → **個人資料（Profile）
 | Handle | **候選未驗證** | 查 `@TaiwanStockTW`、`@TaiwanStock` 或沿用現值；不可假稱可用 |
 | 頻道簡介 | **可直接貼用草案** | 經 owner 確認第 4.1 節文字後才設定 |
 | Banner 文案、顏色、安全區 | **規格已完成** | 製作與 Logo 一致的 2560×1440 PNG/JPEG，中央文字安全區約 1544×423 |
-| Banner 完整主圖 | **尚未製作／未驗收** | 依第 12 節 Logo 參考圖製作，驗證手機／電腦／電視裁切 |
-| 頭像及 Banner 正式上架 | **未執行** | Owner 明確授權後才修改 |
+| Banner 完整主圖 | **Owner 已完成視覺驗收** | `youtube_banner_2560x1440.png` 定案，日後設定頻道前再核對上傳格式與裁切 |
+| 頭像及 Banner 正式上架 | **素材已核准／YouTube 尚未套用** | Owner 另行明確授權後才修改 |
 | 首頁分類與清單名稱 | **草案** | 先建立播放清單，待有公開可展示影片後才排首頁 |
 | 播放清單介紹文案 | **本節已補齊** | Owner 校對後建立 |
 | 新觀眾預告片 | **未完成** | 撰寫 30–60 秒講稿、Render-only／owner 驗收，再另行授權公開 |
@@ -320,4 +320,6 @@ YouTube Studio → **自訂（Customization）** → **個人資料（Profile）
 
 **版本維護規則**：未經 Owner 審閱的想法放在「待驗證假說」中，不取代現行實作；之後每次更新記錄版本、日期、決策、變更原因及引用證據。正式頻道設定與發佈變更需分開執行和驗收。
 
-**2026-11-04 頭像交付決策**：Owner 明確核准 `youtube_avatar_800.png`，並拒絕 `avatar_circle_preview.png`。自此正式頭像素材包不納入圓形預覽圖；這不影響 YouTube 平台本身可能採用圓形遮罩的顯示方式。Banner 仍需另外驗收。下載素材包以 `TAIWAN_STOCK_brand_assets_v1_no_circle_preview.zip` 為準。
+**2026-11-04 頭像交付決策**：Owner 明確核准 `youtube_avatar_800.png`，並拒絕 `avatar_circle_preview.png`。自此正式頭像素材包不納入圓形預覽圖；這不影響 YouTube 平台本身可能採用圓形遮罩的顯示方式。Banner 於同日已完成 Owner 驗收。下載素材包以 `TAIWAN_STOCK_brand_assets_v1_no_circle_preview.zip` 為準。
+
+**2026-11-04 品牌素材整包驗收**：Owner 已確認 `youtube_banner_2560x1440.png` 與整份 `TAIWAN_STOCK_brand_assets_v1_no_circle_preview.zip` 均 OK。`youtube_avatar_800.png` 為已核准正式頭像，排除 `avatar_circle_preview.png`；日後製作沿用此定案版本。此核准**不等同於已將圖片二進位主檔存入 GitHub、已修改 YouTube Studio 或已取得公開發布權限**。
