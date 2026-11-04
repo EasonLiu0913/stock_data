@@ -1,0 +1,46 @@
+name: "[08 頻道] TAIWAN STOCK owner-approved banner and description"
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/strategies/taiwan-stock-channel-apply-once.json'
+permissions:
+  contents: read
+concurrency:
+  group: taiwan-stock-channel-branding-once
+  cancel-in-progress: false
+jobs:
+  update-approved-channel:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout only owner-approved assets and branding script
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          sparse-checkout: |
+            assets/youtube-brand/approved
+            scripts/verify_youtube_brand_assets.js
+            scripts/apply_taiwan_stock_youtube_branding.js
+            docs/strategies/taiwan-stock-channel-apply-once.json
+          sparse-checkout-cone-mode: false
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Fail closed on unapproved branding binary drift
+        run: node scripts/verify_youtube_brand_assets.js
+      - name: Update verified banner and channel description only
+        env:
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: node scripts/apply_taiwan_stock_youtube_branding.js
+      - name: Retain sanitized official API readback
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: taiwan-stock-channel-branding-approval-proof
+          path: output/taiwan-stock-branding-update-receipt.json
+          if-no-files-found: warn
+          retention-days: 14
