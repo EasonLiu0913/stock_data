@@ -118,12 +118,12 @@ function slide(scene,si){
  if(scene.scene_type!=='stock_list'||!codes.length)throw Error('Stock list scene requires explicit nonempty codes');
  const selected=codes.map(c=>{const s=all.get(c);if(!s)throw Error('Unknown stock '+c);return s});
  if(selected.length>3)throw Error('At most 3 stocks per list scene; respect progress and subtitle safe areas');
- const headers=[{x:148,t:'個股／代號'},{x:518,t:'漲幅'},{x:706,t:'外資(張)'},{x:895,t:'投信(張)'},{x:1057,t:'融資(張)'},{x:1230,t:'分點買／賣'}];
+ const headers=[{x:148,t:'標的／代號'},{x:518,t:'漲幅'},{x:706,t:'外資(張)'},{x:895,t:'投信(張)'},{x:1057,t:'融資(張)'},{x:1230,t:'分點買／賣'}];
  const subtitle=short(scene.subtitle||'',65);
  return `<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
  <rect width="1920" height="1080" fill="#07111f"/>
  <rect width="1920" height="14" fill="#38bdf8"/>
- <text x="115" y="94" fill="#e2e8f0" font-family="Noto Sans CJK TC,sans-serif" font-size="27" letter-spacing="3">TAIWAN STOCK｜${date.slice(0,4)}/${date.slice(4,6)}/${date.slice(6,8)}｜上市 5% 強勢股</text>
+ <text x="115" y="94" fill="#e2e8f0" font-family="Noto Sans CJK TC,sans-serif" font-size="27" letter-spacing="3">TAIWAN STOCK｜${date.slice(0,4)}/${date.slice(4,6)}/${date.slice(6,8)}｜5% 強勢標的</text>
  <text x="115" y="161" fill="#ffffff" font-family="Noto Sans CJK TC,sans-serif" font-size="54" font-weight="bold">${esc(short(scene.title,26))}</text>
  <text x="115" y="210" fill="#9ddbf8" font-family="Noto Sans CJK TC,sans-serif" font-size="27">${esc(subtitle)}</text>
  <rect x="116" y="226" width="1320" height="45" rx="12" fill="#0e2035"/>
