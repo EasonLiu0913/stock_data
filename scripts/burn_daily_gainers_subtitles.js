@@ -52,5 +52,17 @@ fs.renameSync(video,archive);
 fs.renameSync(tmp,video);
 const hash=file=>crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 const proof={target_date:date,status:'BURN_EXECUTED_VISUAL_QA_PENDING',cues:blocks.length,source_duration:sourceDuration,burned_duration:newDuration,mp4_sha256:hash(video),srt_sha256:hash(srt),preburn_sha256:hash(archive),subtitle_region:{alignment:'bottom-center',margin_left:60,margin_right:60,margin_bottom:10,font_size:21,ass_outline:1,max_lines:2},publication_authorized:false};
+// qa.json is initially written for the pre-burn render; report final size.
+const qaPath=path.join(out,'qa.json');
+const qa=JSON.parse(fs.readFileSync(qaPath,'utf8'));
+if(qa.target_date!==date||qa.duration_pass!==true)throw Error('Invalid pre-burn QA');
+const finalSize=fs.statSync(video).size;
+if(finalSize<1024*1024)throw Error('Burned MP4 unexpectedly small');
+qa.preburn_file_size_bytes=fs.statSync(archive).size;
+qa.file_size_bytes=finalSize;
+qa.file_size_mib=Number((finalSize/1024/1024).toFixed(2));
+qa.size_pass=true;
+qa.video_size_stage='final_burned_mp4';
+fs.writeFileSync(qaPath,JSON.stringify(qa,null,2)+'\n');
 fs.writeFileSync(path.join(out,'burned-caption-proof.json'),JSON.stringify(proof,null,2)+'\n');
 console.log(JSON.stringify(proof,null,2));
