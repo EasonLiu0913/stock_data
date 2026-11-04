@@ -241,6 +241,8 @@ YouTube Studio → **自訂（Customization）** → **個人資料（Profile）
 - **2026-11-04 / v1.0**：Owner 選定最後一張紅色單線 N 型箭頭＋白色 TS＋深海軍藍正方形 Logo；將完整生成 Prompt、尺寸、安全裁切與後續品牌圖片共用規則寫入本文件。
 
 
+**2026-11-04 Owner 確定：最終頻道名稱為 `TAIWAN STOCK｜台股資金觀察`，不再作二選一。** 頻道設定可貼用版本及品牌圖片準備狀態另見 [`taiwan-stock-youtube-studio-setup-pack-v1.md`](taiwan-stock-youtube-studio-setup-pack-v1.md)；正式頭像 1024／800 PNG、Banner 2560×1440 與裁切預覽目前僅於本次對話作為可下載檔案，尚未保證二進位圖像已入庫 GitHub。尚未修改現有 YouTube 頻道或私人影片。
+
 ## 13. 頻道設定資料補齊盤點與可用文案（2026-11-04）
 
 本節分清楚 **設計已定案／可用草案／外部待確認／尚未製作**。這是供 Owner 審閱的製作清單，**沒有向 YouTube Studio 寫入任何設定**，也沒有核實現有頻道的實際 Handle、Banner 或首頁配置。
