@@ -4,6 +4,8 @@ on:
     branches: [main]
     paths:
       - "scripts/select_daily_gainers_pending_video_dates.js"
+      - "scripts/reserve_daily_gainers_private_upload.sh"
+      - "scripts/decide_daily_gainers_video_upload.sh"
       - "tests/select_daily_gainers_pending_video_dates.test.js"
       - ".github/workflows/daily-gainers-multidate-date-gate-tests.yml"
       - ".github/workflows/daily-gainers-video-upload-orchestrator.yml"
@@ -22,6 +24,8 @@ jobs:
         with:
           sparse-checkout: |
             scripts/select_daily_gainers_pending_video_dates.js
+            scripts/reserve_daily_gainers_private_upload.sh
+            scripts/decide_daily_gainers_video_upload.sh
             tests/select_daily_gainers_pending_video_dates.test.js
             .github/workflows/daily-gainers-video-upload-orchestrator.yml
             .github/workflows/generate-upload-daily-gainers-video.yml
@@ -33,6 +37,8 @@ jobs:
           node-version: "24"
       - name: Run date selection regression
         run: node --test tests/select_daily_gainers_pending_video_dates.test.js
+      - name: Parse private upload reservation script (no external actions)
+        run: bash -n scripts/reserve_daily_gainers_private_upload.sh
       - name: Audit upload concurrency and render isolation
         shell: bash
         run: |
@@ -42,9 +48,14 @@ jobs:
           for(const p of ['.github/workflows/generate-upload-daily-gainers-video.yml','.github/workflows/retry-upload-daily-gainers-video.yml']){
             const s=fs.readFileSync(p,'utf8');
             if(!s.includes('group: daily-gainers-video-upload-serial')||!s.includes('cancel-in-progress: false'))throw Error('unsafe upload mutex '+p);
+            const reservation=s.indexOf('bash scripts/reserve_daily_gainers_private_upload.sh');
+            const upload=s.indexOf('node scripts/upload_youtube.js');
+            if(reservation<0||upload<0||reservation>=upload)throw Error('upload reservation not before API call '+p);
           }
           const router=fs.readFileSync('.github/workflows/daily-gainers-video-upload-orchestrator.yml','utf8');
-          if(!router.includes('select_daily_gainers_pending_video_dates.js')||!router.includes('Explicit date is required'))throw Error('unsafe stale date fallback');
+          if(!router.includes('select_daily_gainers_pending_video_dates.js')||!router.includes('Explicit date is required')||!router.includes('video_upload_attempts'))throw Error('unsafe stale date fallback');
+          const decision=fs.readFileSync('scripts/decide_daily_gainers_video_upload.sh','utf8');
+          if(!decision.includes('decision=blocked_reconcile_upload'))throw Error('missing ambiguous replay blocker');
           const render=fs.readFileSync('.github/workflows/daily-gainers-date-render-only.yml','utf8');
           for(const value of ['workflow_dispatch:','required: true','group: daily-gainers-safe-render-only-','node scripts/validate_daily_gainers_video_script.js "$DATE"','metadata.json','thumbnail.jpg','-render-only']){
             if(!render.includes(value))throw Error('missing render prerequisite '+value);
