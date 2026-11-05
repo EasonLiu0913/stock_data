@@ -4,7 +4,7 @@
   "code": "3049",
   "max_attempts": 10,
   "attempt_count": 1,
-  "state": "RESERVED",
+  "state": "INVALID",
   "history_reconstruction": {
     "prior_first_pass_record_found": false,
     "verified_historical_attempts": 0,
@@ -15,9 +15,9 @@
       "attempt_number": 1,
       "attempt_id": "20261104-3049-first-pass-20261106T040118+0800",
       "phase": "FIRST_PASS",
-      "status": "RESERVED",
+      "status": "FAIL",
       "started_at": "2026-11-06T04:01:18+08:00",
-      "finished_at": null,
+      "finished_at": "2026-11-06T04:01:18+08:00",
       "agent_task_id": "6ae95a57e9d48191b3364c934d9fecfd",
       "agent_run_id": "unavailable",
       "source_sha": {
@@ -26,9 +26,85 @@
         "news": "c31055e4c0f3e60899be5e8e4fe9358c923190a6",
         "research_checkpoint": "e9df8f88ddfe3663883e4d23c79fc69a68132efa"
       },
-      "check_results": [],
-      "failure_reason_codes": [],
-      "github_reservation_commit_sha": "unavailable",
+      "check_results": [
+        {
+          "check_id": "C01",
+          "layer": "CONTRACT_VALIDATED",
+          "status": "PASS",
+          "evidence_ref": "data_daily_gain_over_5/analysis-facts/20261104.json",
+          "reason": "raw index 40=3049; research source_start_index=39 second code=3049",
+          "next_action": "none",
+          "checked_at": "2026-11-06T04:01:18+08:00"
+        },
+        {
+          "check_id": "C02",
+          "layer": "CONTRACT_VALIDATED",
+          "status": "FAIL",
+          "evidence_ref": "scripts/validate_daily_gainers_ai_analysis.js",
+          "reason": "Facts institutional_verification_required=true but checked_at ISO timestamp absent",
+          "next_action": "source-supported checked_at repair",
+          "checked_at": "2026-11-06T04:01:18+08:00"
+        },
+        {
+          "check_id": "C03",
+          "layer": "CONTRACT_VALIDATED",
+          "status": "PASS",
+          "evidence_ref": "data_daily_gain_over_5/analysis-facts/20261104.json",
+          "reason": "raw close 11.3 +5.12% 4457 lots; Facts foreign +900700 shares margin +406; zero_net dealer distinct from no_record trust",
+          "next_action": "none",
+          "checked_at": "2026-11-06T04:01:18+08:00"
+        },
+        {
+          "check_id": "C04",
+          "layer": "CONTRACT_VALIDATED",
+          "status": "PASS",
+          "evidence_ref": "data_daily_gain_over_5/analysis-facts/20261104.json",
+          "reason": "News sources=[] cause unknown; no direct catalyst invented",
+          "next_action": "none",
+          "checked_at": "2026-11-06T04:01:18+08:00"
+        },
+        {
+          "check_id": "C05",
+          "layer": "CONTRACT_VALIDATED",
+          "status": "PASS",
+          "evidence_ref": "data_daily_gain_over_5/analysis-facts/20261104.json",
+          "reason": "zero_net and no_record distinguished; low confidence and moving average risks",
+          "next_action": "none",
+          "checked_at": "2026-11-06T04:01:18+08:00"
+        },
+        {
+          "check_id": "S01",
+          "layer": "SOURCE_AUDIT",
+          "status": "PENDING",
+          "evidence_ref": "data_daily_gain_over_5/analysis-facts/20261104.json",
+          "reason": "upstream source validator PASS evidence not read",
+          "next_action": "read upstream validator PASS evidence",
+          "checked_at": "2026-11-06T04:01:18+08:00"
+        },
+        {
+          "check_id": "O01",
+          "layer": "ORIGIN_AUDIT",
+          "status": "NOT_REQUIRED",
+          "evidence_ref": "data_daily_gain_over_5/analysis-facts/20261104.json",
+          "reason": "owner-approved process-only audit",
+          "next_action": "none",
+          "checked_at": "2026-11-06T04:01:18+08:00"
+        },
+        {
+          "check_id": "O02",
+          "layer": "ORIGIN_AUDIT",
+          "status": "NOT_REQUIRED",
+          "evidence_ref": "data_daily_gain_over_5/analysis-facts/20261104.json",
+          "reason": "owner-approved process-only audit",
+          "next_action": "none",
+          "checked_at": "2026-11-06T04:01:18+08:00"
+        }
+      ],
+      "failure_reason_codes": [
+        "C02_MISSING_INSTITUTIONAL_CHECKED_AT",
+        "S01_UPSTREAM_VALIDATOR_NOT_READ"
+      ],
+      "github_reservation_commit_sha": "99f1041d14149f3bd1c581e443fcd166132e7b72",
       "github_result_commit_sha": null
     }
   ]
