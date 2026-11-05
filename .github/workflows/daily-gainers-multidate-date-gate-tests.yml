@@ -9,6 +9,7 @@ on:
       - ".github/workflows/daily-gainers-video-upload-orchestrator.yml"
       - ".github/workflows/generate-upload-daily-gainers-video.yml"
       - ".github/workflows/retry-upload-daily-gainers-video.yml"
+      - ".github/workflows/daily-gainers-date-render-only.yml"
   workflow_dispatch:
 permissions:
   contents: read
@@ -25,6 +26,7 @@ jobs:
             .github/workflows/daily-gainers-video-upload-orchestrator.yml
             .github/workflows/generate-upload-daily-gainers-video.yml
             .github/workflows/retry-upload-daily-gainers-video.yml
+            .github/workflows/daily-gainers-date-render-only.yml
           sparse-checkout-cone-mode: false
       - uses: actions/setup-node@v4
         with:
@@ -48,5 +50,15 @@ jobs:
           const s=fs.readFileSync('.github/workflows/daily-gainers-video-upload-orchestrator.yml','utf8');
           if(!s.includes('select_daily_gainers_pending_video_dates.js')||!s.includes('Explicit date is required for manual dispatch'))
             throw Error('unsafe stale-date fallback');
-          console.log('PASS: serial private upload mutex and safe date selector');
+          const render=fs.readFileSync('.github/workflows/daily-gainers-date-render-only.yml','utf8');
+          const must=[
+             'workflow_dispatch:', 'required: true', 'group: daily-gainers-safe-render-only-${{ inputs.date }}',
+             'cancel-in-progress: false', 'DATE: ${{ inputs.date }}',
+             'node scripts/validate_daily_gainers_video_script.js "$DATE"',
+             'metadata.json', 'thumbnail.jpg', 'daily-gainers-${{ inputs.date }}-render-only',
+          ];
+          for(const item of must)if(!render.includes(item))throw Error('missing date-scoped render gate: '+item);
+          if(/upload_youtube|YOUTUBE_CLIENT_SECRET|gh workflow run generate-upload/.test(render))throw Error('unsafe YouTube action in Render-only');
+          if(render.includes('9.82%')||render.includes("q.target_date!=='20261103'"))throw Error('11/03-specific visual check leaked');
+          console.log('PASS: serial private upload mutex, safe date selection, per-date Render-only with no YouTube credential');
           NODE
