@@ -57,6 +57,8 @@ function svgArtwork(date,count,options={}){
       '<text x="535" y="154" fill="white" font-family="Noto Sans CJK TC,sans-serif" font-size="28" font-weight="900">'+xml(options.marketQuestion)+'</text>';
     artwork=artwork.replace('</svg>',badge+'</svg>');
   }
+  // Backward-compatible SVG-only reference rendering for the approved mock preview.
+  if(options.marketChangePct===undefined)return artwork;
   const pct=options.marketChangePct;
   const textValue=pct>0?'+'+pct.toFixed(2)+'%':pct.toFixed(2)+'%';
   const badge='<rect x="632" y="215" width="220" height="100" rx="13" fill="#06172c" stroke="'+c.accent+'" stroke-width="4"/>'+
