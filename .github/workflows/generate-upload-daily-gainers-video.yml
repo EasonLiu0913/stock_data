@@ -152,6 +152,15 @@ jobs:
       - name: Generate branded YouTube thumbnail
         run: node scripts/build_daily_gainers_thumbnail.js "${{ steps.date.outputs.date }}"
 
+      - name: Persist create-only PRIVATE upload attempt (blocks ambiguous replay)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          date="${{ steps.date.outputs.date }}"
+          bash scripts/reserve_daily_gainers_private_upload.sh "$date" "$GITHUB_RUN_ID" "output/daily-gainers-video/$date/daily-gainers-$date.mp4"
+
       - name: Upload private video to YouTube
         id: youtube
         env:
