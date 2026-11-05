@@ -39,6 +39,7 @@ jobs:
             assets/daily-gainers-vtuber-sprite.webp
             data_daily_gain_over_5
             research_pending/daily-gainers-video-scripts
+            research_pending/daily-gainers-seo
             tests/test_daily_gainers_spoken_text.py
             tests/test_daily_gainers_subtitle_alignment.py
             tests/test_daily_gainers_caption_segments.py
@@ -171,6 +172,7 @@ jobs:
           set -euo pipefail
           node scripts/add_daily_gainers_video_timestamps.js "$DATE"
           node scripts/build_daily_gainers_thumbnail.js "$DATE"
+          node scripts/verify_daily_gainers_thumbnail_before_upload.js "$DATE"
           test -s "output/daily-gainers-video/$DATE/metadata.json"
           test -s "output/daily-gainers-video/$DATE/thumbnail.jpg"
       - name: Keep MP4 evidence even on partial failures
@@ -182,6 +184,8 @@ jobs:
             output/daily-gainers-video/${{ inputs.date }}/plan.json
             output/daily-gainers-video/${{ inputs.date }}/metadata.json
             output/daily-gainers-video/${{ inputs.date }}/thumbnail.jpg
+            output/daily-gainers-video/${{ inputs.date }}/thumbnail.png
+            output/daily-gainers-video/${{ inputs.date }}/thumbnail-qa.json
             output/daily-gainers-video/${{ inputs.date }}/qa.json
             output/daily-gainers-video/${{ inputs.date }}/news-narration-qa.json
             output/daily-gainers-video/${{ inputs.date }}/tts-manifest.json
