@@ -16,6 +16,11 @@ permissions:
   contents: write
   actions: read
 
+concurrency:
+  # Same mutex as full generate/upload: only one in-flight YouTube upload.
+  group: daily-gainers-video-upload-serial
+  cancel-in-progress: false
+
 jobs:
   upload-only:
     runs-on: ubuntu-latest
