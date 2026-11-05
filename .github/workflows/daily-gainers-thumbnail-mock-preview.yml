@@ -7,15 +7,21 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: thumbnail-mock-preview
+  group: thumbnail-mock-preview-v2
   cancel-in-progress: false
 jobs:
   preview:
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
-      - name: Checkout exact commit
+      - name: Checkout minimal thumbnail inputs
         uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            scripts
+            assets/daily-gainers-vtuber-sprite.webp
+            thumbnail-preview-requests/demo-v1.json
+          sparse-checkout-cone-mode: false
       - name: Install rendering dependencies
         shell: bash
         run: |
