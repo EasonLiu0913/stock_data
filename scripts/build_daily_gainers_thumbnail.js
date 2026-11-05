@@ -82,7 +82,7 @@ function loadVerifiedInputs(root,date,raw){
   const regime=index.change_points>0?'up':index.change_points<0?'down':'flat';
   if(t.market_regime!==regime||!Number.isFinite(index.change_pct)||Math.abs(t.market_change_pct-index.change_pct)>0.015)throw Error('THUMBNAIL_INPUTS_BLOCKED index direction/value mismatch');
   if(t.stock_count!==raw.stock_count||seo.v.stock_count!==raw.stock_count)throw Error('THUMBNAIL_INPUTS_BLOCKED stock_count mismatch');
-  if(typeof t.market_question!=='string'||t.market_question.length<4||t.market_question.length>13||/[<>\r\n]/.test(t.market_question))throw Error('THUMBNAIL_INPUTS_BLOCKED invalid market question');
+  if(typeof t.market_question!=='string'||t.market_question.length<4||t.market_question.length>11||/[<>\r\n]/.test(t.market_question))throw Error('THUMBNAIL_INPUTS_BLOCKED invalid market question');
   if(!Array.isArray(t.bottom_keywords)||t.bottom_keywords.length!==3||t.bottom_keywords.some(x=>typeof x!=='string'||x.length<2||x.length>12))throw Error('THUMBNAIL_INPUTS_BLOCKED invalid footer keywords');
   if(/DEMO|模擬測試|mock/i.test(JSON.stringify(t)))throw Error('THUMBNAIL_INPUTS_BLOCKED mock content forbidden');
   if(seo.v.source_blobs){const expected={raw:'data_daily_gain_over_5/'+date+'.json',facts:'data_daily_gain_over_5/analysis-facts/'+date+'.json',news:'data_daily_gain_over_5/analysis-news/'+date+'.json'};
@@ -121,7 +121,9 @@ function main(date){
   const probe=spawnSync('ffprobe',['-v','error','-select_streams','v:0','-show_entries','stream=width,height','-of','csv=p=0',output],{encoding:'utf8'});
   if(probe.status!==0||probe.stdout.trim()!=='1280,720')throw Error('Wrong thumbnail resolution: '+probe.stdout);
   const sha=crypto.createHash('sha256').update(fs.readFileSync(output)).digest('hex');
-  fs.writeFileSync(path.join(folder,'thumbnail-qa.json'),JSON.stringify({status:'PASS',date,stock_count:stockCount,market_regime:verified.regime,market_change_pct:verified.marketChangePct,template_version:'v1',frame_px:3,jpeg_sha256:sha,source_files:verified.source_files,mock:false},null,2)+'\n');
+  const sourceFiles=['data_daily_gain_over_5/'+date+'.json',...verified.source_files.map(f=>path.relative(root,f))];
+  const sourceSha256=Object.fromEntries(sourceFiles.map(rel=>[rel,crypto.createHash('sha256').update(fs.readFileSync(path.join(root,rel))).digest('hex')]));
+  fs.writeFileSync(path.join(folder,'thumbnail-qa.json'),JSON.stringify({status:'PASS',date,stock_count:stockCount,market_regime:verified.regime,market_change_pct:verified.marketChangePct,template_version:'v1',frame_px:3,jpeg_sha256:sha,source_files:sourceFiles,source_sha256:sourceSha256,mock:false},null,2)+'\n');
   console.log(JSON.stringify({file:output,bytes:size,resolution:'1280x720',stock_count:stockCount,thumbnail_qa:'PASS'}));
 }
 if(require.main===module)main(process.argv[2]);
