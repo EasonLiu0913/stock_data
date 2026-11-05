@@ -37,6 +37,10 @@ Before introducing a major feature or abstraction, answer:
 
 See `docs/project-philosophy.md` and `docs/decisions/ADR-000-project-philosophy.md` for the canonical rationale.
 
+## Daily video thumbnail standard (owner-approved v1)
+
+Before changing TAIWAN STOCK daily thumbnail generation, mock preview, thumbnail SEO text or YouTube thumbnail attachment, read `docs/policies/daily-gainers-thumbnail-standard-v1.md`. Use verified same-date index direction to select exactly 3px red/up, green/down or blue/flat framing; reuse the fixed presenter and list-series composition. Mock thumbnail preview has no YouTube access and must never trigger a real upload. Keep existing A/B, PRIVATE-only and source/asset validation gates.
+
 ## Mandatory daily 5% video owner policy
 
 When working on `daily-gainers-market-opening-end-to-end`, daily 5% video facts, script, narration, subtitles, generation, repair, uploads or scheduling, read and obey `docs/policies/daily-gainers-video-editorial-verification-delivery-v1.md` **before** changing code or declaring PASS. Its figures are illustrative, never fixed daily data. Validation failure triggers truthful diagnosis/repair and continuation to verified daily delivery, not bypassing tests or inventing figures. This policy is owner-approved editorial/delivery intent; it does not override frozen phase A/B gates or authorize production/publishing by itself.
