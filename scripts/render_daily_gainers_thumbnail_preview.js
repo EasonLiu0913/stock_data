@@ -13,7 +13,8 @@ const configs={
 function run(command,args){const p=spawnSync(command,args,{encoding:'utf8'});if(p.status!==0)throw Error(command+' '+args.join(' ')+' failed: '+p.stderr);}
 function xml(s){return String(s).replace(/[<>&"']/g,c=>({'<':'&lt;','>':'&gt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));}
 function make(row,outDir){
-  const {date,stock_count,market_change_pct,regime}=row;
+  const {date,stock_count,market_change_pct,regime,market_question}=row;
+  if(typeof market_question!=='string'||market_question.length<4||market_question.length>13||/[<>\n\r]/.test(market_question))throw Error('Invalid concise market question');
   if(!/^20\d{6}$/.test(date)||!Number.isInteger(stock_count)||stock_count<1||stock_count>300||!configs[regime]||typeof market_change_pct!=='number'||!Number.isFinite(market_change_pct))throw Error('Invalid mock preset '+JSON.stringify(row));
   if((regime==='up'&&market_change_pct<=0)||(regime==='down'&&market_change_pct>=0)||(regime==='flat'&&market_change_pct!==0))throw Error('Direction/value mismatch');
   const c=configs[regime],tag=market_change_pct>0?'+'+market_change_pct.toFixed(2)+'%':market_change_pct.toFixed(2)+'%';
@@ -31,17 +32,19 @@ function make(row,outDir){
   const badge='<rect x="630" y="216" rx="15" width="213" height="97" fill="#06172c" stroke="'+c.accent+'" stroke-width="4"/>'+
       '<text x="652" y="250" fill="#ffffff" font-family="Noto Sans CJK TC,sans-serif" font-size="26" font-weight="bold">加權 '+c.word+'</text>'+
       '<text x="652" y="294" fill="'+c.arrow+'" font-family="Noto Sans CJK TC,sans-serif" font-size="43" font-weight="900">'+xml(tag)+'</text>';
-  const mark='<rect x="590" y="11" width="185" height="49" rx="8" fill="#26354b" stroke="#fef08a" stroke-width="2"/>'+
+  const question='<rect x="542" y="111" width="322" height="74" rx="10" fill="#06172c" opacity=".92" stroke="'+c.accent+'" stroke-width="3"/>'+ 
+      '<text x="557" y="159" font-family="Noto Sans CJK TC,sans-serif" fill="#ffffff" font-size="29" font-weight="900">'+xml(market_question)+'</text>';
+  const mark='<rect x="584" y="11" width="238" height="49" rx="8" fill="#26354b" stroke="#fef08a" stroke-width="2"/>'+
       '<text x="608" y="46" fill="#fef08a" font-family="Noto Sans CJK TC,sans-serif" font-size="27" font-weight="800">模擬測試 · DEMO</text>';
-  svg=svg.replace('</svg>',badge+mark+'</svg>');
+  svg=svg.replace('</svg>',badge+question+mark+'</svg>');
   const dir=path.join(outDir,regime+'-'+date);fs.mkdirSync(dir,{recursive:true});
   const base=path.join(dir,'base.png'),s=path.join(dir,'art.svg'),avatar=path.join(dir,'avatar.png'),dest=path.join(dir,'thumbnail.png');
   fs.writeFileSync(s,svg);
   run('rsvg-convert',['-w','1280','-h','720','-o',base,s]);
   const sprite='assets/daily-gainers-vtuber-sprite.webp';
   if(!fs.existsSync(sprite))throw Error('Missing existing presenter sprite '+sprite);
-  run('ffmpeg',['-y','-loglevel','error','-i',sprite,'-vf','crop=iw/4:ih:0:0,scale=450:-1:flags=lanczos','-frames:v','1','-update','1',avatar]);
-  run('ffmpeg',['-y','-loglevel','error','-i',base,'-i',avatar,'-filter_complex','[0:v][1:v]overlay=830:30:format=auto,drawbox=x=0:y=0:w=iw:h=ih:color=0x'+c.accent.slice(1)+':t=3,format=rgba','-frames:v','1','-update','1',dest]);
+  run('ffmpeg',['-y','-loglevel','error','-i',sprite,'-vf','crop=iw/4:ih:0:0,scale=480:-1:flags=lanczos','-frames:v','1','-update','1',avatar]);
+  run('ffmpeg',['-y','-loglevel','error','-i',base,'-i',avatar,'-filter_complex','[0:v][1:v]overlay=805:23:format=auto,drawbox=x=0:y=0:w=iw:h=ih:color=0x'+c.accent.slice(1)+':t=3,format=rgba','-frames:v','1','-update','1',dest]);
   const probe=spawnSync('ffprobe',['-v','error','-select_streams','v:0','-show_entries','stream=width,height','-of','csv=p=0',dest],{encoding:'utf8'});
   if(probe.status!==0||probe.stdout.trim()!=='1280,720')throw Error('Invalid output dimensions '+dest+' '+probe.stdout);
   fs.writeFileSync(path.join(dir,'mock-input.json'),JSON.stringify(row,null,2)+'\n');
