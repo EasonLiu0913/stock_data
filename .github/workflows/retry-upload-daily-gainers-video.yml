@@ -50,12 +50,7 @@ jobs:
           set -euo pipefail
           date="${INPUT_DATE:-}"
           run_id="${INPUT_RUN_ID:-}"
-          if [ -z "$date" ]; then
-            job="$(find video_upload_jobs/daily-gainers -maxdepth 1 -type f -name '20??????.json' | sort | tail -1)"
-            test -n "$job"
-            date="$(jq -r '.target_date' "$job")"
-            run_id="$(jq -r '.source_run_id' "$job")"
-          fi
+          [ -n "$date" ] && [ -n "$run_id" ] || { echo "Exact date and source run ID required, no fallback" >&2; exit 1; }
           [[ "$date" =~ ^20[0-9]{6}$ ]]
           [[ "$run_id" =~ ^[0-9]+$ ]]
           echo "date=$date" >> "$GITHUB_OUTPUT"
