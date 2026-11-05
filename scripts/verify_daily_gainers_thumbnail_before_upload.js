@@ -25,9 +25,17 @@ for(const file of [p,png]){
  const probe=spawnSync('ffprobe',['-v','error','-select_streams','v:0','-show_entries','stream=width,height','-of','csv=p=0',file],{encoding:'utf8'});
  if(probe.status!==0||probe.stdout.trim()!=='1280,720')error('invalid resolution '+file);
 }
-const im=spawnSync('ffmpeg',['-loglevel','error','-i',png,'-vf','crop=1:1:0:0,format=rgb24','-f','rawvideo','-'],{encoding:null,maxBuffer:1024*1024});
-if(im.status!==0||im.stdout?.length!==3)error('PNG pixel probe failed');
+const im=spawnSync('ffmpeg',['-loglevel','error','-i',png,'-vf','crop=4:1:0:0,format=rgb24','-f','rawvideo','-'],{encoding:null,maxBuffer:1024*1024});
+if(im.status!==0||im.stdout?.length!==12)error('PNG pixel probe failed');
 const rgb={up:[0xD9,0x1F,0x32],down:[0x0C,0xA7,0x4D],flat:[0x44,0x7D,0xA8]}[regime];
-if(!rgb.every((x,i)=>im.stdout[i]===x))error('3px market color frame is absent at corner');
-if(qa.source_files?.length<5||!qa.source_files.every(f=>fs.existsSync(f)))error('provenance missing');
+for(let pixel=0;pixel<3;pixel++)if(!rgb.every((x,i)=>im.stdout[pixel*3+i]===x))error('3px border color incorrect at pixel '+pixel);
+if(rgb.every((x,i)=>im.stdout[9+i]===x))error('frame thicker than 3px at top edge');
+if(qa.source_files?.length<6||!qa.source_files.every(f=>fs.existsSync(f)))error('provenance missing');
+if(!qa.source_sha256||Object.keys(qa.source_sha256).length!==qa.source_files.length)error('source hash manifest missing');
+for(const file of qa.source_files){
+ const recorded=qa.source_sha256[file];
+ if(!/^[0-9a-f]{64}$/.test(recorded||''))error('missing source SHA for '+file);
+ const current=crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+ if(current!==recorded)error('source changed after thumbnail rendering: '+file);
+}
 console.log(JSON.stringify({status:'THUMBNAIL_RENDER_VERIFIED',date,sha256:qa.jpeg_sha256,market_regime:regime}));
