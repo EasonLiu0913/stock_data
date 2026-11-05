@@ -4,8 +4,8 @@ on:
   workflow_dispatch:
     inputs:
       date:
-        description: "影片日期 YYYYMMDD；留空時取最新已完成 ChatGPT 講稿"
-        required: false
+        description: "Required exact validated video trading date YYYYMMDD"
+        required: true
         default: ""
 
 permissions:
@@ -67,9 +67,7 @@ jobs:
         run: |
           set -euo pipefail
           date="${INPUT_DATE:-}"
-          if [ -z "$date" ]; then
-            date="$(find video_scripts/daily-gainers -maxdepth 1 -type f -name '20??????.json' -printf '%f\n' 2>/dev/null | sed 's/\.json$//' | sort | tail -1)"
-          fi
+          [ -n "$date" ] || { echo "Explicit input date required: no stale/latest fallback" >&2; exit 1; }
           [[ "$date" =~ ^20[0-9]{6}$ ]] || { echo "Invalid or missing date: $date" >&2; exit 1; }
           for file in             "data_daily_gain_over_5/${date}.json"             "data_daily_gain_over_5/analysis-ai/${date}.json"             "data_daily_gain_over_5/market-summary/${date}.json"; do
             [ -s "$file" ] || { echo "Missing required file: $file" >&2; exit 1; }
