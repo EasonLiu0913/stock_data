@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       date:
-        description: "YYYYMMDD; blank uses latest available ChatGPT script"
+        description: "Required YYYYMMDD for manual dispatch; schedule scans validated outstanding dates"
         required: false
         default: ""
   schedule:
@@ -37,26 +37,48 @@ jobs:
             tests
             data_daily_gain_over_5
             video_scripts
+            video_upload_receipts
 
-      - name: Resolve latest complete-date script
+      - name: Resolve validated outstanding date (no stale-script fallback)
         id: date
         shell: bash
         env:
           INPUT_DATE: ${{ github.event.inputs.date }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           set -euo pipefail
           date="${INPUT_DATE:-}"
-          if [ -z "$date" ]; then
-            date="$(find video_scripts/daily-gainers -maxdepth 1 -name '20??????.json' -type f -printf '%f\n' | sed 's/\.json$//' | sort | tail -1)"
+          if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ -z "$date" ]; then
+            echo "Explicit date is required for manual dispatch" >&2
+            exit 1
           fi
-          [[ "$date" =~ ^20[0-9]{6}$ ]] || { echo "No valid ChatGPT video script" >&2; exit 1; }
+          if [ -z "$date" ]; then
+            # Inspect all script dates, oldest unuploaded first; skip invalid/incomplete dates,
+            # but never silently fall back to a legacy date such as 20261013.
+            while IFS= read -r candidate; do
+              if node scripts/validate_daily_gainers_video_script.js "$candidate"; then
+                date="$candidate"
+                break
+              fi
+              echo "Date $candidate is not ready for upload; continue scanning" >&2
+            done < <(node scripts/select_daily_gainers_pending_video_dates.js . 30)
+          fi
+          if [ -z "$date" ]; then
+            echo "No validated outstanding video script; no YouTube action."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          [[ "$date" =~ ^20[0-9]{6}$ ]] || { echo "Invalid date: $date" >&2; exit 1; }
           test -s "video_scripts/daily-gainers/$date.json"
           echo "date=$date" >> "$GITHUB_OUTPUT"
+          echo "ready=true" >> "$GITHUB_OUTPUT"
 
       - name: Validate approved script and target-day sources
+        if: steps.date.outputs.ready == 'true'
         run: node scripts/validate_daily_gainers_video_script.js "${{ steps.date.outputs.date }}"
 
       - name: Decide upload-only or full rendering
+        if: steps.date.outputs.ready == 'true'
         id: decision
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
