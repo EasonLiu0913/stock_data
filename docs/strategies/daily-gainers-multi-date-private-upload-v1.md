@@ -1,0 +1,37 @@
+# TAIWAN STOCK｜多交易日補片與 PRIVATE 上傳安全落地 v1
+
+Owner direction: 2026-11-05; same original hourly ChatGPT Agent v2.2, no parallel Agent. Repository: `EasonLiu0913/stock_data`, `main`.
+
+## 目標與完成定義
+
+從 20261103 起逐日維護各有效已收盤交易日的狀態，允許一輪 Agent 補多日新聞、AI、Market Opening、完整講稿與 Render-only。任何較早日期 BLOCKED 不得阻擋較新日期的研究。**每日期只有當該日完整 MP4/SRT/QA/SHA、同日來源與原始 A/B 全部驗證，YouTube PRIVATE 上傳/字幕/Video ID/Receipt/真實隱私回讀也完成，才是 `PRIVATE_UPLOAD_VERIFIED`；只有此時凍結新聞及退出待辦佇列。** 完成僅代表 PRIVATE，不得自動 public/unlisted。
+
+## 可驗證事實（2026-11-05）
+
+- 已觀察 11/04 orchestrator CI #41916560290 錯取 20261013 舊影片講稿，Validator 報 `missing/invalid scene_type 0`。
+- 原 `.github/workflows/generate-upload-daily-gainers-video.yml` 上傳工作全域 `concurrency: group: daily-gainers-video; cancel-in-progress: true`，不同日期可互相取消。
+- `scripts/decide_daily_gainers_video_upload.sh` 只用近期全域 active job 計數，且「receipt 不存在」不證明此前 YouTube 沒有已上傳影片；多日期直接並行上傳有重複風險。
+- 20261103 有既存私人試傳 receipt／Video ID `GiWA60DJoWI`，禁止重傳。
+
+## 已實作並測試的安全小步（main）
+
+1. 將 Generate & Upload 和 Retry Upload 改為共用 `daily-gainers-video-upload-serial` 併發群組、`cancel-in-progress: false`，正在上傳的影片不會被新日期取消；**此為保守序列化，不宣稱已完成多日同時上傳**。
+2. 新增 `scripts/select_daily_gainers_pending_video_dates.js`，以日期升冪列出 `20261103` 起有日期匹配、`privacy_status=private` 且**沒有任何 upload receipt** 的候選講稿；舊日期及 receipt 異常時 fail closed。
+3. 修正 `daily-gainers-video-upload-orchestrator.yml`：手動 dispatch 必須給明確 `YYYYMMDD`；排程/推送掃描待交付候選並先執行原始 `validate_daily_gainers_video_script.js`，只分派首個驗證 PASS 的日期；沒有驗證候選時不啟動 YouTube。**目前每次 orchestrator 最多路由一個上傳工作**。
+4. 新增四組檔案日期／receipt／私密性測試與無秘密讀取的 GitHub Actions CI `daily-gainers-multidate-date-gate-tests.yml`；Run #41971732954 已 PASS。此 PASS **僅代表日期選擇與安全鎖靜態及單元驗證**，不等於真實多日期產片／YouTube 端到端驗收。
+
+## 後續必須完成的階段與 A/B
+
+A. 加入日期化、可並行且**絕不包含 YouTube 上傳步驟**的通用 Render-only 工作流程；每個有效交易日獨立 facts/news/AI/final summary/12值opening/逐檔 scripts/MP4/SRT/QA/SHA，避免 11/3 golden 硬編日期與 44 檔內容不一致。保留驗證器的嚴格門檻，不能因多日期而將 missing 概念成 PASS。
+
+B. 在任何自動私人上傳前建立**不可重複建立影片的持久化上傳意圖／idempotency 保護**：在 YouTube API 建立影片前保存日期、輸入 SHA、來源 run 與 PENDING；上傳回覆模糊時唯讀查證而非盲目 retry；只有 video ID、真實 private 與字幕回讀、receipt 完整後更新 COMPLETE。所有 retry / Generate Upload 共用檢查，需測 race/取消/並行情境。GitHub concurrency 序列化同一時間只允許一個 upload job；待完整測試再評估按日期上傳併發。
+
+C. 才讓 Agent 單輪觸發多個日期化 **Render-only** 工作流程，並將其合格影片排入**單一安全上傳序列**；各日 `PRIVATE_UPLOAD_VERIFIED` 才結案。不同日期相互獨立，但相同日期不重跑不重傳。
+
+D. 對 20261104 及另一有效日期做原定 A/B、現場 Job Logs 與真正 Artifact 逐項驗證：來源 SHA、官方12值、全部股票、TTS、SRT、1080p MP4、burn QA、SHA、YouTube private、字幕、receipt。這些尚未 PASS，不得寫成已完成。
+
+## 執行邊界
+
+- Owner 已授權合格影片自動 **PRIVATE** 上傳（2026-11-05），**未授權**自動 public/unlisted 或修改既存影片隱私；不得降低任何原始 A/B。
+- 不重傳 11/3，不自動回補 20261102 及更早。
+- 所有正式流程必須先核對遠端 main 與 push 副作用，保持一個原本每小時 ChatGPT Agent、直接 main 小步演進。舊的硬編 11/3 workflow 保留 golden，不用它假冒 11/4。
