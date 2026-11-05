@@ -35,3 +35,16 @@ D. 對 20261104 及另一有效日期做原定 A/B、現場 Job Logs 與真正 A
 - Owner 已授權合格影片自動 **PRIVATE** 上傳（2026-11-05），**未授權**自動 public/unlisted 或修改既存影片隱私；不得降低任何原始 A/B。
 - 不重傳 11/3，不自動回補 20261102 及更早。
 - 所有正式流程必須先核對遠端 main 與 push 副作用，保持一個原本每小時 ChatGPT Agent、直接 main 小步演進。舊的硬編 11/3 workflow 保留 golden，不用它假冒 11/4。
+
+## 2026-11-05 小步實作與驗證進度（接續 v1）
+
+**已寫入 main、CI 已實際 PASS**：
+
+- `.github/workflows/daily-gainers-date-render-only.yml`：從 11/3 Golden 派生的通用日期參數化 Render-only（`workflow_dispatch date=YYYYMMDD`），`concurrency` 以 `inputs.date` 隔離；沒有 YouTube API 或任何上傳 Secrets；所有日期限定檢查已改用該日 raw stock_count、qa.target_date、scene_count、動態字幕百分比，並產出日期化 metadata/thumbnail、MP4/SRT/QA/SHA。**目前只有靜態安全／單元測試通過，尚未以 11/4 真實 44 檔跑出完整影片；不能宣稱渲染驗收通過。**
+- `.github/workflows/generate-upload-daily-gainers-video.yml` 與 `retry-upload-daily-gainers-video.yml` 已取消「空白日期自動選最新」後備：必須帶入確切日期（retry 還必須帶來源 Run ID）；二者共享不可中途取消的 PRIVATE 上傳併發鎖 `daily-gainers-video-upload-serial`。
+- `scripts/reserve_daily_gainers_private_upload.sh`：每次私人上傳 API POST 前，以 GitHub Contents API **create-only** 寫入 `video_upload_attempts/daily-gainers/YYYYMMDD.json`，內含日期、source Run、workflow Run、MP4 SHA-256、私人狀態與啟動時間。若先前已有 Attempt 或既有 Receipt，一律拒絕重傳。
+- `scripts/select_daily_gainers_pending_video_dates.js` 與 `scripts/decide_daily_gainers_video_upload.sh`：發現 Attempt 而沒有完整 Receipt 時不自動重試，而是保留阻塞並要求 YouTube 唯讀對帳（`blocked_reconcile_upload`），消除「成功上傳卻沒寫入 Receipt 後重傳」的已知風險。**但尚無自動對帳成功即完成 Receipt 的測試，不能宣稱整條 upload idempotency 完成。**
+- 日期選擇已限定 `20261103` 起，優先最早尚未交付且完整 Validator PASS 的日期；舊 `20261013` 不再作預設。每輪可另行派多個**無上傳**的 Render-only，PRIVATE 上傳仍保守一個接一個，避免真正同時寫入 YouTube。
+- 唯讀 CI：[Multi-date safety gates #41972808906](https://github.com/EasonLiu0913/stock_data/actions/runs/41972808906) **SUCCESS**，涵蓋 5 組日期／receipt／attempt 選擇測試、Shell 語法、並行鎖／Render-only 禁止上傳與上傳前 reservation 順序。
+
+**接下來還缺真正 A/B：** 針對至少兩個日期以實際 Agent 撰寫的合格講稿完成 Render-only MP4/SRT/QA/SHA/開尾畫面及新聞來源驗收；在未有 ambiguity 的測試條件下完成 YouTube PRIVATE 上傳／真實狀態／字幕／Receipt 回讀，並測試上傳中斷後由 Attempt 正確阻擋重傳。這些項目尚未執行，不要標為 PASS。發布鎖維持 **PRIVATE only**，禁止 public/unlisted。
