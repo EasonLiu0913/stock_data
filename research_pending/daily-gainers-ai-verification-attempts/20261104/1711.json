@@ -4,7 +4,7 @@
   "code": "1711",
   "max_attempts": 10,
   "attempt_count": 1,
-  "state": "RESERVED",
+  "state": "INVALID",
   "history_reconstruction": {
     "prior_first_pass_record_found": false,
     "verified_historical_attempts": 0,
@@ -15,9 +15,9 @@
       "attempt_number": 1,
       "attempt_id": "20261104-1711-first-pass-20261106T040118+0800",
       "phase": "FIRST_PASS",
-      "status": "RESERVED",
+      "status": "FAIL",
       "started_at": "2026-11-06T04:01:18+08:00",
-      "finished_at": null,
+      "finished_at": "2026-11-06T04:01:18+08:00",
       "agent_task_id": "6ae95a57e9d48191b3364c934d9fecfd",
       "agent_run_id": "unavailable",
       "source_sha": {
@@ -26,9 +26,85 @@
         "news": "c31055e4c0f3e60899be5e8e4fe9358c923190a6",
         "research_checkpoint": "5f94c86dc7669d5570b986d17cb4774840b87e8c"
       },
-      "check_results": [],
-      "failure_reason_codes": [],
-      "github_reservation_commit_sha": "unavailable",
+      "check_results": [
+        {
+          "check_id": "C01",
+          "layer": "CONTRACT_VALIDATED",
+          "status": "PASS",
+          "evidence_ref": "research_pending/daily-gainers-ai-checkpoints/20261104/agent-v35-20261105-2357-037-039.json",
+          "reason": "raw index 37 = 1711; research source_start_index=36 and second analysis=1711",
+          "next_action": "none",
+          "checked_at": "2026-11-06T04:01:18+08:00"
+        },
+        {
+          "check_id": "C02",
+          "layer": "CONTRACT_VALIDATED",
+          "status": "FAIL",
+          "evidence_ref": "scripts/validate_daily_gainers_ai_analysis.js",
+          "reason": "Facts institutional_verification_required=true; research institutional_verification.checked_at missing ISO timestamp",
+          "next_action": "source-supported repair of checked_at",
+          "checked_at": "2026-11-06T04:01:18+08:00"
+        },
+        {
+          "check_id": "C03",
+          "layer": "CONTRACT_VALIDATED",
+          "status": "PASS",
+          "evidence_ref": "research_pending/daily-gainers-ai-checkpoints/20261104/agent-v35-20261105-2357-037-039.json",
+          "reason": "raw close 36.8, +5.29%, 10220 lots; Facts foreign +639827 shares, margin -100 lots, broker top buy 370 lots; consistent",
+          "next_action": "none",
+          "checked_at": "2026-11-06T04:01:18+08:00"
+        },
+        {
+          "check_id": "C04",
+          "layer": "CONTRACT_VALIDATED",
+          "status": "PASS",
+          "evidence_ref": "data_daily_gain_over_5/analysis-news/20261104.json",
+          "reason": "formal News 1711 sources=[] cause_type=unknown; research does not claim direct catalyst",
+          "next_action": "none",
+          "checked_at": "2026-11-06T04:01:18+08:00"
+        },
+        {
+          "check_id": "C05",
+          "layer": "CONTRACT_VALIDATED",
+          "status": "PASS",
+          "evidence_ref": "research_pending/daily-gainers-ai-checkpoints/20261104/agent-v35-20261105-2357-037-039.json",
+          "reason": "no_record trust not treated as zero; low confidence and rebound risks stated",
+          "next_action": "none",
+          "checked_at": "2026-11-06T04:01:18+08:00"
+        },
+        {
+          "check_id": "S01",
+          "layer": "SOURCE_AUDIT",
+          "status": "PENDING",
+          "evidence_ref": "research_pending/daily-gainers-ai-checkpoints/20261104/agent-v35-20261105-2357-037-039.json",
+          "reason": "upstream source validator PASS/run not independently read",
+          "next_action": "read upstream validator proof",
+          "checked_at": "2026-11-06T04:01:18+08:00"
+        },
+        {
+          "check_id": "O01",
+          "layer": "ORIGIN_AUDIT",
+          "status": "NOT_REQUIRED",
+          "evidence_ref": "research_pending/daily-gainers-ai-checkpoints/20261104/agent-v35-20261105-2357-037-039.json",
+          "reason": "owner approved process-only audit; run unavailable",
+          "next_action": "none",
+          "checked_at": "2026-11-06T04:01:18+08:00"
+        },
+        {
+          "check_id": "O02",
+          "layer": "ORIGIN_AUDIT",
+          "status": "NOT_REQUIRED",
+          "evidence_ref": "research_pending/daily-gainers-ai-checkpoints/20261104/agent-v35-20261105-2357-037-039.json",
+          "reason": "owner approved process-only audit",
+          "next_action": "none",
+          "checked_at": "2026-11-06T04:01:18+08:00"
+        }
+      ],
+      "failure_reason_codes": [
+        "C02_MISSING_INSTITUTIONAL_CHECKED_AT",
+        "S01_UPSTREAM_VALIDATOR_NOT_READ"
+      ],
+      "github_reservation_commit_sha": "1e6c484a0e5ccb17f24b9280e741570919ed0cc7",
       "github_result_commit_sha": null
     }
   ]
