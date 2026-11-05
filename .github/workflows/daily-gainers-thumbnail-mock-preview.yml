@@ -1,0 +1,38 @@
+name: "[08 測試] Thumbnail mock previews (no YouTube)"
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "thumbnail-preview-requests/demo-v1.json"
+permissions:
+  contents: read
+concurrency:
+  group: thumbnail-mock-preview
+  cancel-in-progress: false
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+      - name: Install rendering dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg librsvg2-bin fonts-noto-cjk
+      - name: Generate mock-only PNG previews
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/render_daily_gainers_thumbnail_preview.js thumbnail-preview-requests/demo-v1.json output/thumbnail-preview-demo-v1
+          test -s output/thumbnail-preview-demo-v1/manifest.json
+          test "$(find output/thumbnail-preview-demo-v1 -name thumbnail.png | wc -l)" -eq 4
+      - name: Upload review-only previews
+        uses: actions/upload-artifact@v4
+        with:
+          name: thumbnail-mock-preview-demo-v1
+          path: output/thumbnail-preview-demo-v1/
+          retention-days: 7
+          if-no-files-found: error
