@@ -51,6 +51,18 @@ jobs:
           if(!s.includes('select_daily_gainers_pending_video_dates.js')||!s.includes('Explicit date is required for manual dispatch'))
             throw Error('unsafe stale-date fallback');
           const render=fs.readFileSync('.github/workflows/daily-gainers-date-render-only.yml','utf8');
+          // Build expression at Node runtime so Actions does not interpolate it in this test step.
+          const dateExpr='             'workflow_dispatch:', 'required: true', 'group: daily-gainers-safe-render-only-'+dateExpr,
+             'cancel-in-progress: false', 'DATE: '+dateExpr,
+             'node scripts/validate_daily_gainers_video_script.js "$DATE"',
+             'metadata.json', 'thumbnail.jpg', 'daily-gainers-'+dateExpr+'-render-only',
+          ];
+          for(const item of must)if(!render.includes(item))throw Error('missing date-scoped render gate: '+item);
+          if(/upload_youtube|YOUTUBE_CLIENT_SECRET|gh workflow run generate-upload/.test(render))throw Error('unsafe YouTube action in Render-only');
+          if(render.includes('9.82%')||render.includes("q.target_date!=='20261103'"))throw Error('11/03-specific visual check leaked');
+          console.log('PASS: serial private upload mutex, safe date selection, per-date Render-only with no YouTube credential');
+          NODE
++'{{ inputs.date }}';
           const must=[
              'workflow_dispatch:', 'required: true', 'group: daily-gainers-safe-render-only-${{ inputs.date }}',
              'cancel-in-progress: false', 'DATE: ${{ inputs.date }}',
