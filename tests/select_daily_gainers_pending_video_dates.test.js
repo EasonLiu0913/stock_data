@@ -38,3 +38,11 @@ test('a receipt with wrong date blocks automatic replay, rather than guessing',(
  script(scripts,'20261104');receipt(receipts,'20261104',{target_date:'20261103'});
  assert.deepEqual(run(dir),[]);
 }));
+
+test('an initiated upload attempt blocks replay even when final receipt is missing',()=>fixture(({dir,scripts})=>{
+ for(const d of ['20261104','20261105'])script(scripts,d);
+ const attempts=path.join(dir,'video_upload_attempts','daily-gainers');
+ fs.mkdirSync(attempts,{recursive:true});
+ fs.writeFileSync(path.join(attempts,'20261104.json'),JSON.stringify({target_date:'20261104',attempt_status:'initiated'}));
+ assert.deepEqual(run(dir),['20261105']);
+}));
