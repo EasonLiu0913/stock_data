@@ -1,5 +1,9 @@
 name: "[06 回填修復] Date-scoped TAIWAN STOCK missing data dispatcher"
 on:
+  push:
+    branches: [main]
+    paths:
+      - "recovery-requests/daily-gainers/*.json"
   workflow_dispatch:
     inputs:
       date:
@@ -16,7 +20,7 @@ permissions:
   contents: read
   actions: write
 concurrency:
-  group: taiwan-stock-date-recovery-${{ inputs.date }}
+  group: taiwan-stock-date-recovery-serial
   cancel-in-progress: false
 jobs:
   discover-and-dispatch:
@@ -35,19 +39,39 @@ jobs:
             data_twse_margin_balance
             data_fubon_broker_details
             research_pending/daily-gainers-ai
+            recovery-requests/daily-gainers
           sparse-checkout-cone-mode: false
       - name: Discover missing files and safely dispatch date-matched repair workflows
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TARGET: ${{ inputs.date }}
-          MAX_DISPATCHES: ${{ inputs.max_dispatches }}
+          INPUT_DATE: ${{ inputs.date }}
+          INPUT_MAX_DISPATCHES: ${{ inputs.max_dispatches }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           set -euo pipefail
+          TARGET="${INPUT_DATE:-}"
+          MAX_DISPATCHES="${INPUT_MAX_DISPATCHES:-2}"
+          if [[ "$EVENT_NAME" == "push" ]]; then
+            # The Agent can push a date-scoped request through its GitHub connector.
+            # Only an actual changed request triggers recovery, not workflow code changes.
+            mapfile -t changed < <(jq -r '[.commits[]? | (.added[]?, .modified[]?)] | unique[] | select(test("^recovery-requests/daily-gainers/20[0-9]{6}\\.json$"))' "$GITHUB_EVENT_PATH")
+            if [[ "${#changed[@]}" -ne 1 ]]; then
+              echo "Expected exactly one changed date request per commit" >&2; exit 1
+            fi
+            request="${changed[0]}"
+            TARGET="$(basename "$request" .json)"
+            test -s "$request"
+            jq -e --arg d "$TARGET" '.target_date==$d and .schema_version==1 and .mode=="missing_data_recovery" and (.reason|type=="string" and length>0)' "$request" >/dev/null
+            MAX_DISPATCHES="$(jq -r '.max_dispatches // 2' "$request")"
+          fi
           [[ "$TARGET" =~ ^20[0-9]{6}$ ]] && [[ "$TARGET" > "20261102" ]] || { echo "Bad/out-of-scope date" >&2; exit 1; }
           [[ "$MAX_DISPATCHES" == "1" || "$MAX_DISPATCHES" == "2" ]] || exit 1
           today="$(TZ=Asia/Taipei date +%Y%m%d)"
-          [[ "$TARGET" < "$today" ]] || { echo "Only closed past trading dates; no future/today speculation" >&2; exit 1; }
+          hour="$(TZ=Asia/Taipei date +%H)"
+          if [[ "$TARGET" > "$today" ]] || { [[ "$TARGET" == "$today" ]] && (( 10#$hour < 14 )); }; then
+            echo "Only completed TWSE sessions; no future/intraday date" >&2; exit 1
+          fi
           repo="$GITHUB_REPOSITORY"
           dispatched=0
           echo "### Date-specific recovery $TARGET" >> "$GITHUB_STEP_SUMMARY"
