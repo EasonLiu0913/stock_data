@@ -4,7 +4,7 @@
   "code": "2471",
   "max_attempts": 10,
   "attempt_count": 1,
-  "state": "RESERVED",
+  "state": "INVALID",
   "history_reconstruction": {
     "prior_first_pass_record_found": false,
     "verified_historical_attempts": 0,
@@ -15,9 +15,9 @@
       "attempt_number": 1,
       "attempt_id": "20261104-2471-first-pass-20261106T032538+0800",
       "phase": "FIRST_PASS",
-      "status": "RESERVED",
+      "status": "FAIL",
       "started_at": "2026-11-06T03:25:38+08:00",
-      "finished_at": null,
+      "finished_at": "2026-11-06T03:25:38+08:00",
       "agent_task_id": "Automation_1efe375b3ec4819182c93dc614aaa993",
       "agent_run_id": "unavailable",
       "source_sha": {
@@ -26,9 +26,101 @@
         "news": "c31055e4c0f3e60899be5e8e4fe9358c923190a6",
         "research_checkpoint": "5f94c86dc7669d5570b986d17cb4774840b87e8c"
       },
-      "check_results": [],
-      "failure_reason_codes": [],
-      "github_reservation_commit_sha": "unavailable",
+      "check_results": [
+        {
+          "check_id": "C01",
+          "layer": "CONTRACT_VALIDATED",
+          "status": "PASS",
+          "evidence_ref": "research_pending/daily-gainers-ai-checkpoints/20261104/agent-v35-20261105-2357-037-039.json",
+          "expected": "exact-date AI v3 content and source compliance",
+          "observed": "raw 0-based index 36 = 2471; research source_start_index=36 and stocks[0]=2471",
+          "reason": "raw 0-based index 36 = 2471; research source_start_index=36 and stocks[0]=2471",
+          "next_action": "none",
+          "checked_at": "2026-11-06T03:25:38+08:00"
+        },
+        {
+          "check_id": "C02",
+          "layer": "CONTRACT_VALIDATED",
+          "status": "FAIL",
+          "evidence_ref": "config/daily-gainers-ai-contract.json",
+          "expected": "exact-date AI v3 content and source compliance",
+          "observed": "Facts institutional_verification_required=true; checkpoint institutional_verification missing required checked_at",
+          "reason": "Facts institutional_verification_required=true; checkpoint institutional_verification missing required checked_at",
+          "next_action": "Obtain genuine institutional verification checked_at in a source-supported repair",
+          "checked_at": "2026-11-06T03:25:38+08:00"
+        },
+        {
+          "check_id": "C03",
+          "layer": "CONTRACT_VALIDATED",
+          "status": "PASS",
+          "evidence_ref": "research_pending/daily-gainers-ai-checkpoints/20261104/agent-v35-20261105-2357-037-039.json",
+          "expected": "exact-date AI v3 content and source compliance",
+          "observed": "raw 52.5/5.32%/1618 lots; Facts foreign +19060 shares, margin +100 lots, no_record trust/dealer; consistent",
+          "reason": "raw 52.5/5.32%/1618 lots; Facts foreign +19060 shares, margin +100 lots, no_record trust/dealer; consistent",
+          "next_action": "none",
+          "checked_at": "2026-11-06T03:25:38+08:00"
+        },
+        {
+          "check_id": "C04",
+          "layer": "CONTRACT_VALIDATED",
+          "status": "PASS",
+          "evidence_ref": "research_pending/daily-gainers-ai-checkpoints/20261104/agent-v35-20261105-2357-037-039.json",
+          "expected": "exact-date AI v3 content and source compliance",
+          "observed": "formal News sources=[] and research unknown catalyst; no future news claimed",
+          "reason": "formal News sources=[] and research unknown catalyst; no future news claimed",
+          "next_action": "none",
+          "checked_at": "2026-11-06T03:25:38+08:00"
+        },
+        {
+          "check_id": "C05",
+          "layer": "CONTRACT_VALIDATED",
+          "status": "PASS",
+          "evidence_ref": "research_pending/daily-gainers-ai-checkpoints/20261104/agent-v35-20261105-2357-037-039.json",
+          "expected": "exact-date AI v3 content and source compliance",
+          "observed": "no_record not equated to zero; low confidence",
+          "reason": "no_record not equated to zero; low confidence",
+          "next_action": "none",
+          "checked_at": "2026-11-06T03:25:38+08:00"
+        },
+        {
+          "check_id": "S01",
+          "layer": "SOURCE_AUDIT",
+          "status": "PENDING",
+          "evidence_ref": "research_pending/daily-gainers-ai-checkpoints/20261104/agent-v35-20261105-2357-037-039.json",
+          "expected": "exact-date AI v3 content and source compliance",
+          "observed": "upstream official-source validator PASS/receipt not independently read",
+          "reason": "upstream official-source validator PASS/receipt not independently read",
+          "next_action": "Read upstream validator evidence",
+          "checked_at": "2026-11-06T03:25:38+08:00"
+        },
+        {
+          "check_id": "O01",
+          "layer": "ORIGIN_AUDIT",
+          "status": "NOT_REQUIRED",
+          "evidence_ref": "research_pending/daily-gainers-ai-checkpoints/20261104/agent-v35-20261105-2357-037-039.json",
+          "expected": "exact-date AI v3 content and source compliance",
+          "observed": "Owner v4.2 process-only audit, original run unavailable",
+          "reason": "Owner v4.2 process-only audit, original run unavailable",
+          "next_action": "none",
+          "checked_at": "2026-11-06T03:25:38+08:00"
+        },
+        {
+          "check_id": "O02",
+          "layer": "ORIGIN_AUDIT",
+          "status": "NOT_REQUIRED",
+          "evidence_ref": "research_pending/daily-gainers-ai-checkpoints/20261104/agent-v35-20261105-2357-037-039.json",
+          "expected": "exact-date AI v3 content and source compliance",
+          "observed": "Owner v4.2 process-only audit",
+          "reason": "Owner v4.2 process-only audit",
+          "next_action": "none",
+          "checked_at": "2026-11-06T03:25:38+08:00"
+        }
+      ],
+      "failure_reason_codes": [
+        "C02_MISSING_INSTITUTIONAL_CHECKED_AT",
+        "S01_UPSTREAM_VALIDATOR_NOT_READ"
+      ],
+      "github_reservation_commit_sha": "8b8b1bef95d280b4858dab69f005a254f7a9d6f9",
       "github_result_commit_sha": null
     }
   ]
