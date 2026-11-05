@@ -9,6 +9,14 @@ if gh api "repos/$repo/contents/$receipt?ref=main" >/dev/null 2>&1; then
   echo "decision=already_uploaded" >> "$GITHUB_OUTPUT"
   exit 0
 fi
+# Any initiated attempt without a completed receipt is ambiguous (YouTube may already
+# have created a video even if the job stopped before recording the Video ID).
+attempt="video_upload_attempts/daily-gainers/${date}.json"
+if gh api "repos/$repo/contents/$attempt?ref=main" >/dev/null 2>&1; then
+  echo "Upload attempt requires YouTube readback before retry: $attempt"
+  echo "decision=blocked_reconcile_upload" >> "$GITHUB_OUTPUT"
+  exit 0
+fi
 # Avoid a second dispatch while either downstream workflow is already queued or running.
 active="$(gh api "repos/$repo/actions/runs?per_page=100" --jq '[.workflow_runs[] | select((.status=="queued" or .status=="in_progress") and (.name=="[08 影片] Generate & Upload Daily 5% Video" or .name=="[08 影片] Retry Daily 5% YouTube Upload"))] | length')"
 if [ "$active" -gt 0 ]; then
