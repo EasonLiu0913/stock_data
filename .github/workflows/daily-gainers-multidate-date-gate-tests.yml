@@ -1,0 +1,52 @@
+name: "[08 測試] Multi-date video scheduling safety gates"
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/select_daily_gainers_pending_video_dates.js"
+      - "tests/select_daily_gainers_pending_video_dates.test.js"
+      - ".github/workflows/daily-gainers-multidate-date-gate-tests.yml"
+      - ".github/workflows/daily-gainers-video-upload-orchestrator.yml"
+      - ".github/workflows/generate-upload-daily-gainers-video.yml"
+      - ".github/workflows/retry-upload-daily-gainers-video.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            scripts/select_daily_gainers_pending_video_dates.js
+            tests/select_daily_gainers_pending_video_dates.test.js
+            .github/workflows/daily-gainers-video-upload-orchestrator.yml
+            .github/workflows/generate-upload-daily-gainers-video.yml
+            .github/workflows/retry-upload-daily-gainers-video.yml
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Test date queue selector (no YouTube credentials)
+        run: node --test tests/select_daily_gainers_pending_video_dates.test.js
+      - name: Check upload workflows never cancel an ongoing upload
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs=require('node:fs');
+          for(const p of [
+            '.github/workflows/generate-upload-daily-gainers-video.yml',
+            '.github/workflows/retry-upload-daily-gainers-video.yml'
+          ]){
+            const s=fs.readFileSync(p,'utf8');
+            if(!s.includes('group: daily-gainers-video-upload-serial')||!s.includes('cancel-in-progress: false'))
+              throw Error('unsafe upload concurrency: '+p);
+          }
+          const s=fs.readFileSync('.github/workflows/daily-gainers-video-upload-orchestrator.yml','utf8');
+          if(!s.includes('select_daily_gainers_pending_video_dates.js')||!s.includes('Explicit date is required for manual dispatch'))
+            throw Error('unsafe stale-date fallback');
+          console.log('PASS: serial private upload mutex and safe date selector');
+          NODE
