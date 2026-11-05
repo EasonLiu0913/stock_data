@@ -12,6 +12,7 @@ on:
       - ".github/workflows/generate-upload-daily-gainers-video.yml"
       - ".github/workflows/retry-upload-daily-gainers-video.yml"
       - ".github/workflows/daily-gainers-date-render-only.yml"
+      - ".github/workflows/taiwan-stock-date-recovery-dispatch.yml"
   workflow_dispatch:
 permissions:
   contents: read
@@ -31,6 +32,7 @@ jobs:
             .github/workflows/generate-upload-daily-gainers-video.yml
             .github/workflows/retry-upload-daily-gainers-video.yml
             .github/workflows/daily-gainers-date-render-only.yml
+            .github/workflows/taiwan-stock-date-recovery-dispatch.yml
           sparse-checkout-cone-mode: false
       - uses: actions/setup-node@v4
         with:
@@ -62,5 +64,12 @@ jobs:
           }
           if(/upload_youtube|YOUTUBE_CLIENT_SECRET|gh workflow run generate-upload/.test(render))throw Error('upload path in Render-only');
           if(render.includes('9.82%')||render.includes("q.target_date!=='20261103'"))throw Error('hardcoded Golden date');
-          console.log('PASS safe multi-date selection and render-only/upload concurrency separation');
+          const recovery=fs.readFileSync('.github/workflows/taiwan-stock-date-recovery-dispatch.yml','utf8');
+          const required=['recovery-requests/daily-gainers/*.json','concurrency:','group: taiwan-stock-date-recovery-serial','MAX_DISPATCHES','gh workflow run "$workflow" --ref main -f date="$TARGET"','REVIEW_FIRST','INPUT_DATE','jq -e --arg d "$TARGET"'];
+          for(const part of required)if(!recovery.includes(part))throw Error('recovery dispatcher missing gate '+part);
+          for(const workflow of ['daily-gainers-over-5.yml','crawl-twse-mi-index.yml','crawl-twse-institutional-summaries.yml','crawl-twse-margin-balance.yml','crawl-fubon-broker-details.yml']){
+            if(!recovery.includes(workflow))throw Error('unmapped missing data '+workflow);
+          }
+          if(/upload_youtube\.js|generate-upload-daily-gainers-video\.yml|privacyStatus/.test(recovery))throw Error('unsafe recovery side effects');
+          console.log('PASS safe multi-date selection, date-scoped missing-data recovery, render-only and upload mutex');
           NODE
