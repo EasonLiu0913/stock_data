@@ -48,3 +48,13 @@ D. 對 20261104 及另一有效日期做原定 A/B、現場 Job Logs 與真正 A
 - 唯讀 CI：[Multi-date safety gates #41972808906](https://github.com/EasonLiu0913/stock_data/actions/runs/41972808906) **SUCCESS**，涵蓋 5 組日期／receipt／attempt 選擇測試、Shell 語法、並行鎖／Render-only 禁止上傳與上傳前 reservation 順序。
 
 **接下來還缺真正 A/B：** 針對至少兩個日期以實際 Agent 撰寫的合格講稿完成 Render-only MP4/SRT/QA/SHA/開尾畫面及新聞來源驗收；在未有 ambiguity 的測試條件下完成 YouTube PRIVATE 上傳／真實狀態／字幕／Receipt 回讀，並測試上傳中斷後由 Attempt 正確阻擋重傳。這些項目尚未執行，不要標為 PASS。發布鎖維持 **PRIVATE only**，禁止 public/unlisted。
+
+## 2026-11-05 每小時多日期缺資料觸發（Phase: date-scoped source recovery）
+
+新增 `.github/workflows/taiwan-stock-date-recovery-dispatch.yml`（Commit `7450c57549e60430efeb80eeacd85ba74a59afea`），整合原本單一每小時 ChatGPT Agent v2.2。
+
+- **Agent 可用入口**：由 GitHub Connector 在 `main` 建立或有實質變更才更新 `recovery-requests/daily-gainers/YYYYMMDD.json`，內容 `{"schema_version":1,"target_date":"YYYYMMDD","mode":"missing_data_recovery","reason":"實際缺少哪些來源及上輪證據","max_dispatches":2}`。GitHub Actions `push` path filter 會啟動日期化補檔 Dispatcher。人工亦可透過 `workflow_dispatch` 指定 `date`。嚴禁直接使用不具日期參數的預設值。
+- **可觸發的既有資料來源**：`daily-gainers-over-5.yml`（raw 5%）、`crawl-twse-mi-index.yml`、`crawl-twse-institutional-summaries.yml`（外資／投信／自營商）、`crawl-twse-margin-balance.yml`、`crawl-fubon-broker-details.yml`。保留各自原始契約；源 Workflow 可能帶 Pages deploy 副作用，Agent 發請求前須查原 Workflow 是否符合該日安全與成本限制。
+- **成本／重試界線**：每個 Dispatcher 最多派送兩個源 Workflow；已有資料文件就跳過、原工作仍在跑就跳過、該類最近 2 小時內執行過則標 `REVIEW_FIRST` 等 Agent 查實際 Job Log；不做盲目高頻重跑。不同日期可各自補資料，但共用 Router serial concurrency；不是允許同時多日 YouTube upload。
+- **內容邊界**：Dispatcher 僅以**檔案存在與非空**作為缺檔初判，**不是**日期／語義／來源 SHA 與 Validator PASS。已有但異常檔案需 Agent 依原驗證 Log 專案化修復；尚未具通用 `Facts`、`official market-opening` 或 AI 創作自動重建器。ChatGPT 本身必須撰寫新聞候選和非模板 AI 候選，讓現有日期化 CI 驗證及推廣；影片仍要完整 QA、PRIVATE 上傳及 receipt 才結案。
+- **證據**：安全靜態／日期選擇回歸 CI [#41975732119](https://github.com/EasonLiu0913/stock_data/actions/runs/41975732119) SUCCESS；尚未以實際 `recovery-requests` 推送證實其源 Workflow 連鎖成功，**不得稱端到端 PASS**。每小時 Agent 已寫入相關入口與真實 Run/Log 續行規則。沒有可安全行動時照實報 `BLOCKED`／`WAITING_SOURCE`，不能為了每輪報告 PASS 而造假或重複提交。
