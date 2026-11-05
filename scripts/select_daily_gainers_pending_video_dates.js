@@ -9,6 +9,7 @@ const limit=Number(process.argv[3]||3);
 if(!Number.isSafeInteger(limit)||limit<1||limit>30)throw Error('Invalid limit');
 const scriptDir=path.join(root,'video_scripts','daily-gainers');
 const receiptDir=path.join(root,'video_upload_receipts','daily-gainers');
+const attemptDir=path.join(root,'video_upload_attempts','daily-gainers');
 const min='20261103'; // owner-authorized queue start
 const valid=x=>/^20[0-9]{6}$/.test(x);
 if(!fs.existsSync(scriptDir))process.exit(0);
@@ -21,6 +22,9 @@ for(const date of candidates){
  let data;
  try{data=JSON.parse(fs.readFileSync(file,'utf8'));}catch{continue;}
  if(data.target_date!==date||data.privacy_status!=='private')continue;
+ const attempt=path.join(attemptDir,date+'.json');
+ // Ambiguous prior uploads require YouTube reconciliation before any retry.
+ if(fs.existsSync(attempt))continue;
  const receipt=path.join(receiptDir,date+'.json');
  if(fs.existsSync(receipt)){
    // Fail closed when receipt is malformed or ambiguous. Do not retry automatically.
