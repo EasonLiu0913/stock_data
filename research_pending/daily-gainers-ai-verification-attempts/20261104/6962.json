@@ -4,7 +4,7 @@
   "code": "6962",
   "max_attempts": 10,
   "attempt_count": 1,
-  "state": "PENDING",
+  "state": "UNVERIFIED",
   "history_reconstruction": {
     "prior_first_pass_record_found": false,
     "verified_historical_attempts": 0,
@@ -17,7 +17,7 @@
       "phase": "FIRST_PASS",
       "status": "PENDING",
       "started_at": "2026-11-06T02:01:15+08:00",
-      "finished_at": null,
+      "finished_at": "2026-11-06T02:01:15+08:00",
       "agent_task_id": "6ae95a57e9d48191b3364c934d9fecfd",
       "agent_run_id": "unavailable",
       "source_sha": {
@@ -26,10 +26,104 @@
         "news": "c31055e4c0f3e60899be5e8e4fe9358c923190a6",
         "research_checkpoint": "b6bcad3185fcdaf9969c1d8eb5e95cfc48ea928a"
       },
-      "check_results": [],
-      "failure_reason_codes": [],
-      "github_reservation_commit_sha": "unavailable",
-      "github_result_commit_sha": null
+      "check_results": [
+        {
+          "check_id": "C01",
+          "layer": "CONTRACT_VALIDATED",
+          "status": "PASS",
+          "reason": "raw index 30 = 6962; research 031-033 index30",
+          "evidence_ref": "raw and research blob",
+          "expected": "date-matched source and compliant analysis",
+          "observed": "raw index 30 = 6962; research 031-033 index30",
+          "next_action": "none",
+          "checked_at": "2026-11-06T02:01:15+08:00"
+        },
+        {
+          "check_id": "C02",
+          "layer": "CONTRACT_VALIDATED",
+          "status": "PENDING",
+          "reason": "Partial checkpoint analysis has expected fields but original full AI v3 validator not executed",
+          "evidence_ref": "config/daily-gainers-ai-contract.json",
+          "expected": "date-matched source and compliant analysis",
+          "observed": "Partial checkpoint analysis has expected fields but original full AI v3 validator not executed",
+          "next_action": "run original full AI validator when eligible",
+          "checked_at": "2026-11-06T02:01:15+08:00"
+        },
+        {
+          "check_id": "C03",
+          "layer": "CONTRACT_VALIDATED",
+          "status": "PASS",
+          "reason": "OHLC 29.9/30.65/29.25/30.45, 5.73%, 4936 lots; foreign 1602478 shares, margin +104 lots match Facts",
+          "evidence_ref": "raw/Facts SHA",
+          "expected": "date-matched source and compliant analysis",
+          "observed": "OHLC 29.9/30.65/29.25/30.45, 5.73%, 4936 lots; foreign 1602478 shares, margin +104 lots match Facts",
+          "next_action": "none",
+          "checked_at": "2026-11-06T02:01:15+08:00"
+        },
+        {
+          "check_id": "C04",
+          "layer": "CONTRACT_VALIDATED",
+          "status": "PASS",
+          "reason": "News sources=[] and unknown catalyst; research does not claim dated direct event",
+          "evidence_ref": "News SHA",
+          "expected": "date-matched source and compliant analysis",
+          "observed": "News sources=[] and unknown catalyst; research does not claim dated direct event",
+          "next_action": "none",
+          "checked_at": "2026-11-06T02:01:15+08:00"
+        },
+        {
+          "check_id": "C05",
+          "layer": "CONTRACT_VALIDATED",
+          "status": "PASS",
+          "reason": "low confidence, no confirmed catalyst; broker not equated to institution",
+          "evidence_ref": "research blob",
+          "expected": "date-matched source and compliant analysis",
+          "observed": "low confidence, no confirmed catalyst; broker not equated to institution",
+          "next_action": "none",
+          "checked_at": "2026-11-06T02:01:15+08:00"
+        },
+        {
+          "check_id": "S01",
+          "layer": "SOURCE_AUDIT",
+          "status": "PENDING",
+          "reason": "Facts cross-checked, independent TWSE original file readback not performed",
+          "evidence_ref": "data_twse_foreign_investors/20261104_twse_foreign_investors.json",
+          "expected": "date-matched source and compliant analysis",
+          "observed": "Facts cross-checked, independent TWSE original file readback not performed",
+          "next_action": "read official raw original",
+          "checked_at": "2026-11-06T02:01:15+08:00"
+        },
+        {
+          "check_id": "O01",
+          "layer": "ORIGIN_AUDIT",
+          "status": "PENDING",
+          "reason": "GitHub research commit ac122c81583530d8d7b9c7f485ee8b4bf5d356ab at 2026-11-05T16:00:17Z; original automation run ID unavailable",
+          "evidence_ref": "GitHub commit",
+          "expected": "original task run linked to commit",
+          "observed": "GitHub research commit ac122c81583530d8d7b9c7f485ee8b4bf5d356ab at 2026-11-05T16:00:17Z; original automation run ID unavailable",
+          "next_action": "obtain original automation run reference",
+          "checked_at": "2026-11-06T02:01:15+08:00"
+        },
+        {
+          "check_id": "O02",
+          "layer": "ORIGIN_AUDIT",
+          "status": "PENDING",
+          "reason": "No independently accessible run-to-research trace; commit title not proof",
+          "evidence_ref": "original automation task run",
+          "expected": "date-matched source and compliant analysis",
+          "observed": "No independently accessible run-to-research trace; commit title not proof",
+          "next_action": "obtain original automation run reference",
+          "checked_at": "2026-11-06T02:01:15+08:00"
+        }
+      ],
+      "failure_reason_codes": [
+        "C02",
+        "S01",
+        "O01",
+        "O02"
+      ],
+      "github_reservation_commit_sha": "e582e0a73f83817dbce88c7e8e0d9a68d6236bb6",
+      "github_result_commit_sha": "unavailable_until_commit_readback"
     }
   ]
 }
