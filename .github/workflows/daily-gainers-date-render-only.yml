@@ -1,0 +1,189 @@
+name: "[08 影片] Date-scoped ChatGPT Safe Render-only"
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "Required trading date YYYYMMDD"
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: daily-gainers-safe-render-only-${{ inputs.date }}
+  cancel-in-progress: false
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      DATE: ${{ inputs.date }}
+      YOUTUBE_VTUBER_ENABLED: '1'
+      YOUTUBE_TTS_VOICE: zh-TW-YunJheNeural
+      YOUTUBE_TTS_RATE: '+15%'
+    steps:
+      - name: Validate requested trading date
+        shell: bash
+        run: |
+          [[ "$DATE" =~ ^20[0-9]{6}$ ]] || { echo "Explicit YYYYMMDD date required" >&2; exit 1; }
+          [[ "$DATE" > "20261102" ]] || { echo "Queue starts at 20261103" >&2; exit 1; }
+      - name: Checkout read-only media inputs (no YouTube actions)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+          sparse-checkout: |
+            scripts
+            config
+            assets/daily-gainers-vtuber-sprite.webp
+            data_daily_gain_over_5
+            research_pending/daily-gainers-video-scripts
+            tests/test_daily_gainers_spoken_text.py
+            tests/test_daily_gainers_subtitle_alignment.py
+            tests/test_daily_gainers_caption_segments.py
+            tests/daily_gainers_video_timestamps.test.js
+            tests/daily_gainers_video_date_gate.test.js
+            tests/daily_gainers_dual_track.test.js
+            tests/daily_gainers_news_narration.test.js
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install media dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg librsvg2-bin fonts-noto-cjk espeak-ng
+          python -m pip install --disable-pip-version-check --no-cache-dir edge-tts==7.3.1 mutagen pypinyin pillow
+      - name: Materialize ChatGPT script locally without publishing to monitored upload path
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p video_scripts/daily-gainers
+          node --test tests/daily_gainers_dual_track.test.js
+          node scripts/materialize_daily_gainers_dual_track.js "$DATE"
+          sha256sum "video_scripts/daily-gainers/$DATE.json"
+          node scripts/validate_daily_gainers_video_script.js "$DATE"
+          node --test tests/daily_gainers_news_narration.test.js
+          node scripts/build_daily_gainers_video_package.js "$DATE"
+          node scripts/validate_daily_gainers_news_narration.js "$DATE" | tee "output/daily-gainers-video/$DATE/news-narration-qa.json"
+          node scripts/build_daily_gainers_list_dashboard_slides.js "$DATE"
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const date=process.env.DATE;
+          const raw=JSON.parse(fs.readFileSync('data_daily_gain_over_5/'+date+'.json'));
+          const p=JSON.parse(fs.readFileSync('output/daily-gainers-video/'+date+'/list-dashboard-manifest.json'));
+          if(p.dashboard!=='owner-approved-multi-stock-list-only'||p.stock_codes.length!==raw.stock_count)process.exit(1);
+          const expected=['加權指數','全市場成交金額','上漲／下跌','平盤／漲停','外資／投信／自營商','三大法人合計','市場強弱摘要'];
+          if(JSON.stringify(p.opening_dashboard_fields)!==JSON.stringify(expected))throw Error('Owner-approved fixed opening Dashboard order mismatch');
+          NODE
+      - name: Validate TTS and subtitle text rules
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m unittest discover -s tests -p 'test_daily_gainers_spoken_text.py'
+          python -m unittest discover -s tests -p 'test_daily_gainers_subtitle_alignment.py'
+          python -m unittest discover -s tests -p 'test_daily_gainers_caption_segments.py'
+      - name: Real YunJhe +15% TTS and cue timings
+        shell: bash
+        run: |
+          set -euo pipefail
+          plan="output/daily-gainers-video/$DATE/plan.json"
+          for trial in 1 2 3; do
+            if [ "$trial" -eq 1 ]; then
+              if python scripts/synthesize_daily_gainers_tts.py "$plan"; then exit 0; fi
+            else
+              if TAIWAN_STOCK_TTS_RESUME=1 python scripts/synthesize_daily_gainers_tts.py "$plan"; then exit 0; fi
+            fi
+            if [ "$trial" -eq 3 ]; then
+              echo "Edge TTS unavailable after 3 bounded passes; preserving fail-closed status" >&2
+              exit 1
+            fi
+            echo "Retry remaining scenes from verified per-scene checkpoint" >&2
+            sleep 20
+          done
+      - name: Real 1080p VTuber render
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/build_daily_gainers_lipsync.py "output/daily-gainers-video/$DATE/plan.json"
+          node scripts/render_daily_gainers_video.js "$DATE"
+      - name: Generate spoken-aligned Traditional Chinese SRT
+        run: python scripts/build_daily_gainers_srt.py "output/daily-gainers-video/$DATE/plan.json"
+      - name: Fail closed on unsafe subtitle cue length or multiline overflow
+        shell: bash
+        run: |
+          python - "$DATE" <<'PY'
+          import pathlib,re,sys
+          p=pathlib.Path(f"output/daily-gainers-video/{sys.argv[1]}/daily-gainers-{sys.argv[1]}.zh-TW.srt")
+          blocks=re.split(r'\n\s*\n',p.read_text(encoding='utf-8').strip())
+          if not blocks: raise SystemExit('No SRT cues')
+          for i,block in enumerate(blocks,1):
+              lines=block.splitlines()
+              if len(lines)<3 or len(lines[2:])>2: raise SystemExit(f'Cue {i}: not 1-2 lines')
+              if len(''.join(lines[2:]))>30: raise SystemExit(f'Cue {i}: >30 characters')
+          print(f"SRT safe-area PASS cues={len(blocks)}")
+          PY
+      - name: Burn spoken Traditional Chinese SRT into final MP4 and verify visual pixels
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/burn_daily_gainers_subtitles.js "$DATE"
+          python scripts/verify_daily_gainers_burned_caption.py "$DATE"
+          ffmpeg -y -loglevel error -ss 12 -i "output/daily-gainers-video/$DATE/daily-gainers-$DATE.mp4" -frames:v 1 "output/daily-gainers-video/$DATE/verified-opening-frame.png"
+          ffmpeg -y -loglevel error -sseof -12 -i "output/daily-gainers-video/$DATE/daily-gainers-$DATE.mp4" -frames:v 1 "output/daily-gainers-video/$DATE/verified-closing-frame.png"
+      - name: Verify MP4, QA, SRT, and provenance without touching YouTube
+        shell: bash
+        run: |
+          set -euo pipefail
+          dir="output/daily-gainers-video/$DATE"
+          test -s "$dir/daily-gainers-$DATE.mp4"
+          test -s "$dir/daily-gainers-$DATE.zh-TW.srt"
+          if grep -Eq '百分之[0-9]' "$dir/daily-gainers-$DATE.zh-TW.srt"; then
+            echo "Display subtitle still contains spoken numeric percent" >&2
+            exit 1
+          fi
+          grep -Eq '[0-9]+(\.[0-9]+)?%' "$dir/daily-gainers-$DATE.zh-TW.srt" || { echo "No numeric percent display subtitle" >&2; exit 1; }
+          node - "$dir" <<'NODE'
+          const fs=require('node:fs'),path=require('node:path');
+          const d=process.argv[2],q=JSON.parse(fs.readFileSync(path.join(d,'qa.json')));
+          const raw=JSON.parse(fs.readFileSync(path.join('data_daily_gain_over_5',process.env.DATE+'.json'),'utf8'));
+          const plan=JSON.parse(fs.readFileSync(path.join(d,'plan.json')));
+          const p=JSON.parse(fs.readFileSync(path.join(d,'list-dashboard-manifest.json')));
+          if(q.target_date!==process.env.DATE||q.scene_count!==plan.scenes.length||q.duration_pass!==true||q.vtuber_enabled!==true)throw Error('MP4 QA incomplete');
+          const visual=JSON.parse(fs.readFileSync(path.join(d,'render-only-visual-check.json')));
+          const burn=JSON.parse(fs.readFileSync(path.join(d,'burned-caption-proof.json')));
+          if(plan.scenes[0]?.scene_type!=='market_opening'||!['summary','closing_summary'].includes(plan.scenes.at(-1)?.scene_type))throw Error('Opening or closing missing');
+          if(visual.status!=='PASS_STATIC_AND_PIXEL_DELTA_VISUAL_REVIEW_PENDING'||burn.status!=='BURN_EXECUTED_VISUAL_QA_PENDING')throw Error('Caption-burn visual evidence missing');
+          if(p.stock_codes.length!==raw.stock_count)throw Error('Dashboard stock coverage incomplete');
+          NODE
+          ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0 "$dir/daily-gainers-$DATE.mp4" | grep -Fx '1920,1080'
+          sha256sum "$dir/daily-gainers-$DATE.mp4" "$dir/daily-gainers-$DATE.zh-TW.srt" "$dir/plan.json" "$dir/qa.json" "$dir/burned-caption-proof.json" "$dir/render-only-visual-check.json" | tee "$dir/sha256sums.txt"
+          echo "Render-only QA pass: no YouTube action, no upload credential used" >> "$GITHUB_STEP_SUMMARY"
+      - name: Keep MP4 evidence even on partial failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-gainers-${{ inputs.date }}-render-only
+          path: |
+            output/daily-gainers-video/${{ inputs.date }}/plan.json
+            output/daily-gainers-video/${{ inputs.date }}/qa.json
+            output/daily-gainers-video/${{ inputs.date }}/news-narration-qa.json
+            output/daily-gainers-video/${{ inputs.date }}/tts-manifest.json
+            output/daily-gainers-video/${{ inputs.date }}/subtitle-manifest.json
+            output/daily-gainers-video/${{ inputs.date }}/render-timings.json
+            output/daily-gainers-video/${{ inputs.date }}/list-dashboard-manifest.json
+            output/daily-gainers-video/${{ inputs.date }}/sha256sums.txt
+            output/daily-gainers-video/${{ inputs.date }}/burned-caption-proof.json
+            output/daily-gainers-video/${{ inputs.date }}/render-only-visual-check.json
+            output/daily-gainers-video/${{ inputs.date }}/verified-opening-frame.png
+            output/daily-gainers-video/${{ inputs.date }}/verified-closing-frame.png
+            output/daily-gainers-video/${{ inputs.date }}/daily-gainers-${{ inputs.date }}.mp4
+            output/daily-gainers-video/${{ inputs.date }}/daily-gainers-${{ inputs.date }}.zh-TW.srt
+          retention-days: 14
+          if-no-files-found: warn
