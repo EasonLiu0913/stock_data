@@ -79,6 +79,15 @@ jobs:
           awk -v d="$duration" 'BEGIN { if (d < 300 || d > 600) exit 1 }'
           echo "Reusing QA-passed artifact: $(jq -r '.duration_minutes' "$dir/qa.json") min"
 
+      - name: Persist create-only PRIVATE upload attempt (blocks ambiguous replay)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          date="${{ steps.job.outputs.date }}"
+          bash scripts/reserve_daily_gainers_private_upload.sh "$date" "${{ steps.job.outputs.run_id }}" "output/daily-gainers-video/$date/daily-gainers-$date.mp4"
+
       - name: Upload private video to YouTube
         id: youtube
         env:
