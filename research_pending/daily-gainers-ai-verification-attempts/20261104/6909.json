@@ -4,7 +4,7 @@
   "code": "6909",
   "max_attempts": 10,
   "attempt_count": 1,
-  "state": "RESERVED",
+  "state": "INVALID",
   "history_reconstruction": {
     "prior_first_pass_record_found": false,
     "verified_historical_attempts": 0,
@@ -15,9 +15,9 @@
       "attempt_number": 1,
       "attempt_id": "20261104-6909-first-pass-20261106T040118+0800",
       "phase": "FIRST_PASS",
-      "status": "RESERVED",
+      "status": "FAIL",
       "started_at": "2026-11-06T04:01:18+08:00",
-      "finished_at": null,
+      "finished_at": "2026-11-06T04:01:18+08:00",
       "agent_task_id": "6ae95a57e9d48191b3364c934d9fecfd",
       "agent_run_id": "unavailable",
       "source_sha": {
@@ -26,9 +26,85 @@
         "news": "c31055e4c0f3e60899be5e8e4fe9358c923190a6",
         "research_checkpoint": "5f94c86dc7669d5570b986d17cb4774840b87e8c"
       },
-      "check_results": [],
-      "failure_reason_codes": [],
-      "github_reservation_commit_sha": "unavailable",
+      "check_results": [
+        {
+          "check_id": "C01",
+          "layer": "CONTRACT_VALIDATED",
+          "status": "PASS",
+          "evidence_ref": "data_daily_gain_over_5/analysis-facts/20261104.json",
+          "reason": "raw index 38=6909; research index 36–38 third stock=6909",
+          "next_action": "none",
+          "checked_at": "2026-11-06T04:01:18+08:00"
+        },
+        {
+          "check_id": "C02",
+          "layer": "CONTRACT_VALIDATED",
+          "status": "FAIL",
+          "evidence_ref": "scripts/validate_daily_gainers_ai_analysis.js",
+          "reason": "institutional_verification_required=true but checked_at ISO timestamp absent",
+          "next_action": "source-supported checked_at repair",
+          "checked_at": "2026-11-06T04:01:18+08:00"
+        },
+        {
+          "check_id": "C03",
+          "layer": "CONTRACT_VALIDATED",
+          "status": "PASS",
+          "evidence_ref": "data_daily_gain_over_5/analysis-facts/20261104.json",
+          "reason": "raw 45.1 +5.25% 675 lots; Facts foreign +19065 shares dealer -17000 margin -8; consistent",
+          "next_action": "none",
+          "checked_at": "2026-11-06T04:01:18+08:00"
+        },
+        {
+          "check_id": "C04",
+          "layer": "CONTRACT_VALIDATED",
+          "status": "PASS",
+          "evidence_ref": "data_daily_gain_over_5/analysis-facts/20261104.json",
+          "reason": "News sources=[] unknown catalyst; no fabricated direct event",
+          "next_action": "none",
+          "checked_at": "2026-11-06T04:01:18+08:00"
+        },
+        {
+          "check_id": "C05",
+          "layer": "CONTRACT_VALIDATED",
+          "status": "PASS",
+          "evidence_ref": "data_daily_gain_over_5/analysis-facts/20261104.json",
+          "reason": "investment_trust no_record distinguished from zero; low confidence and risk included",
+          "next_action": "none",
+          "checked_at": "2026-11-06T04:01:18+08:00"
+        },
+        {
+          "check_id": "S01",
+          "layer": "SOURCE_AUDIT",
+          "status": "PENDING",
+          "evidence_ref": "data_daily_gain_over_5/analysis-facts/20261104.json",
+          "reason": "upstream official source validator PASS not independently retrieved",
+          "next_action": "read upstream validator PASS evidence",
+          "checked_at": "2026-11-06T04:01:18+08:00"
+        },
+        {
+          "check_id": "O01",
+          "layer": "ORIGIN_AUDIT",
+          "status": "NOT_REQUIRED",
+          "evidence_ref": "data_daily_gain_over_5/analysis-facts/20261104.json",
+          "reason": "owner-approved process-only audit",
+          "next_action": "none",
+          "checked_at": "2026-11-06T04:01:18+08:00"
+        },
+        {
+          "check_id": "O02",
+          "layer": "ORIGIN_AUDIT",
+          "status": "NOT_REQUIRED",
+          "evidence_ref": "data_daily_gain_over_5/analysis-facts/20261104.json",
+          "reason": "owner-approved process-only audit",
+          "next_action": "none",
+          "checked_at": "2026-11-06T04:01:18+08:00"
+        }
+      ],
+      "failure_reason_codes": [
+        "C02_MISSING_INSTITUTIONAL_CHECKED_AT",
+        "S01_UPSTREAM_VALIDATOR_NOT_READ"
+      ],
+      "github_reservation_commit_sha": "18c351e3c123591ceebc2d9a689c1b85351c837c",
       "github_result_commit_sha": null
     }
   ]
