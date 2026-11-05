@@ -13,8 +13,9 @@ permissions:
   actions: read
 
 concurrency:
-  group: daily-gainers-video
-  cancel-in-progress: true
+  # Shared upload mutex across generate/retry; never cancel an in-flight YouTube upload.
+  group: daily-gainers-video-upload-serial
+  cancel-in-progress: false
 
 jobs:
   render-upload:
