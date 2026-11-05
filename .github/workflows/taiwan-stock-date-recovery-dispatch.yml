@@ -1,0 +1,104 @@
+name: "[06 回填修復] Date-scoped TAIWAN STOCK missing data dispatcher"
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "Exact closed TWSE trading date YYYYMMDD; no fallback"
+        required: true
+        type: string
+      max_dispatches:
+        description: "Maximum source workflows to start this run (1 or 2)"
+        required: false
+        type: choice
+        options: ["1", "2"]
+        default: "2"
+permissions:
+  contents: read
+  actions: write
+concurrency:
+  group: taiwan-stock-date-recovery-${{ inputs.date }}
+  cancel-in-progress: false
+jobs:
+  discover-and-dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          sparse-checkout: |
+            data_daily_gain_over_5
+            data_twse_mi_index
+            data_twse_foreign_investors
+            data_twse_investment_trust
+            data_twse_dealers
+            data_twse_margin_balance
+            data_fubon_broker_details
+            research_pending/daily-gainers-ai
+          sparse-checkout-cone-mode: false
+      - name: Discover missing files and safely dispatch date-matched repair workflows
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET: ${{ inputs.date }}
+          MAX_DISPATCHES: ${{ inputs.max_dispatches }}
+        run: |
+          set -euo pipefail
+          [[ "$TARGET" =~ ^20[0-9]{6}$ ]] && [[ "$TARGET" > "20261102" ]] || { echo "Bad/out-of-scope date" >&2; exit 1; }
+          [[ "$MAX_DISPATCHES" == "1" || "$MAX_DISPATCHES" == "2" ]] || exit 1
+          today="$(TZ=Asia/Taipei date +%Y%m%d)"
+          [[ "$TARGET" < "$today" ]] || { echo "Only closed past trading dates; no future/today speculation" >&2; exit 1; }
+          repo="$GITHUB_REPOSITORY"
+          dispatched=0
+          echo "### Date-specific recovery $TARGET" >> "$GITHUB_STEP_SUMMARY"
+          # Never start a second instance of the same source workflow while another one runs.
+          dispatch_missing() {
+            local file="$1" workflow="$2"
+            if [[ -s "$file" ]]; then
+              echo "PRESENT $file" >> "$GITHUB_STEP_SUMMARY"
+              return 0
+            fi
+            if (( dispatched >= MAX_DISPATCHES )); then
+              echo "DEFERRED $file (bounded dispatch budget)" >> "$GITHUB_STEP_SUMMARY"
+              return 0
+            fi
+            local active
+            active="$(gh api "repos/$repo/actions/workflows/$workflow/runs?per_page=30" --jq '[.workflow_runs[] | select(.status=="queued" or .status=="in_progress" or .status=="waiting" or .status=="requested")] | length')"
+            if (( active > 0 )); then
+              echo "RUNNING $workflow; wait for existing job before retry" >> "$GITHUB_STEP_SUMMARY"
+              return 0
+            fi
+            # Fail-closed on a recent failed or completed run: Agent must inspect actual
+            # log + output date before another request, not create hourly retry storms.
+            local latest
+            latest="$(gh api "repos/$repo/actions/workflows/$workflow/runs?per_page=1" --jq '.workflow_runs[0] | [.id,.conclusion,.created_at] | @tsv' 2>/dev/null || true)"
+            if [[ -n "$latest" ]]; then
+              local id conclusion started stamp now
+              IFS=$'\t' read -r id conclusion started <<< "$latest"
+              stamp="$(date -u -d "$started" +%s 2>/dev/null || echo 0)"
+              now="$(date -u +%s)"
+              if (( now-stamp < 7200 )); then
+                echo "REVIEW_FIRST $workflow latest=$id conclusion=$conclusion; output $file still missing" >> "$GITHUB_STEP_SUMMARY"
+                return 0
+              fi
+            fi
+            gh workflow run "$workflow" --ref main -f date="$TARGET"
+            dispatched=$((dispatched+1))
+            echo "DISPATCHED $workflow date=$TARGET for missing $file" >> "$GITHUB_STEP_SUMMARY"
+          }
+          # The target date is valid only if there is a date-scoped market file
+          # or the agent explicitly chose it as a known historical trading date.
+          # Never invent raw stocks for nonexistent market dates.
+          dispatch_missing "data_daily_gain_over_5/$TARGET.json" "daily-gainers-over-5.yml"
+          if [[ ! -s "data_daily_gain_over_5/$TARGET.json" ]]; then
+            echo "RAW_LIST_MISSING: dependent steps deferred until next hourly check" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          dispatch_missing "data_twse_mi_index/${TARGET}_twse_mi_index.json" "crawl-twse-mi-index.yml"
+          if [[ ! -s "data_twse_foreign_investors/${TARGET}_twse_foreign_investors.json" || ! -s "data_twse_investment_trust/${TARGET}_twse_investment_trust.json" || ! -s "data_twse_dealers/${TARGET}_twse_dealers.json" ]]; then
+            dispatch_missing "data_twse_foreign_investors/${TARGET}_twse_foreign_investors.json" "crawl-twse-institutional-summaries.yml"
+          fi
+          dispatch_missing "data_twse_margin_balance/${TARGET}_twse_margin_balance.csv" "crawl-twse-margin-balance.yml"
+          dispatch_missing "data_fubon_broker_details/fubon_${TARGET}_券商分點進出明細.json" "crawl-fubon-broker-details.yml"
+          echo "Dispatches this round: $dispatched / $MAX_DISPATCHES" >> "$GITHUB_STEP_SUMMARY"
+          echo "AI/news narratives still belong to ChatGPT Agent; this dispatcher cannot synthesize them." >> "$GITHUB_STEP_SUMMARY"
