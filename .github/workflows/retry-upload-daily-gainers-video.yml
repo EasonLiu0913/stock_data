@@ -34,6 +34,7 @@ jobs:
           sparse-checkout: |
             scripts
             video_upload_jobs
+            data_daily_gain_over_5
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
@@ -79,6 +80,12 @@ jobs:
           awk -v d="$duration" 'BEGIN { if (d < 300 || d > 600) exit 1 }'
           echo "Reusing QA-passed artifact: $(jq -r '.duration_minutes' "$dir/qa.json") min"
 
+      - name: Mandatory thumbnail QA before creating any YouTube video
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/verify_daily_gainers_thumbnail_before_upload.js "${{ steps.job.outputs.date }}"
+
       - name: Persist create-only PRIVATE upload attempt (blocks ambiguous replay)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -110,6 +117,17 @@ jobs:
             "${{ steps.youtube.outputs.video_id }}" \
             "output/daily-gainers-video/$date/daily-gainers-$date.zh-TW.srt" \
             "zh-TW" "繁體中文"
+
+      - name: Set REQUIRED YouTube thumbnail on same video ID
+        id: thumbnail
+        env:
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: |
+          set -euo pipefail
+          date="${{ steps.job.outputs.date }}"
+          node scripts/upload_youtube_thumbnail.js "${{ steps.youtube.outputs.video_id }}" "output/daily-gainers-video/$date/thumbnail.jpg"
 
       - name: Record completed YouTube upload
         if: success()
