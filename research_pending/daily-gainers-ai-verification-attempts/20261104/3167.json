@@ -4,7 +4,7 @@
   "code": "3167",
   "max_attempts": 10,
   "attempt_count": 1,
-  "state": "PENDING",
+  "state": "UNVERIFIED",
   "history_reconstruction": {
     "prior_first_pass_record_found": false,
     "verified_historical_attempts": 0,
@@ -17,7 +17,7 @@
       "phase": "FIRST_PASS",
       "status": "PENDING",
       "started_at": "2026-11-06T04:27:14+08:00",
-      "finished_at": null,
+      "finished_at": "2026-11-06T04:27:14+08:00",
       "agent_task_id": "Automation_1efe375b3ec4819182c93dc614aaa993",
       "agent_run_id": "unavailable",
       "source_sha": {
@@ -26,9 +26,84 @@
         "news": "c31055e4c0f3e60899be5e8e4fe9358c923190a6",
         "research_checkpoint": "e9df8f88ddfe3663883e4d23c79fc69a68132efa"
       },
-      "check_results": [],
-      "failure_reason_codes": [],
-      "github_reservation_commit_sha": "unavailable",
+      "check_results": [
+        {
+          "check_id": "C01",
+          "layer": "CONTRACT_VALIDATED",
+          "status": "PASS",
+          "evidence_ref": "data_daily_gain_over_5/analysis-facts/20261104.json",
+          "reason": "raw index 41 matches Facts and checkpoint code 3167",
+          "next_action": "none",
+          "checked_at": "2026-11-06T04:27:14+08:00"
+        },
+        {
+          "check_id": "C02",
+          "layer": "CONTRACT_VALIDATED",
+          "status": "PASS",
+          "evidence_ref": "scripts/validate_daily_gainers_ai_analysis.js",
+          "reason": "AI v3 item required fields, enum, array types and optional institutional_verification status not_required match contract; Facts institutional_verification_required=false",
+          "next_action": "none",
+          "checked_at": "2026-11-06T04:27:14+08:00"
+        },
+        {
+          "check_id": "C03",
+          "layer": "CONTRACT_VALIDATED",
+          "status": "PASS",
+          "evidence_ref": "data_daily_gain_over_5/analysis-facts/20261104.json",
+          "reason": "raw close 863 change 5.12 volume 8017; Facts foreign -70057 shares trust +147000 dealer -48843, margin -87, short +10, SMA5 896.8 SMA20 974.55 SMA60 850.97 match research",
+          "next_action": "none",
+          "checked_at": "2026-11-06T04:27:14+08:00"
+        },
+        {
+          "check_id": "C04",
+          "layer": "CONTRACT_VALIDATED",
+          "status": "PASS",
+          "evidence_ref": "data_daily_gain_over_5/analysis-news/20261104.json",
+          "reason": "formal News 3167 sources=[] evidence_strength none; checkpoint claims no verified direct catalyst",
+          "next_action": "none",
+          "checked_at": "2026-11-06T04:27:14+08:00"
+        },
+        {
+          "check_id": "C05",
+          "layer": "CONTRACT_VALIDATED",
+          "status": "PASS",
+          "evidence_ref": "data_daily_gain_over_5/analysis-facts/20261104.json",
+          "reason": "low confidence, broker identity not equated to institutional attribution; risks and follow_up present",
+          "next_action": "none",
+          "checked_at": "2026-11-06T04:27:14+08:00"
+        },
+        {
+          "check_id": "S01",
+          "layer": "SOURCE_AUDIT",
+          "status": "PENDING",
+          "evidence_ref": "data_daily_gain_over_5/analysis-facts/20261104.json",
+          "reason": "upstream official source validator PASS and SHA provenance not independently read",
+          "next_action": "Read upstream official source validator PASS receipt",
+          "checked_at": "2026-11-06T04:27:14+08:00"
+        },
+        {
+          "check_id": "O01",
+          "layer": "ORIGIN_AUDIT",
+          "status": "NOT_REQUIRED",
+          "evidence_ref": "data_daily_gain_over_5/analysis-facts/20261104.json",
+          "reason": "owner-approved process-only audit; original run ID unavailable",
+          "next_action": "none",
+          "checked_at": "2026-11-06T04:27:14+08:00"
+        },
+        {
+          "check_id": "O02",
+          "layer": "ORIGIN_AUDIT",
+          "status": "NOT_REQUIRED",
+          "evidence_ref": "data_daily_gain_over_5/analysis-facts/20261104.json",
+          "reason": "owner-approved process-only audit",
+          "next_action": "none",
+          "checked_at": "2026-11-06T04:27:14+08:00"
+        }
+      ],
+      "failure_reason_codes": [
+        "S01_UPSTREAM_VALIDATOR_NOT_READ"
+      ],
+      "github_reservation_commit_sha": "9b07bd9daa6dc12a0d84fc8d8bfdee3306095f24",
       "github_result_commit_sha": null
     }
   ]
