@@ -36,6 +36,7 @@ jobs:
             tests/daily_gainers_video_date_gate.test.js
             assets/daily-gainers-vtuber-sprite.webp
             data_daily_gain_over_5
+            research_pending/daily-gainers-seo
             video_scripts
 
       - name: Setup Node.js
@@ -152,6 +153,12 @@ jobs:
       - name: Generate branded YouTube thumbnail
         run: node scripts/build_daily_gainers_thumbnail.js "${{ steps.date.outputs.date }}"
 
+      - name: Mandatory verified thumbnail BEFORE reserving upload attempt
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/verify_daily_gainers_thumbnail_before_upload.js "${{ steps.date.outputs.date }}"
+
       - name: Persist create-only PRIVATE upload attempt (blocks ambiguous replay)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -184,9 +191,8 @@ jobs:
             "output/daily-gainers-video/${date}/daily-gainers-${date}.zh-TW.srt" \
             "zh-TW" "繁體中文"
 
-      - name: Upload custom YouTube thumbnail
+      - name: Upload required custom YouTube thumbnail (failure blocks completion receipt)
         id: thumbnail
-        continue-on-error: true
         env:
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
