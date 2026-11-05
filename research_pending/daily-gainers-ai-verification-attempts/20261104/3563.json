@@ -4,7 +4,7 @@
   "code": "3563",
   "max_attempts": 10,
   "attempt_count": 1,
-  "state": "RESERVED",
+  "state": "INVALID",
   "history_reconstruction": {
     "prior_first_pass_record_found": false,
     "verified_historical_attempts": 0,
@@ -15,9 +15,9 @@
       "attempt_number": 1,
       "attempt_id": "20261104-3563-first-pass-20261106T032538+0800",
       "phase": "FIRST_PASS",
-      "status": "RESERVED",
+      "status": "FAIL",
       "started_at": "2026-11-06T03:25:38+08:00",
-      "finished_at": null,
+      "finished_at": "2026-11-06T03:25:38+08:00",
       "agent_task_id": "Automation_1efe375b3ec4819182c93dc614aaa993",
       "agent_run_id": "unavailable",
       "source_sha": {
@@ -26,9 +26,101 @@
         "news": "c31055e4c0f3e60899be5e8e4fe9358c923190a6",
         "research_checkpoint": "1733126ee39e274cd7f5aaecb1d3f652fd7852aa"
       },
-      "check_results": [],
-      "failure_reason_codes": [],
-      "github_reservation_commit_sha": "unavailable",
+      "check_results": [
+        {
+          "check_id": "C01",
+          "layer": "CONTRACT_VALIDATED",
+          "status": "PASS",
+          "evidence_ref": "research_pending/daily-gainers-ai-checkpoints/20261104/agent-v35-20261105-2357-034-036.json",
+          "expected": "exact-date schema and source compliance",
+          "observed": "Raw index 35 code 3563, checkpoint stocks[2] matches 20261104",
+          "reason": "Raw index 35 code 3563, checkpoint stocks[2] matches 20261104",
+          "next_action": "none",
+          "checked_at": "2026-11-06T03:25:38+08:00"
+        },
+        {
+          "check_id": "C02",
+          "layer": "CONTRACT_VALIDATED",
+          "status": "FAIL",
+          "evidence_ref": "config/daily-gainers-ai-contract.json",
+          "expected": "exact-date schema and source compliance",
+          "observed": "Facts flow.broker.institutional_verification_required=true; research analyses[2].institutional_verification lacks required checked_at per config.institutional_verification.required_fields_when_verification_required",
+          "reason": "Facts flow.broker.institutional_verification_required=true; research analyses[2].institutional_verification lacks required checked_at per config.institutional_verification.required_fields_when_verification_required",
+          "next_action": "Add genuine checked_at from actual institutional verification; do not invent historical time",
+          "checked_at": "2026-11-06T03:25:38+08:00"
+        },
+        {
+          "check_id": "C03",
+          "layer": "CONTRACT_VALIDATED",
+          "status": "PASS",
+          "evidence_ref": "research_pending/daily-gainers-ai-checkpoints/20261104/agent-v35-20261105-2357-034-036.json",
+          "expected": "exact-date schema and source compliance",
+          "observed": "Raw 647/5.37%/944 lots; Facts foreign +8755 shares, dealer +28000, margin +21, short -16; matches research",
+          "reason": "Raw 647/5.37%/944 lots; Facts foreign +8755 shares, dealer +28000, margin +21, short -16; matches research",
+          "next_action": "none",
+          "checked_at": "2026-11-06T03:25:38+08:00"
+        },
+        {
+          "check_id": "C04",
+          "layer": "CONTRACT_VALIDATED",
+          "status": "PASS",
+          "evidence_ref": "research_pending/daily-gainers-ai-checkpoints/20261104/agent-v35-20261105-2357-034-036.json",
+          "expected": "exact-date schema and source compliance",
+          "observed": "News sources=[]; research says no confirmed catalyst, no postdate event assumed",
+          "reason": "News sources=[]; research says no confirmed catalyst, no postdate event assumed",
+          "next_action": "none",
+          "checked_at": "2026-11-06T03:25:38+08:00"
+        },
+        {
+          "check_id": "C05",
+          "layer": "CONTRACT_VALIDATED",
+          "status": "PASS",
+          "evidence_ref": "research_pending/daily-gainers-ai-checkpoints/20261104/agent-v35-20261105-2357-034-036.json",
+          "expected": "exact-date schema and source compliance",
+          "observed": "Investment trust no_record retained as no_record, not 0; short covering is hypothetical",
+          "reason": "Investment trust no_record retained as no_record, not 0; short covering is hypothetical",
+          "next_action": "none",
+          "checked_at": "2026-11-06T03:25:38+08:00"
+        },
+        {
+          "check_id": "S01",
+          "layer": "SOURCE_AUDIT",
+          "status": "PENDING",
+          "evidence_ref": "data_daily_gain_over_5/analysis-facts/20261104.json",
+          "expected": "exact-date schema and source compliance",
+          "observed": "Facts source_completeness complete, but upstream official source validator PASS not independently retrieved",
+          "reason": "Facts source_completeness complete, but upstream official source validator PASS not independently retrieved",
+          "next_action": "Read source validator exact date and SHA",
+          "checked_at": "2026-11-06T03:25:38+08:00"
+        },
+        {
+          "check_id": "O01",
+          "layer": "ORIGIN_AUDIT",
+          "status": "NOT_REQUIRED",
+          "evidence_ref": "research_pending/daily-gainers-ai-checkpoints/20261104/agent-v35-20261105-2357-034-036.json",
+          "expected": "exact-date schema and source compliance",
+          "observed": "Owner v4.2 process-only audit; original run ID unavailable",
+          "reason": "Owner v4.2 process-only audit; original run ID unavailable",
+          "next_action": "Optional original run trace",
+          "checked_at": "2026-11-06T03:25:38+08:00"
+        },
+        {
+          "check_id": "O02",
+          "layer": "ORIGIN_AUDIT",
+          "status": "NOT_REQUIRED",
+          "evidence_ref": "research_pending/daily-gainers-ai-checkpoints/20261104/agent-v35-20261105-2357-034-036.json",
+          "expected": "exact-date schema and source compliance",
+          "observed": "Owner v4.2 process-only audit",
+          "reason": "Owner v4.2 process-only audit",
+          "next_action": "Optional independent origin trace",
+          "checked_at": "2026-11-06T03:25:38+08:00"
+        }
+      ],
+      "failure_reason_codes": [
+        "C02_MISSING_INSTITUTIONAL_CHECKED_AT",
+        "S01_UPSTREAM_VALIDATOR_NOT_READ"
+      ],
+      "github_reservation_commit_sha": "442b25671a97a1a5c6f36a65d850280fb2ac1286",
       "github_result_commit_sha": null
     }
   ]
