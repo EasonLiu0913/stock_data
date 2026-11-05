@@ -1,7 +1,7 @@
 # TAIWAN STOCK 每日影片縮圖標準規格 v1
 
 - Owner approval: 2026-11-05, based on the four mock PNGs actually rendered by GitHub Actions #41995250296.
-- Status: **approved visual direction; isolated renderer implementation/verification in progress**. This policy is not evidence that the production YouTube thumbnail has been changed.
+- Status: **approved visual direction and production-code integration committed to main; real-date full video/YouTube original readback still requires verification**. This policy is not evidence that the production YouTube thumbnail has been changed.
 - Scope: TAIWAN STOCK daily 5% gainers videos. Read with `AGENTS.md`, `docs/policies/daily-gainers-video-editorial-verification-delivery-v1.md`, and current owner instructions.
 - Reference: original 10/13 editorial thumbnail and approved 11/03 down-day concept; prefer deterministic composition using existing `assets/daily-gainers-vtuber-sprite.webp`, not a regenerated/random presenter every day.
 
@@ -47,3 +47,12 @@
 
 ### Owner decisions
 - 2026-11-05: retain the original daily 5% thumbnail skeleton, add red-up/green-down/neutral frame exactly 3px and matching date/arrow, daily index/count, presenter on right, market question and bottom evidence-backed keywords. Reuse existing GitHub pipeline, not a new hourly Agent or new production upload flow.
+
+## 6. Implementation checkpoint — 2026-11-05
+- The owner explicitly requires **verified cover before PRIVATE video insert**. The existing production renderer `scripts/build_daily_gainers_thumbnail.js` now requires same-date raw/Facts/News, `market-summary` status `final` with `coverage.overall=complete`, verified official TWSE `market-opening-video`, plus validated `research_pending/daily-gainers-seo/YYYYMMDD.json.thumbnail` fields. Missing / preliminary / changed-source inputs fail closed, not downgraded to mock.
+- The renderer produces `thumbnail.png`, `thumbnail.jpg`, `thumbnail-qa.json`; `scripts/verify_daily_gainers_thumbnail_before_upload.js` checks date, official direction, file type, dimensions, SHA, frame corner pixels, sources and QA before the shared attempt reservation.
+- `generate-upload-daily-gainers-video.yml` and `retry-upload-daily-gainers-video.yml` both require this gate before creating a YouTube video; failed YouTube thumbnail setting blocks a completion receipt (previous optional `continue-on-error` was removed). Existing single-use 11/03 pilot is historical and must never be replayed.
+- `daily-gainers-date-render-only.yml` archives PNG / JPG / thumbnail QA and checks without YouTube access.
+- Regression tests: `tests/daily_gainers_thumbnail_gate.test.js`, executed in isolated mock-preview CI. Static/preview CI passing is **not** a substitute for rendering a fresh real-date video with official sources and YouTube readback.
+- A YouTube video already created before a thumbnail API failure is an **ambiguous attempt**; recover the thumbnail of the **same video ID** after original readback. Never create a second video to repair an existing video.
+- The hourly Agent is tasked with FIFO oldest-pending dates, creating evidence-backed v1 thumbnail metadata when truly eligible, without substituting art work for AI/MP4 critical path. Existing thumbnail draft of a preliminary date is not an upload-ready production cover.
