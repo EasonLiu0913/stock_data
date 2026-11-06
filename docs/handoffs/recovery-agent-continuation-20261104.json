@@ -2,7 +2,7 @@
   "schema_version": 1,
   "purpose": "Small persistent read-first handoff; evidence pointers, not a validator receipt or retry authorization",
   "target_date": "20261104",
-  "updated_context": "2026-11-06 17:27 Asia/Taipei",
+  "updated_context": "2026-11-06 18:00 Asia/Taipei",
   "known_evidence": {
     "prior_failed_dispatcher_run_id": 42174950357,
     "prior_failed_run_head_sha": "c55512e6fa93263f6f36aebc36a9142a2601918f",
@@ -12,21 +12,26 @@
     "current_dispatcher_blob_sha_at_last_check": "d72b0b9c692d7055d0d237f8b76ea80010e4cda9",
     "current_dispatcher_sha_must_be_refetched": true,
     "official_receipt_path": "data_daily_gain_over_5/verification/official-numeric/20261104.json",
-    "official_receipt_last_observed": "404 at 2026-11-06 17:27 Asia/Taipei",
+    "official_receipt_last_observed": "404 at 2026-11-06 18:00 Asia/Taipei; failed receipt only in run artifact 13490846186",
     "request_path": "recovery-requests/daily-gainers/20261104.json",
     "request_last_observed": "PRESENT blob a49c5c3eb91f363545383b9084f21405a99f83c3; commit fdf9f7f1a18cc11d4a881eadafceefe1fd64232b",
     "formal_ai_blob_sha": "24cf09ade6b98488b792aebc5036db9240c58a30",
     "market_summary_last_observed": "final/full_synthesis 44/44; not proof of S01/C02/C03 PASS"
   },
   "last_agent_result": {
-    "scheduled": "2026-11-06T17:30:00+08:00",
+    "scheduled": "2026-11-06T18:00:00+08:00",
     "dedup_check": "DUPLICATE",
-    "error_code": "NONE_FOR_REQUEST; RECEIPT_NOT_FOUND",
     "recovery_request_commit": "fdf9f7f1a18cc11d4a881eadafceefe1fd64232b",
-    "new_dispatcher_run_id": null,
-    "commits_this_run": 1
+    "dispatcher_run_id": 42191626587,
+    "dispatcher_conclusion": "success",
+    "official_numeric_run_id": 42192165862,
+    "official_numeric_conclusion": "failure",
+    "official_numeric_job_id": 127806579200,
+    "official_numeric_checks": 999,
+    "official_numeric_errors": 19,
+    "commits_this_run_before_handoff": 0
   },
-  "next_action": "Do not create/update the already-present Request. Trace Dispatcher job/result from request commit fdf9f7f1a18cc11d4a881eadafceefe1fd64232b using supported run/job access; verify official-numeric receipt and SHA; while waiting continue independent actionable stock work. Never infer Dispatcher PASS from request commit.",
+  "next_action": "Do not retry Recovery Request: Dispatcher 42191626587 PASS, official numeric 42192165862 FAIL (job 127806579200). Repair exact-date official dealer net_shares/net_lots mismatches (6933,3515,3701,1528,6830,6456,7711,4977,4960,4526) and 7710 margin missing official row using raw official source/Facts provenance; inspect verifier and source generation before minimal CAS fix; rerun only after real source/code change. S01 PENDING, do not publish.",
   "safety": "No manual workflow_dispatch; no upload; preserve all validation gates. This file is not a retry lock; Request create_file collision is atomic lock.",
   "progress_rule": "Each run must attempt an actionable write or record precise API/tool blocker; continue independent research if blocked; only update this file when material state changes; no repeated full-day scans."
 }
