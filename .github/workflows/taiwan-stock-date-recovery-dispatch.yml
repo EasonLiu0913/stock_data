@@ -118,7 +118,7 @@ jobs:
             # Fail-closed on a recent failed or completed run: Agent must inspect actual
             # log + output date before another request, not create hourly retry storms.
             local latest
-            latest="$(jq -r '.[0] | if . == null then empty else [.id,.conclusion,.created_at] | @tsv end' <<< "$runs")""
+            latest="$(jq -r '.[0] | if . == null then empty else [.id,.conclusion,.created_at] | @tsv end' <<< "$runs")"
             if [[ -n "$latest" ]]; then
               local id conclusion started stamp now
               IFS=$'\t' read -r id conclusion started <<< "$latest"
@@ -195,7 +195,7 @@ jobs:
                     if (( active > 0 )); then
                       echo "OFFICIAL_NUMERIC_RUNNING existing workflow; no duplicate" >> "$GITHUB_STEP_SUMMARY"
                     else
-                      latest="$(jq -r '.[0] | if . == null then empty else [.id,.conclusion,.created_at] | @tsv end' <<< "$official_runs")""
+                      latest="$(jq -r '.[0] | if . == null then empty else [.id,.conclusion,.created_at] | @tsv end' <<< "$official_runs")"
                       recent=0
                       if [[ -n "$latest" ]]; then
                         IFS=$'\t' read -r id conclusion started <<< "$latest"
