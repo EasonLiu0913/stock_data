@@ -140,19 +140,19 @@ jobs:
               need_official=1
               if [[ -s "$receipt" ]]; then
                 if node - "$receipt" "$facts" "$TARGET" <<'NODE'
-const fs=require('fs'),crypto=require('crypto');
-const [receiptPath,factsPath,date]=process.argv.slice(2);
-try{
- const r=JSON.parse(fs.readFileSync(receiptPath)),f=JSON.parse(fs.readFileSync(factsPath));
- if(r.status!=='PASS'||r.target_date!==date||r.failed_count!==0||!r.workflow?.run_id)process.exit(1);
- const paths={facts:factsPath,list:'data_daily_gain_over_5/'+date+'.json',...f.source_files};
- for(const [key,p] of Object.entries(paths)){
-  const rec=r.source_sha256?.[key];
-  if(!rec||rec.path!==p||rec.sha256!==crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex'))process.exit(1);
- }
- process.exit(0);
-}catch(e){process.exit(1)}
-NODE
+          const fs=require('fs'),crypto=require('crypto');
+          const [receiptPath,factsPath,date]=process.argv.slice(2);
+          try{
+           const r=JSON.parse(fs.readFileSync(receiptPath)),f=JSON.parse(fs.readFileSync(factsPath));
+           if(r.status!=='PASS'||r.target_date!==date||r.failed_count!==0||!r.workflow?.run_id)process.exit(1);
+           const paths={facts:factsPath,list:'data_daily_gain_over_5/'+date+'.json',...f.source_files};
+           for(const [key,p] of Object.entries(paths)){
+            const rec=r.source_sha256?.[key];
+            if(!rec||rec.path!==p||rec.sha256!==crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex'))process.exit(1);
+           }
+           process.exit(0);
+          }catch(e){process.exit(1)}
+          NODE
                 then
                   need_official=0
                   echo "OFFICIAL_NUMERIC_PASS_REUSED $receipt" >> "$GITHUB_STEP_SUMMARY"
