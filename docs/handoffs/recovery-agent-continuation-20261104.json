@@ -2,7 +2,7 @@
   "schema_version": 1,
   "purpose": "Small persistent read-first handoff; evidence pointers, not a validator receipt or retry authorization",
   "target_date": "20261104",
-  "updated_context": "2026-11-06 18:00 Asia/Taipei",
+  "updated_context": "2026-11-06 20:00 Asia/Taipei",
   "known_evidence": {
     "prior_failed_dispatcher_run_id": 42174950357,
     "prior_failed_run_head_sha": "c55512e6fa93263f6f36aebc36a9142a2601918f",
@@ -19,7 +19,7 @@
     "market_summary_last_observed": "final/full_synthesis 44/44; not proof of S01/C02/C03 PASS"
   },
   "last_agent_result": {
-    "scheduled": "2026-11-06T19:00:00+08:00",
+    "scheduled": "2026-11-06T20:00:00+08:00",
     "dedup_check": "DUPLICATE",
     "recovery_request_commit": "fdf9f7f1a18cc11d4a881eadafceefe1fd64232b",
     "dispatcher_run_id": 42191626587,
@@ -35,9 +35,30 @@
     "dealer_source_blob_sha": "51b77eecf5a29624ed8af00b78e39e3f1337a790",
     "margin_source_blob_sha": "d2176fb1dcb4521f00219e81bdf6c6c3212673b1",
     "numeric_validator_blob_sha": "06ae1c3b29e50a957b04d06cd56a65bec9556cbd",
-    "new_observation": "7710 Facts margin fields are all null; validator currently unconditionally fails when official margin row is absent. Dealer validator picks last column whose name includes 買賣超股數; field mapping must be verified against official dealer schema before modifying Facts or validator."
+    "new_observation": "Downloaded actual artifact and parsed 999 checks: 57 FAIL across 29 stocks (not 19). Exact field breakdown dealer shares 26, lots 24, status 2, margin missing 5. Do not patch without official row evidence.",
+    "artifact_id": 13490846186,
+    "artifact_download": "SUCCESS",
+    "artifact_receipt_status": "FAIL",
+    "artifact_failed_count": 57,
+    "artifact_check_count": 999,
+    "artifact_failed_stock_count": 29,
+    "artifact_fail_fields": {
+      "dealer.net_shares": 26,
+      "dealer.net_lots": 24,
+      "dealer.record_status": 2,
+      "margin": 5
+    },
+    "artifact_margin_missing_codes": [
+      "7710",
+      "2923",
+      "6467",
+      "7610",
+      "6924"
+    ],
+    "artifact_source_sha256_dealer": "5cb2127135be0d53c48baa07800e09bc2b3e48b7b5c19c7b9ec993c51663c49f",
+    "source_fetch_observation": "GitHub fetch_file dealer JSON lines 1-2, 2-3, 3-3 all returned empty content despite existing blob SHA; cannot establish actual official field mapping from this response"
   },
-  "next_action": "Inspect 20261104 official dealer JSON column names/row for 6933 and other affected codes using bounded source retrieval, establish correct dealer net field; confirm 7710 absent margin row is an official no_record versus upstream missing row before minimal fix. No retry without source/code change; S01 PENDING.",
+  "next_action": "Obtain bounded nonempty official dealer fields and rows (GitHub fetch_file currently returns empty for giant JSON) or equivalent authenticated source; compare Facts dealer mapping and margin CSV rows for five codes, then minimal patch and rerun official-numeric validation only on changed evidence. S01 remains PENDING.",
   "safety": "No manual workflow_dispatch; no upload; preserve all validation gates. This file is not a retry lock; Request create_file collision is atomic lock.",
   "progress_rule": "Each run must attempt an actionable write or record precise API/tool blocker; continue independent research if blocked; only update this file when material state changes; no repeated full-day scans."
 }
