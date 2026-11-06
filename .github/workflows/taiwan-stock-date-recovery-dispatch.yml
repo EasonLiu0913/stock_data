@@ -94,8 +94,8 @@ jobs:
           # Unknown-date runs are reported, not mistaken for this date.
           date_runs() {
             local workflow="$1"
-            gh api "repos/$repo/actions/workflows/$workflow/runs?per_page=100" \
-              --jq --arg d "$TARGET" '[.workflow_runs[] | select((.display_title // "" | contains($d)) or (.name // "" | contains($d)))]'
+            gh api "repos/$repo/actions/workflows/$workflow/runs?per_page=100" | \
+              jq --arg d "$TARGET" '[.workflow_runs[] | select((.display_title // "" | contains($d)) or (.name // "" | contains($d)))]'
           }
           # Never start a second instance of the same source workflow while another one runs.
           dispatch_missing() {
