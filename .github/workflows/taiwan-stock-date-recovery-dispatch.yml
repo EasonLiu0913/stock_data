@@ -57,9 +57,21 @@ jobs:
           if [[ "$EVENT_NAME" == "push" ]]; then
             # The Agent can push a date-scoped request through its GitHub connector.
             # Only an actual changed request triggers recovery, not workflow code changes.
-            mapfile -t changed < <(jq -r '[.commits[]? | (.added[]?, .modified[]?)] | unique[] | select(test("^recovery-requests/daily-gainers/20[0-9]{6}\\.json$"))' "$GITHUB_EVENT_PATH")
+            # Include head_commit and compare fallback; deleted-only requests are a no-op.
+            mapfile -t changed < <(jq -r '[.commits[]?, .head_commit?] | map(select(. != null)) | [.[] | (.added[]?, .modified[]?)] | unique[] | select(test("^recovery-requests/daily-gainers/20[0-9]{6}\\.json$"))' "$GITHUB_EVENT_PATH")
+            if [[ "${#changed[@]}" -eq 0 ]]; then
+              before="$(jq -r '.before // empty' "$GITHUB_EVENT_PATH")"
+              after="$(jq -r '.after // empty' "$GITHUB_EVENT_PATH")"
+              if [[ -n "$before" && -n "$after" ]]; then
+                mapfile -t changed < <(gh api "repos/$GITHUB_REPOSITORY/compare/$before...$after" --jq '[.files[] | select(.status=="added" or .status=="modified") | .filename] | unique[] | select(test("^recovery-requests/daily-gainers/20[0-9]{6}\\.json$"))')
+              fi
+            fi
+            if [[ "${#changed[@]}" -eq 0 ]]; then
+              echo "NO_REQUEST_CHANGE: deletion or unrelated push; no dispatch" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
             if [[ "${#changed[@]}" -ne 1 ]]; then
-              echo "Expected exactly one changed date request per commit" >&2; exit 1
+              echo "INVALID_REQUEST_COUNT count=${#changed[@]}" >&2; exit 1
             fi
             request="${changed[0]}"
             TARGET="$(basename "$request" .json)"
@@ -77,6 +89,14 @@ jobs:
           repo="$GITHUB_REPOSITORY"
           dispatched=0
           echo "### Date-specific recovery $TARGET" >> "$GITHUB_STEP_SUMMARY"
+          # GitHub's workflow-runs API does not always expose workflow_dispatch inputs.
+          # Only date-identifiable runs may suppress dispatch for this target date.
+          # Unknown-date runs are reported, not mistaken for this date.
+          date_runs() {
+            local workflow="$1"
+            gh api "repos/$repo/actions/workflows/$workflow/runs?per_page=100" \
+              --jq --arg d "$TARGET" '[.workflow_runs[] | select((.display_title // "" | contains($d)) or (.name // "" | contains($d)))]'
+          }
           # Never start a second instance of the same source workflow while another one runs.
           dispatch_missing() {
             local file="$1" workflow="$2"
@@ -89,7 +109,8 @@ jobs:
               return 0
             fi
             local active
-            active="$(gh api "repos/$repo/actions/workflows/$workflow/runs?per_page=30" --jq '[.workflow_runs[] | select(.status=="queued" or .status=="in_progress" or .status=="waiting" or .status=="requested")] | length')"
+            runs="$(date_runs "$workflow")"
+            active="$(jq '[.[] | select(.status=="queued" or .status=="in_progress" or .status=="waiting" or .status=="requested")] | length' <<< "$runs")"
             if (( active > 0 )); then
               echo "RUNNING $workflow; wait for existing job before retry" >> "$GITHUB_STEP_SUMMARY"
               return 0
@@ -97,7 +118,7 @@ jobs:
             # Fail-closed on a recent failed or completed run: Agent must inspect actual
             # log + output date before another request, not create hourly retry storms.
             local latest
-            latest="$(gh api "repos/$repo/actions/workflows/$workflow/runs?per_page=1" --jq '.workflow_runs[0] | [.id,.conclusion,.created_at] | @tsv' 2>/dev/null || true)"
+            latest="$(jq -r '.[0] | if . == null then empty else [.id,.conclusion,.created_at] | @tsv end' <<< "$runs")""
             if [[ -n "$latest" ]]; then
               local id conclusion started stamp now
               IFS=$'\t' read -r id conclusion started <<< "$latest"
@@ -169,11 +190,12 @@ jobs:
                   if (( dispatched >= MAX_DISPATCHES )); then
                     echo "OFFICIAL_NUMERIC_DEFERRED budget" >> "$GITHUB_STEP_SUMMARY"
                   else
-                    active="$(gh api "repos/$repo/actions/workflows/$official_workflow/runs?per_page=30" --jq '[.workflow_runs[] | select(.status=="queued" or .status=="in_progress" or .status=="waiting" or .status=="requested")] | length')"
+                    official_runs="$(date_runs "$official_workflow")"
+                    active="$(jq '[.[] | select(.status=="queued" or .status=="in_progress" or .status=="waiting" or .status=="requested")] | length' <<< "$official_runs")"
                     if (( active > 0 )); then
                       echo "OFFICIAL_NUMERIC_RUNNING existing workflow; no duplicate" >> "$GITHUB_STEP_SUMMARY"
                     else
-                      latest="$(gh api "repos/$repo/actions/workflows/$official_workflow/runs?per_page=1" --jq '.workflow_runs[0] | [.id,.conclusion,.created_at] | @tsv' 2>/dev/null || true)"
+                      latest="$(jq -r '.[0] | if . == null then empty else [.id,.conclusion,.created_at] | @tsv end' <<< "$official_runs")""
                       recent=0
                       if [[ -n "$latest" ]]; then
                         IFS=$'\t' read -r id conclusion started <<< "$latest"
@@ -196,5 +218,6 @@ jobs:
           else
             echo "OFFICIAL_NUMERIC_WAIT_FACTS $facts" >> "$GITHUB_STEP_SUMMARY"
           fi
+          echo "RECOVERY_STATE date=$TARGET dispatched=$dispatched receipt=$receipt" >> "$GITHUB_STEP_SUMMARY"
           echo "Dispatches this round: $dispatched / $MAX_DISPATCHES" >> "$GITHUB_STEP_SUMMARY"
           echo "AI/news narratives still belong to ChatGPT Agent; this dispatcher cannot synthesize them." >> "$GITHUB_STEP_SUMMARY"
