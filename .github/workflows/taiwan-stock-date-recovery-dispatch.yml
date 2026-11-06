@@ -40,6 +40,7 @@ jobs:
             data_fubon_broker_details
             research_pending/daily-gainers-ai
             recovery-requests/daily-gainers
+            scripts/verify_daily_gainers_official_numeric.js
           sparse-checkout-cone-mode: false
       - name: Discover missing files and safely dispatch date-matched repair workflows
         shell: bash
@@ -124,5 +125,77 @@ jobs:
           fi
           dispatch_missing "data_twse_margin_balance/${TARGET}_twse_margin_balance.csv" "crawl-twse-margin-balance.yml"
           dispatch_missing "data_fubon_broker_details/fubon_${TARGET}_券商分點進出明細.json" "crawl-fubon-broker-details.yml"
+          # Official numeric evidence is a date-level audit, not a missing source crawl.
+          # Only dispatch after required stored inputs exist; never treat file existence as PASS.
+          receipt="data_daily_gain_over_5/verification/official-numeric/$TARGET.json"
+          facts="data_daily_gain_over_5/analysis-facts/$TARGET.json"
+          official_workflow="daily-gainers-official-numeric-verification.yml"
+          if [[ -s "$facts" ]]; then
+            if ! jq -e --arg d "$TARGET" '.target_date==$d and (.source_files|type=="object")' "$facts" >/dev/null; then
+              echo "OFFICIAL_NUMERIC_BLOCKED invalid Facts date/schema" >> "$GITHUB_STEP_SUMMARY"
+            else
+              # Missing receipt triggers a new audit; a receipt is reusable only if
+              # its date, PASS status and all recorded source SHA256 match current inputs.
+              need_official=1
+              if [[ -s "$receipt" ]]; then
+                if node - "$receipt" "$facts" "$TARGET" <<'NODE'
+const fs=require('fs'),crypto=require('crypto');
+const [receiptPath,factsPath,date]=process.argv.slice(2);
+try{
+ const r=JSON.parse(fs.readFileSync(receiptPath)),f=JSON.parse(fs.readFileSync(factsPath));
+ if(r.status!=='PASS'||r.target_date!==date||r.failed_count!==0||!r.workflow?.run_id)process.exit(1);
+ const paths={facts:factsPath,list:'data_daily_gain_over_5/'+date+'.json',...f.source_files};
+ for(const [key,p] of Object.entries(paths)){
+  const rec=r.source_sha256?.[key];
+  if(!rec||rec.path!==p||rec.sha256!==crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex'))process.exit(1);
+ }
+ process.exit(0);
+}catch(e){process.exit(1)}
+NODE
+                then
+                  need_official=0
+                  echo "OFFICIAL_NUMERIC_PASS_REUSED $receipt" >> "$GITHUB_STEP_SUMMARY"
+                fi
+              fi
+              if (( need_official )); then
+                # Source data must be present and date-aligned before auditing;
+                # never trigger an endless retry against incomplete inputs.
+                inputs_ready=1
+                while IFS= read -r p; do
+                  [[ -s "$p" ]] || { inputs_ready=0; echo "OFFICIAL_NUMERIC_WAIT_SOURCE $p" >> "$GITHUB_STEP_SUMMARY"; }
+                done < <(jq -r '.source_files[]' "$facts")
+                if [[ -s "data_daily_gain_over_5/$TARGET.json" && "$inputs_ready" == "1" ]]; then
+                  if (( dispatched >= MAX_DISPATCHES )); then
+                    echo "OFFICIAL_NUMERIC_DEFERRED budget" >> "$GITHUB_STEP_SUMMARY"
+                  else
+                    active="$(gh api "repos/$repo/actions/workflows/$official_workflow/runs?per_page=30" --jq '[.workflow_runs[] | select(.status=="queued" or .status=="in_progress" or .status=="waiting" or .status=="requested")] | length')"
+                    if (( active > 0 )); then
+                      echo "OFFICIAL_NUMERIC_RUNNING existing workflow; no duplicate" >> "$GITHUB_STEP_SUMMARY"
+                    else
+                      latest="$(gh api "repos/$repo/actions/workflows/$official_workflow/runs?per_page=1" --jq '.workflow_runs[0] | [.id,.conclusion,.created_at] | @tsv' 2>/dev/null || true)"
+                      recent=0
+                      if [[ -n "$latest" ]]; then
+                        IFS=
+          echo "AI/news narratives still belong to ChatGPT Agent; this dispatcher cannot synthesize them." >> "$GITHUB_STEP_SUMMARY"
+\t' read -r id conclusion started <<< "$latest"
+                        stamp="$(date -u -d "$started" +%s 2>/dev/null || echo 0)"
+                        now="$(date -u +%s)"
+                        (( now-stamp < 7200 )) && recent=1
+                      fi
+                      if (( recent )); then
+                        echo "OFFICIAL_NUMERIC_REVIEW_FIRST run=$id conclusion=$conclusion" >> "$GITHUB_STEP_SUMMARY"
+                      else
+                        gh workflow run "$official_workflow" --ref main -f target_date="$TARGET"
+                        dispatched=$((dispatched+1))
+                        echo "OFFICIAL_NUMERIC_DISPATCHED date=$TARGET workflow=$official_workflow" >> "$GITHUB_STEP_SUMMARY"
+                      fi
+                    fi
+                  fi
+                fi
+              fi
+            fi
+          else
+            echo "OFFICIAL_NUMERIC_WAIT_FACTS $facts" >> "$GITHUB_STEP_SUMMARY"
+          fi
           echo "Dispatches this round: $dispatched / $MAX_DISPATCHES" >> "$GITHUB_STEP_SUMMARY"
           echo "AI/news narratives still belong to ChatGPT Agent; this dispatcher cannot synthesize them." >> "$GITHUB_STEP_SUMMARY"
