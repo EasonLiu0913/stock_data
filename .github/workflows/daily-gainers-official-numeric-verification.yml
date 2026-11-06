@@ -1,0 +1,62 @@
+name: "[07 驗證] Daily Gainers Official Numeric Verification"
+on:
+  workflow_dispatch:
+    inputs:
+      target_date:
+        description: "TWSE trading date YYYYMMDD (historical backfill supported)"
+        required: true
+        type: string
+        default: "20261104"
+permissions:
+  contents: write
+concurrency:
+  group: official-numeric-${{ inputs.target_date }}
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+          fetch-depth: 1
+      - name: Validate requested date
+        env:
+          TARGET_DATE: ${{ inputs.target_date }}
+        run: |
+          [[ "$TARGET_DATE" =~ ^20[0-9]{6}$ ]] || exit 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Reconcile original official numeric data against stored Facts
+        id: verify
+        continue-on-error: true
+        env:
+          TARGET_DATE: ${{ inputs.target_date }}
+        run: node scripts/verify_daily_gainers_official_numeric.js "$TARGET_DATE"
+      - name: Upload audit report even when validation fails
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: official-numeric-${{ inputs.target_date }}-${{ github.run_id }}
+          path: data_daily_gain_over_5/verification/official-numeric/${{ inputs.target_date }}.json
+          if-no-files-found: warn
+      - name: Commit PASS receipt only
+        if: steps.verify.outcome == 'success'
+        env:
+          TARGET_DATE: ${{ inputs.target_date }}
+        run: |
+          set -euo pipefail
+          FILE="data_daily_gain_over_5/verification/official-numeric/$TARGET_DATE.json"
+          node -e "const r=require('./'+process.argv[1]);if(r.status!=='PASS'||r.target_date!==process.argv[2])process.exit(1)" "$FILE" "$TARGET_DATE"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "$FILE"
+          git diff --cached --quiet && exit 0
+          git commit -m "verification: official numeric PASS $TARGET_DATE [run ${{ github.run_id }}]"
+          git pull --rebase origin main
+          git push origin HEAD:main
+      - name: Fail closed when source numeric reconciliation fails
+        if: steps.verify.outcome != 'success'
+        run: exit 1
