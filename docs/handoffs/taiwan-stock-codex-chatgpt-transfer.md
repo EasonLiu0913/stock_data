@@ -91,6 +91,19 @@ Two agents must not write the same date/file concurrently. Check date lease/ledg
 
 ## 6. Transfer checkpoints (append at meaningful boundaries)
 
+### 2026-11-07 00:17 Asia/Taipei — loader/contract mismatch repaired locally; formal CI pending
+
+- **Task:** bounded repair of the 20261104 central AI contract startup failure; active project remains `daily-gainers-market-opening-end-to-end`, goal `goal-v3/MVP-10DAY-v1`, phase `MVP10-A PROMOTED / NOT_STARTED`; this operational task does not execute or alter its frozen A/B.
+- **Remote baseline:** fetched `origin/main` SHA `f9ba796eaabebe5e161a73e5cba5f6f840c470ef`; local branch `main`, clean before work. Recheck remote immediately before commit/push.
+- **Root cause:** actual Run `42246225691`, Job `127989039610`, Node `24.22.2`, failed at `Validate central contract` before target-date resolution. The loader required `checked_at` and `sources` in `required_fields_when_verification_required`, while the JSON contract and per-stock validator classify them as optional audit metadata.
+- **Local change:** only `scripts/lib/daily_gainers_ai_contract.js`; core required list now checks `status` and `summary`, while `checked_at` and `sources` remain declared optional audit fields and their supplied-value validation remains unchanged. Loader blob SHA-1 `224a8cf1c52f0b71291c441732f59a680e9ff1d7`. Candidate SHA-1 `24cf09ade6b98488b792aebc5036db9240c58a30`; Facts SHA-1 `75e0573aa2fb394712f40cb9b115096b3e136c07`; News SHA-1 `c31055e4c0f3e60899be5e8e4fe9358c923190a6`.
+- **Local checks:** `node --check scripts/lib/daily_gainers_ai_contract.js` PASS; `node scripts/daily_gainers_ai_contract_cli.js print` PASS; `node scripts/check_daily_gainers_ai_contract_consistency.js` PASS; `node scripts/build_daily_gainers_market_summary.js --self-test` PASS; `node scripts/validate_daily_gainers_market_summary.js --self-test` PASS; `node scripts/validate_daily_gainers_ai_analysis.js 20261104` PASS (44 stocks, exact order verified); `git diff --check` PASS.
+- **Commit / remote readback:** pending; no commit or push yet. **Formal workflow:** pending; Run/Job IDs and tested SHA must be recorded after completion. Expected safe checker: `.github/workflows/check-daily-gainers-ai-contract.yml` (contents read only). The production AI workflow also listens to loader changes, but this commit changes no pending AI candidate or its workflow; verify its run exits before date resolution/data publication and that Pages job is skipped.
+- **Gate state:** S01 historical receipt PASS (reconfirm its source identity before reusing); local AI schema/order check PASS but formal C02 / C03 / C04 / DAILY_VALIDATOR remain UNKNOWN pending fresh evidence; Render-only NOT VERIFIED. FIFO/date locks unchanged; candidate/data untouched. YouTube upload prohibited; release/publication locks unchanged.
+- **`NEXT_SINGLE_ACTION`:** re-fetch `origin/main`, commit/push only the loader repair and this checkpoint on `main`; inspect fresh Actions runs on that commit, require read-only contract consistency success and verify AI publication/Pages side effects were skipped. Record commit SHA, run/job IDs, tested SHA, artifact state and final gate statuses in the next checkpoint. Do not claim the video A/B or whole daily delivery passed.
+- **Owner action:** not required for the authorized narrow repair and safe CI verification; ask before any workflow with data-promotion, Pages/deploy, production, A/B scope change, or YouTube side effects.
+- **Plan changed:** no. Canonical handoff, frozen A/B, FIFO, date lock and upload lock unchanged.
+
 ### 2026-11-07 00:00 Asia/Taipei — ChatGPT → Local Codex
 
 - **Task:** repair 20261104 AI contract startup failure without weakening any official or editorial gate.
