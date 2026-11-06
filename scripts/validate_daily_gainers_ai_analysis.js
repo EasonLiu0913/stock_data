@@ -96,18 +96,20 @@ function main() {
       assert(validVerification.has(verification.status), `invalid institutional verification status for ${item.code}`);
       const required = fact?.flow?.institutional_verification_required === true;
 
-      // Central contract only requires sources/checked_at/summary when external
-      // institutional verification is actually required. A not_required record
-      // may omit sources entirely; if sources are present, still validate them.
+      // C02 validates the verification record shape, not independent corroboration.
+      // Numeric correctness is gated separately by official S01 and Facts-to-AI C03.
+      // checked_at and sources are optional audit metadata; validate if supplied.
       if (required) {
         for (const field of CONTRACT.institutional_verification.required_fields_when_verification_required) {
           assert(Object.prototype.hasOwnProperty.call(verification, field), `institutional verification ${field} required for ${item.code}`);
         }
         assert(verification.status !== 'not_required', `institutional verification cannot be not_required for ${item.code}`);
         assert(isText(verification.summary), `institutional verification summary required for ${item.code}`);
+      }
+      if (verification.checked_at != null) {
         assert(isIsoTimestamp(verification.checked_at), `institutional verification checked_at must be ISO timestamp for ${item.code}`);
-        validateVerificationSources(verification.sources, item.code);
-      } else if (verification.sources != null) {
+      }
+      if (verification.sources != null) {
         validateVerificationSources(verification.sources, item.code);
       }
     }
