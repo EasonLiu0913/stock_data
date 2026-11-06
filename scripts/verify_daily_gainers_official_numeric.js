@@ -67,7 +67,14 @@ for(const s of facts.stocks){
   assert(item.net_lots===(value==null?null:Math.round(value/1000)),code,actor+'.net_lots','Facts lots differ from shares');
  }
  const m=margins?.get(code),f=s.flow.margin;
- if(!m){assert(false,code,'margin','official margin row unavailable');continue}
+ if(!m){
+  // Absence in the exact-date official CSV is not a zero balance.
+  // Only accept the missing row when Facts preserves every margin/short field as null.
+  // A non-null claim without an official row remains a hard verification failure.
+  const fields=['margin_prev','margin_now','margin_delta','short_prev','short_now','short_delta'];
+  assert(fields.every(field=>f[field]===null),code,'margin.no_record','official row absent; Facts must keep all margin/short values null');
+  continue;
+ }
  for(const [field,col] of [['margin_prev','融資前日餘額'],['margin_now','融資今日餘額'],['short_prev','融券前日餘額'],['short_now','融券今日餘額']])assert(f[field]===num(m[col]),code,'margin.'+field,'Facts differs from official margin');
  assert(f.margin_delta===num(m['融資今日餘額'])-num(m['融資前日餘額']),code,'margin.margin_delta','delta mismatch');
  assert(f.short_delta===num(m['融券今日餘額'])-num(m['融券前日餘額']),code,'margin.short_delta','delta mismatch');
