@@ -28,26 +28,24 @@ for(const k of ['foreign','investment_trust','dealer']){
   const fields=data.fields.map(v=>String(v).replace(/\s/g,''));
   const codeIndex=fields.findIndex(x=>x==='證券代號'||x==='股票代號');
   if(codeIndex<0)throw Error('missing stock code field');
-  // The T86 dealer total is NOT its last net-buy/sell column: that can be
-  // the hedging-only subtotal. Resolve the named total or both components.
-  const named=(name)=>fields.indexOf(name);
-  let netForRow;
-  if(k==='dealer'){
-   const total=named('自營商買賣超股數');
-   const own=named('自營商買賣超股數(自行買賣)');
-   const hedge=named('自營商買賣超股數(避險)');
-   if(total>=0){sourceColumnMapping[k]={mode:'named_total',fields:[fields[total]]};netForRow=row=>num(row[total]);}
-   else if(own>=0&&hedge>=0){sourceColumnMapping[k]={mode:'component_sum',fields:[fields[own],fields[hedge]]};netForRow=row=>{
-    const a=num(row[own]),b=num(row[hedge]);
-    return a==null||b==null?null:a+b;
-   };}
-   else throw Error('dealer total or both dealer components unavailable: '+fields.filter(x=>x.includes('買賣超股數')).join('|'));
-  }else{
-   const indices=fields.flatMap((x,i)=>x.includes('買賣超股數')?[i]:[]);
-   if(indices.length!==1)throw Error(k+' ambiguous net-buy/sell columns: '+indices.map(i=>fields[i]).join('|'));
-   sourceColumnMapping[k]={mode:'unique_net_column',fields:[fields[indices[0]]]};
-   netForRow=row=>num(row[indices[0]]);
-  }
+  // TWSE institutional sub-tables may repeat the identical net column label
+  // for two components and their total. Resolve the total from the arithmetic
+  // identity across all official rows, never from Facts or a guessed last index.
+  const indices=fields.flatMap((x,i)=>x.includes('買賣超股數')?[i]:[]);
+  if(indices.length===0)throw Error(k+' missing net-buy/sell column');
+  let totalIndex;
+  if(indices.length===1)totalIndex=indices[0];
+  else if(indices.length===3){
+   const candidates=indices.filter(candidate=>data.data.filter(Array.isArray).every(row=>{
+    const values=indices.map(i=>num(row[i]));
+    if(values.some(v=>v===null||!Number.isFinite(v)))return false;
+    return num(row[candidate])===indices.filter(i=>i!==candidate).reduce((sum,i)=>sum+num(row[i]),0);
+   }));
+   if(candidates.length!==1)throw Error(k+' total net column not uniquely identifiable from official component sums: '+JSON.stringify({indices,candidates}));
+   totalIndex=candidates[0];
+  }else throw Error(k+' unsupported net-buy/sell column count '+indices.length);
+  sourceColumnMapping[k]={mode:indices.length===1?'unique_net_column':'verified_component_total',index:totalIndex,component_indices:indices.filter(i=>i!==totalIndex),fields:indices.map(i=>fields[i])};
+  const netForRow=row=>num(row[totalIndex]);
   src[k]=new Map(data.data.filter(Array.isArray).map(row=>[String(row[codeIndex]||'').trim(),netForRow(row)]));
  }catch(e){errors.push(k+' invalid: '+e.message);src[k]=null}
 }
