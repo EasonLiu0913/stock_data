@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "purpose": "Small persistent read-first handoff; evidence pointers, not a validator receipt or retry authorization",
+  "target_date": "20261104",
+  "updated_context": "2026-11-06 16:30 Asia/Taipei",
+  "known_evidence": {
+    "prior_failed_dispatcher_run_id": 42174950357,
+    "prior_failed_run_head_sha": "c55512e6fa93263f6f36aebc36a9142a2601918f",
+    "prior_dispatcher_blob_sha": "07a391cf1926952f780059a49a5290969bfc70c0",
+    "prior_run_result": "failure",
+    "prior_run_jobs_count": 0,
+    "current_dispatcher_blob_sha_at_last_check": "d72b0b9c692d7055d0d237f8b76ea80010e4cda9",
+    "current_dispatcher_sha_must_be_refetched": true,
+    "official_receipt_path": "data_daily_gain_over_5/verification/official-numeric/20261104.json",
+    "official_receipt_last_observed": "404",
+    "request_path": "recovery-requests/daily-gainers/20261104.json",
+    "request_last_observed": "404",
+    "formal_ai_blob_sha": "24cf09ade6b98488b792aebc5036db9240c58a30",
+    "market_summary_last_observed": "final/full_synthesis 44/44; not proof of S01/C02/C03 PASS"
+  },
+  "last_agent_result": {
+    "scheduled": "2026-11-06T16:30:00+08:00",
+    "dedup_check": "FAILED",
+    "error_code": "PRIOR_FAILED_WORKFLOW_SHA_UNAVAILABLE",
+    "recovery_request_commit": null,
+    "new_dispatcher_run_id": null,
+    "commits_this_run": 0
+  },
+  "next_action": "Read this file first, then fetch only current Dispatcher SHA, Request path, Receipt path and existing retry ledger. Historical failed SHA is already independently verified from commit. If no duplicate retry and gate conditions met, atomically create one date-scoped Request on main and record commit. Do not repeat historical discovery.",
+  "safety": "No manual workflow_dispatch; no upload; preserve all validation gates. This file is not a retry lock; Request create_file collision is atomic lock.",
+  "progress_rule": "Each run must attempt an actionable write or record precise API/tool blocker; continue independent research if blocked; only update this file when material state changes; no repeated full-day scans."
+}
