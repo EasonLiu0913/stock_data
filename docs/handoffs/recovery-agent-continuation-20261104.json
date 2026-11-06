@@ -19,7 +19,7 @@
     "market_summary_last_observed": "final/full_synthesis 44/44; not proof of S01/C02/C03 PASS"
   },
   "last_agent_result": {
-    "scheduled": "2026-11-06T18:00:00+08:00",
+    "scheduled": "2026-11-06T19:00:00+08:00",
     "dedup_check": "DUPLICATE",
     "recovery_request_commit": "fdf9f7f1a18cc11d4a881eadafceefe1fd64232b",
     "dispatcher_run_id": 42191626587,
@@ -29,9 +29,15 @@
     "official_numeric_job_id": 127806579200,
     "official_numeric_checks": 999,
     "official_numeric_errors": 19,
-    "commits_this_run_before_handoff": 0
+    "commits_this_run_before_handoff": 0,
+    "receipt_status": "NOT_FOUND_404",
+    "facts_blob_sha": "a0b9746386a5269a5debd622bbc8cf18b9b091d4",
+    "dealer_source_blob_sha": "51b77eecf5a29624ed8af00b78e39e3f1337a790",
+    "margin_source_blob_sha": "d2176fb1dcb4521f00219e81bdf6c6c3212673b1",
+    "numeric_validator_blob_sha": "06ae1c3b29e50a957b04d06cd56a65bec9556cbd",
+    "new_observation": "7710 Facts margin fields are all null; validator currently unconditionally fails when official margin row is absent. Dealer validator picks last column whose name includes 買賣超股數; field mapping must be verified against official dealer schema before modifying Facts or validator."
   },
-  "next_action": "Do not retry Recovery Request: Dispatcher 42191626587 PASS, official numeric 42192165862 FAIL (job 127806579200). Repair exact-date official dealer net_shares/net_lots mismatches (6933,3515,3701,1528,6830,6456,7711,4977,4960,4526) and 7710 margin missing official row using raw official source/Facts provenance; inspect verifier and source generation before minimal CAS fix; rerun only after real source/code change. S01 PENDING, do not publish.",
+  "next_action": "Inspect 20261104 official dealer JSON column names/row for 6933 and other affected codes using bounded source retrieval, establish correct dealer net field; confirm 7710 absent margin row is an official no_record versus upstream missing row before minimal fix. No retry without source/code change; S01 PENDING.",
   "safety": "No manual workflow_dispatch; no upload; preserve all validation gates. This file is not a retry lock; Request create_file collision is atomic lock.",
   "progress_rule": "Each run must attempt an actionable write or record precise API/tool blocker; continue independent research if blocked; only update this file when material state changes; no repeated full-day scans."
 }
