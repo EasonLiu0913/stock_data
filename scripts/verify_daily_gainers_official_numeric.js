@@ -27,10 +27,27 @@ for(const k of ['foreign','investment_trust','dealer']){
   assert(Array.isArray(data.data)&&Array.isArray(data.fields),'*',k+'_schema','missing rows or fields');
   const fields=data.fields.map(v=>String(v).replace(/\s/g,''));
   const codeIndex=fields.findIndex(x=>x==='證券代號'||x==='股票代號');
-  const indices=fields.flatMap((x,i)=>x.includes('買賣超股數')?[i]:[]);
-  if(codeIndex<0||!indices.length)throw Error('missing code/net field');
-  const netIndex=k==='foreign'?indices[indices.length-1]:indices[indices.length-1];
-  src[k]=new Map(data.data.filter(Array.isArray).map(row=>[String(row[codeIndex]||'').trim(),num(row[netIndex])]));
+  if(codeIndex<0)throw Error('missing stock code field');
+  // The T86 dealer total is NOT its last net-buy/sell column: that can be
+  // the hedging-only subtotal. Resolve the named total or both components.
+  const named=(name)=>fields.indexOf(name);
+  let netForRow;
+  if(k==='dealer'){
+   const total=named('自營商買賣超股數');
+   const own=named('自營商買賣超股數(自行買賣)');
+   const hedge=named('自營商買賣超股數(避險)');
+   if(total>=0)netForRow=row=>num(row[total]);
+   else if(own>=0&&hedge>=0)netForRow=row=>{
+    const a=num(row[own]),b=num(row[hedge]);
+    return a==null||b==null?null:a+b;
+   };
+   else throw Error('dealer total or both dealer components unavailable: '+fields.filter(x=>x.includes('買賣超股數')).join('|'));
+  }else{
+   const indices=fields.flatMap((x,i)=>x.includes('買賣超股數')?[i]:[]);
+   if(indices.length!==1)throw Error(k+' ambiguous net-buy/sell columns: '+indices.map(i=>fields[i]).join('|'));
+   netForRow=row=>num(row[indices[0]]);
+  }
+  src[k]=new Map(data.data.filter(Array.isArray).map(row=>[String(row[codeIndex]||'').trim(),netForRow(row)]));
  }catch(e){errors.push(k+' invalid: '+e.message);src[k]=null}
 }
 function parseCsv(line){const a=[];let v='',q=false;for(let i=0;i<line.length;i++){const c=line[i];if(c==='"'){if(q&&line[i+1]==='"'){v+='"';i++}else q=!q}else if(c===','&&!q){a.push(v);v=''}else v+=c}a.push(v);return a}
