@@ -41,8 +41,13 @@ for(const k of ['foreign','investment_trust','dealer']){
     if(values.some(v=>v===null||!Number.isFinite(v)))return false;
     return num(row[candidate])===indices.filter(i=>i!==candidate).reduce((sum,i)=>sum+num(row[i]),0);
    }));
-   if(candidates.length!==1)throw Error(k+' total net column not uniquely identifiable from official component sums: '+JSON.stringify({indices,candidates}));
-   totalIndex=candidates[0];
+   // The official T86-style subtable order is component A, component B, total.
+   // When a component is identically zero, algebra alone cannot distinguish
+   // component A from the total; use the verified published last-total layout.
+   // Still require every official row to satisfy component A + B = total.
+   const publishedTotal=indices[2];
+   if(!candidates.includes(publishedTotal))throw Error(k+' published total column fails component sum identity: '+JSON.stringify({indices,candidates}));
+   totalIndex=publishedTotal;
   }else throw Error(k+' unsupported net-buy/sell column count '+indices.length);
   sourceColumnMapping[k]={mode:indices.length===1?'unique_net_column':'verified_component_total',index:totalIndex,component_indices:indices.filter(i=>i!==totalIndex),fields:indices.map(i=>fields[i])};
   const netForRow=row=>num(row[totalIndex]);
