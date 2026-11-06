@@ -18,7 +18,7 @@ assert(facts.stock_count===facts.stocks.length&&facts.stocks.length===list.stock
 const byCode=new Map(list.stocks.map(s=>[String(s.code),s]));
 const sourcePaths={facts:factsPath,list:listPath,...facts.source_files};
 for(const [key,p] of Object.entries(sourcePaths)){try{files[key]={path:p,sha256:sha(p)};}catch(e){errors.push('missing source '+key+': '+p)}}
-const src={};
+const src={},sourceColumnMapping={};
 for(const k of ['foreign','investment_trust','dealer']){
  try{
   const data=json(facts.source_files[k]);
@@ -36,15 +36,16 @@ for(const k of ['foreign','investment_trust','dealer']){
    const total=named('自營商買賣超股數');
    const own=named('自營商買賣超股數(自行買賣)');
    const hedge=named('自營商買賣超股數(避險)');
-   if(total>=0)netForRow=row=>num(row[total]);
-   else if(own>=0&&hedge>=0)netForRow=row=>{
+   if(total>=0){sourceColumnMapping[k]={mode:'named_total',fields:[fields[total]]};netForRow=row=>num(row[total]);}
+   else if(own>=0&&hedge>=0){sourceColumnMapping[k]={mode:'component_sum',fields:[fields[own],fields[hedge]]};netForRow=row=>{
     const a=num(row[own]),b=num(row[hedge]);
     return a==null||b==null?null:a+b;
-   };
+   };}
    else throw Error('dealer total or both dealer components unavailable: '+fields.filter(x=>x.includes('買賣超股數')).join('|'));
   }else{
    const indices=fields.flatMap((x,i)=>x.includes('買賣超股數')?[i]:[]);
    if(indices.length!==1)throw Error(k+' ambiguous net-buy/sell columns: '+indices.map(i=>fields[i]).join('|'));
+   sourceColumnMapping[k]={mode:'unique_net_column',fields:[fields[indices[0]]]};
    netForRow=row=>num(row[indices[0]]);
   }
   src[k]=new Map(data.data.filter(Array.isArray).map(row=>[String(row[codeIndex]||'').trim(),netForRow(row)]));
@@ -71,7 +72,7 @@ for(const s of facts.stocks){
  assert(f.margin_delta===num(m['融資今日餘額'])-num(m['融資前日餘額']),code,'margin.margin_delta','delta mismatch');
  assert(f.short_delta===num(m['融券今日餘額'])-num(m['融券前日餘額']),code,'margin.short_delta','delta mismatch');
 }
-const report={schema_version:'official-numeric-receipt-v1',target_date:date,status:errors.length?'FAIL':'PASS',checked_at:new Date().toISOString(),workflow:{run_id:process.env.GITHUB_RUN_ID||null,run_attempt:process.env.GITHUB_RUN_ATTEMPT||null,job:process.env.GITHUB_JOB||null,sha:process.env.GITHUB_SHA||null,url:process.env.GITHUB_RUN_ID?'https://github.com/'+process.env.GITHUB_REPOSITORY+'/actions/runs/'+process.env.GITHUB_RUN_ID:null},source_sha256:files,stock_count:facts.stocks.length,check_count:checks.length,failed_count:errors.length,checks,errors};
+const report={schema_version:'official-numeric-receipt-v1',target_date:date,status:errors.length?'FAIL':'PASS',checked_at:new Date().toISOString(),workflow:{run_id:process.env.GITHUB_RUN_ID||null,run_attempt:process.env.GITHUB_RUN_ATTEMPT||null,job:process.env.GITHUB_JOB||null,sha:process.env.GITHUB_SHA||null,url:process.env.GITHUB_RUN_ID?'https://github.com/'+process.env.GITHUB_REPOSITORY+'/actions/runs/'+process.env.GITHUB_RUN_ID:null},source_sha256:files,source_column_mapping:sourceColumnMapping,stock_count:facts.stocks.length,check_count:checks.length,failed_count:errors.length,checks,errors};
 const out='data_daily_gain_over_5/verification/official-numeric/'+date+'.json';
 fs.mkdirSync(path.dirname(path.join(root,out)),{recursive:true});fs.writeFileSync(path.join(root,out),JSON.stringify(report,null,2)+'\n');
 console.log(JSON.stringify({out,status:report.status,checks:checks.length,errors:errors.slice(0,20)},null,2));
