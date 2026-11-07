@@ -2351,3 +2351,32 @@ The owner formally promoted the project from completed `MVP10-OPENING-PIPELINE-R
 - No MVP10-B, YouTube upload, scheduling, public release, or release-lock change. These locks remain closed.
 
 **Next round:** the owner may now invoke `promptA`. On that fresh command, re-read remote `AGENTS.md`, this canonical handoff, the original frozen pair, current Task State, and latest `main`; then execute only the preregistered MVP10-A Prompt A. Do not execute it as part of this promotion turn.
+
+## MVP10-A R1 Prompt A checkpoint — blocked on frozen input gates (2026-11-08)
+
+**Status: BLOCKED / Prompt A incomplete; Prompt B is not eligible.** This checkpoint records the first authorized Prompt A invocation after the owner promoted MVP10-A. It does not change the original paired acceptance, alter the roadmap, or authorize Render, upload, scheduling, Pages deployment, or publication.
+
+**Fresh remote state:** 14a7ab4f57edc51e43e1db0e76df699e325b271a. The owner-promoted state and original pair were reread from this main. The original frozen pair remains data_research/m5/change-proposals/DAILY-VIDEO-MVP-10DAY-PAIR-v1.md; no acceptance change is recorded.
+
+**Durable 20261104 evidence reused:**
+- Official opening blob 3578047ff03548e2bcb65d908228e9753deb434b, status verified_official_market_aggregate; breadth scope is TWSE_MI_INDEX_OFFICIAL_STOCK_COLUMN; index close 42,948.91, change -358.63 points / -0.8281%.
+- Official numeric Receipt PASS run 42231051247; unchanged.
+- Facts blob 75e0573aa2fb394712f40cb9b115096b3e136c07, News analysis blob c31055e4c0f3e60899be5e8e4fe9358c923190a6, final Market Summary blob 5560810319b843c1b5e57c3ddbf009ff51946bc4, AI v3 blob 24cf09ade6b98488b792aebc5036db9240c58a30.
+- Private Agent candidate blob f690c703058a4367ac1f619dd786d61f9d55eab0: 44 unique raw-list symbols, 15 stock scenes plus one closing; R2 News Narration verifier evidence remains reusable. It includes 910322 康師傅-DR, so the candidate is not an ordinary-common-only eligible set.
+- No data files were changed or regenerated in this checkpoint.
+
+**Bounded workflow/input audit:**
+- Current .github/workflows/daily-gainers-date-render-only.yml is workflow_dispatch only, requires date, has contents: read, and contains no YouTube action. Current session GitHub plugin provides remote reads, Contents writes, commits and run/job/artifact reads, but no Actions workflow-dispatch operation. No dispatch or rerun was attempted.
+- .github/workflows/daily-gainers-video-upload-orchestrator.yml still has a push trigger on video_scripts/daily-gainers/*.json, plus schedule and workflow_dispatch; it has actions: write. Therefore committing a formal script to that monitored path can start upload orchestration. The upload workflows themselves are manual and remain prohibited here. Keep YouTube upload/schedule/publication and release locks closed.
+- .github/workflows/deploy-pages.yml does not include docs/handoffs/** in its push path filters. The handoff/state checkpoint write is isolated from the Pages and render/upload paths.
+- The existing 20261104 opening passes its own validator but does not contain the separately required TWSE_COMMON_STOCK breadth in the frozen charter. No date-effective ordinary-share classification/breadth evidence for the target date was found in the verified opening/candidate inputs. Do not rerun broad historical security-master research; the precise missing input is an authenticated target-date ordinary-share classification basis and the resulting TWSE_COMMON_STOCK count, if still required by the original frozen gate.
+- research_pending/daily-gainers-seo/20261104.json is absent. The existing thumbnail builder requires that date-matched SEO metadata, verified same-date opening direction, and stock count consistent with the raw list. It cannot safely be populated until the eligible set/count is resolved.
+- Latest relevant prior render evidence remains run 42364913870, job 128380839271, failed at the materialization step before TTS/render, with no artifacts. Its input predates the verified R2 opening/news candidate, so it is stale evidence and was not rerun. The 20261102 artifact remains partial only: actual MP4/SRT existed, but visual QA was pending and no thumbnail was present.
+
+**Next ordered work inside this frozen A:**
+1. Obtain or identify a permitted, date-valid ordinary-share classification input for 20261104 and derive the separately scoped common-stock breadth using existing approved scripts; preserve the raw 44-row list.
+2. Reconcile the featured set against that evidence, omitting any nonordinary item from the eligible narration without rewriting source data; then produce date-matched SEO metadata from verified inputs.
+3. Once all frozen input/script gates pass, use a safe isolated Render-only route and verify the actual MP4, SRT, 1080p Dashboard, YunJhe TTS, VTuber, subtitle legibility, thumbnail, safe areas and QA. The current session has no GitHub dispatch tool, so it cannot trigger the native manual workflow.
+4. Stop before any YouTube action. A private pilot requires explicit owner authorization; none is present.
+
+**No implementation or production workflow was changed. Plan changed: NO.**
