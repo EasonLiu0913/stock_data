@@ -4,7 +4,7 @@ Canonical handoff: `docs/handoffs/daily-gainers-market-opening-end-to-end.md`
 Task id: `daily-gainers-market-opening-end-to-end`
 Project routing status: **ACTIVE** (owner-authorized v3 activation 2026-10-09); previous `institutional-accumulation` preserved as pending. Activation does NOT execute Prompt A.
 Plan version: `goal-v3`, owner-approved M2-v2 candidate-coverage amendment 2026-10-10; see sections DJ/DK. Earlier goal-v2 M1 completion remains valid, and original goal-v2 M2 A/B are superseded without PASS.
-Ultimate goal status: **NOT COMPLETE**. M0 and M1-v2 **COMPLETE**; owner-approved M2-v2 successor Prompt A promoted/eligible but not executed; M3–M7 PENDING.
+Ultimate goal status: **NOT COMPLETE**. R2 opening-pipeline repair A/B closeout is complete (R2 Prompt B PASS); v2 R1 Prompt B remains permanently FAILED. The originally frozen MVP10-A is now formally promoted and active, but Prompt A has NOT started. MVP10-B remains frozen and ineligible. See the latest dated promotion checkpoint at the end of this handoff.
 
 ## A. Immutable Project Charter — WHY
 
@@ -2329,3 +2329,25 @@ Owner requested an original frozen-contract eligibility review after accepting t
 - Publication: YouTube upload/scheduling/publication locks remain closed. The frozen pair's private-upload feasibility remains WAITING_OWNER/WAITING_PERMISSION unless separately authorized; do not claim upload PASS.
 
 **Decision:** MVP10-A is eligible for owner promotion as the next implementation phase because R2's paired closeout has passed and the trigger-safety repair is in place. This does not mean its outputs are ready or that the frozen hard gates have passed. This turn records eligibility only; no automatic promotion, Prompt A execution, Render, or YouTube action. Next permitted governance action is owner promotion followed by a fresh `promptA`; Prompt B stays ineligible until A's frozen completion contract is met.
+
+
+## Owner promotion of original MVP10-A — 2026-11-08
+
+The owner formally promoted the project from completed `MVP10-OPENING-PIPELINE-REPAIR-R2` to the originally approved, immutable `MVP10-A` phase. This checkpoint registers the promotion only. Prompt A has not started; this commit does not dispatch any workflow.
+
+**Current phase and routing**
+- Active project: `daily-gainers-market-opening-end-to-end`; goal: `goal-v3/MVP-10DAY-v1`.
+- R2 A/B and closeout: complete / PASS. R2 closeout evidence remains at commit `290d70c449575de521ed2fbfd91120b36fcc6bd7`; final R2 checkpoint was `bb2bcc2ac74960a5df5992832134646ffedad05b`.
+- Current phase: `MVP10-A`, round `MVP10-A-R1`, promoted and active; Prompt A is eligible but not started. Prompt B is not eligible.
+- Original frozen pair remains `data_research/m5/change-proposals/DAILY-VIDEO-MVP-10DAY-PAIR-v1.md` (blob `8cebf1a8e50f9d044e777419f7f120b4afa699a0`). Acceptance was not changed.
+- v2 R1 Prompt B remains **FAILED**, preserved with runs `42401534137`, `42401534168`, `42401534231`. R2 PASS does not retroactively clear R1.
+- The machine-readable state is `docs/handoffs/state/daily-gainers-market-opening-end-to-end.json`. It records the current phase, promotion, A/B eligibility, exact predecessor evidence, and unchanged YouTube locks.
+
+**MVP10-A execution constraints and starting evidence**
+- Reuse the 20261104 official Opening blob `3578047ff03548e2bcb65d908228e9753deb434b`, numeric Receipt PASS run `42231051247`, News analysis blob `c31055e4c0f3e60899be5e8e4fe9358c923190a6`, and R2-passed candidate blob `f690c703058a4367ac1f619dd786d61f9d55eab0`. Do not redo verified 44-stock research or News attribution.
+- The candidate includes `910322 康師傅-DR`; do not call it an ordinary stock or manually alter the source list. Resolve date-valid eligibility for the featured selection and satisfy the original `TWSE_COMMON_STOCK` breadth contract without substituting the R2 MI_INDEX stock-column scope.
+- Continue with formal script assembly, date-matched thumbnail inputs, an authorized safe Render-only path, and actual MP4/SRT/1080p Dashboard/TTS/VTuber/21px subtitles, safe-area and visual QA against the frozen pair. The existing 20261102 render artifact is partial evidence only; its visual QA remained pending and it lacked the thumbnail.
+- Dispatch Render-only only after its original frozen prerequisites pass and any approval the original contract requires. This promotion itself does not authorize an early dispatch.
+- No MVP10-B, YouTube upload, scheduling, public release, or release-lock change. These locks remain closed.
+
+**Next round:** the owner may now invoke `promptA`. On that fresh command, re-read remote `AGENTS.md`, this canonical handoff, the original frozen pair, current Task State, and latest `main`; then execute only the preregistered MVP10-A Prompt A. Do not execute it as part of this promotion turn.
