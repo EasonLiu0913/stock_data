@@ -4,23 +4,27 @@ const assert=require('node:assert/strict');
 const {mergeVerifiedBreadth}=require('../scripts/merge_daily_gainers_market_opening_breadth');
 function fixture(){
  const date='20261008';
- const s={schema_version:1,target_date:date,market:'TWSE',status:'partial',
+ const s={schema_version:2,target_date:date,market:'TWSE',status:'partial',
   taiex:{close:100,previous_close:99,change_points:1,change_pct:(100/99-1)*100},
   market_trading:{turnover_twd:1000,shares:100,transactions:20},
   institutional:{foreign:{buy_twd:100,sell_twd:50,net_twd:50,unit:'TWD',market_scope:'TWSE'}},
-  source_manifest:[{source_name:'TWSE FMTQIK',source_date:date,market_scope:'TWSE',verified:true,unit:'TWD'}],
+  source_manifest:[{source_name:'TWSE FMTQIK',source_date:date,market_scope:'TWSE',verified:true,unit:'TWD',sha256:'c'.repeat(64)}],
   quality:{missing_fields:['breadth','listed common-stock identity master','sector_flows'],warnings:[],blocking_reasons:['COMPLETE_PUBLICATION_NOT_AUTHORIZED']}};
  const e={target_date:date,market:'TWSE',status:'verified_breadth_only',
-  breadth:{scope:'TWSE_COMMON_STOCK',advancers:1,decliners:0,unchanged:0,no_trade_count:0,eligible_count:1,gainers_5pct_count:1,
+  breadth:{scope:'TWSE_COMMON_STOCK',advancers:1,decliners:0,unchanged:0,no_trade_count:0,no_comparison_count:0,eligible_count:1,gainers_5pct_count:1,
+   source_manifest:[{source_name:'date-specific TWSE classified security master',source_date:date,market_scope:'TWSE',verified:true,sha256:'a'.repeat(64)}],
    identities:[{code:'2330',market:'TWSE',security_type:'COMMON_STOCK',classification_verified:true}]},
+  market_opening_breadth:{scope:'TWSE_MI_INDEX_OFFICIAL_STOCK_COLUMN',source_date:date,advancers:1,decliners:0,unchanged:0,limit_up:0,limit_down:0,no_trade:0,no_comparison:0,
+   source_manifest:[{source_name:'TWSE MI_INDEX',source_date:date,market_scope:'TWSE',verified:true,sha256:'b'.repeat(64)}]},
   source_manifest:[
-   {source_name:'TWSE MI_INDEX',source_date:date,market_scope:'TWSE',verified:true,unit:'TWD'},
-   {source_name:'date-specific TWSE classified security master',source_date:date,market_scope:'TWSE',verified:true,unit:'security identities'}]};
+   {source_name:'TWSE MI_INDEX',source_date:date,market_scope:'TWSE',verified:true,unit:'TWD',sha256:'b'.repeat(64)},
+   {source_name:'date-specific TWSE classified security master',source_date:date,market_scope:'TWSE',verified:true,unit:'security identities',sha256:'a'.repeat(64)}]};
  return {s,e};
 }
 test('verified breadth merges without promoting remaining partial data',()=>{
  const {s,e}=fixture(),out=mergeVerifiedBreadth(s,e);
  assert.equal(out.status,'partial');assert.equal(out.breadth.advancers,1);
+ assert.equal(out.market_opening_breadth.scope,'TWSE_MI_INDEX_OFFICIAL_STOCK_COLUMN');
  assert.deepEqual(out.quality.missing_fields,['sector_flows']);
  assert.equal(s.breadth,undefined);
 });

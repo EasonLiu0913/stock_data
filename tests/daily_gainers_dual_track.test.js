@@ -2,7 +2,10 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs');
 const {chineseInt,opening,materialize}=require('../scripts/materialize_daily_gainers_dual_track');
 const date='20261102';
-const market=JSON.parse(fs.readFileSync('data_daily_gain_over_5/market-opening-video/'+date+'.json','utf8'));
+const legacyMarket=JSON.parse(fs.readFileSync('data_daily_gain_over_5/market-opening-video/'+date+'.json','utf8'));
+// The historical fixture is schema v1; map its official MI_INDEX field into
+// the new dedicated field for generator unit tests only. It is not a v2 PASS.
+const market={...legacyMarket,market_opening_breadth:legacyMarket.breadth};
 const agent=JSON.parse(fs.readFileSync('research_pending/daily-gainers-video-scripts/'+date+'.json','utf8'));
 test('spoken numbers cover TWD magnitude and Taiwan date',()=>{
  assert.equal(chineseInt(44920),'四萬四千九百二十');
@@ -34,6 +37,6 @@ test('wrong trading date, tampered totals, mismatched ratio, missing sources all
  m=>{m.institutional.total_net_twd=1;},
  m=>{m.trading.turnover_ratio_ma5=2;},
  m=>{m.source_manifest=[];},
- m=>{m.breadth.scope='UNKNOWN';}
+ m=>{m.market_opening_breadth.scope='UNKNOWN';}
  ]){const m=structuredClone(market);mutate(m);assert.throws(()=>opening(date,m,29));}
 });

@@ -16,7 +16,7 @@ function money(n){return number(Math.abs(n)/1e8)+'億元';}
 function direction(n){return n>0?'買超':n<0?'賣超':'買賣超持平';}
 function opening(date,m,count){
  failUnless(/^20\d{6}$/.test(date)&&m.target_date===date&&m.market==='TWSE'&&m.status==='verified_official_market_aggregate','unverified or stale opening');
- const {breadth:b,index:i,trading:t,institutional:f}=m;
+ const {market_opening_breadth:b,index:i,trading:t,institutional:f}=m;
  for(const [o,scope] of [[b,'TWSE_MI_INDEX_OFFICIAL_STOCK_COLUMN'],[t,'TWSE_WHOLE_MARKET'],[f,'TWSE_BFI82U_TWD']])failUnless(o?.scope===scope,'scope mismatch');
  for(const o of [b,i,t,f])failUnless(o?.source_date===date,'market date mismatch');
  const c={advancers:b.advancers,decliners:b.decliners,unchanged:b.unchanged,limit_up:b.limit_up,index_close:i.close,index_change_points:i.change_points,index_change_pct:i.change_pct,turnover_twd:t.turnover_twd,foreign_net_twd:f.foreign_net_twd,investment_trust_net_twd:f.investment_trust_net_twd,dealers_net_twd:f.dealers_net_twd,total_net_twd:f.total_net_twd};
