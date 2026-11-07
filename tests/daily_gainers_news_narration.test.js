@@ -48,3 +48,17 @@ test('source name must match cited article, not merely any approved link',()=>{
  a.scenes[2].news_attributions.find(x=>x.code==='2468').url=row.sources.find(x=>x.title.includes('永豐金')).url;
  assert.throws(()=>verify(a,news,ai),/spoken publisher does not match cited article title/);
 });
+
+test('20261104 private candidate preserves 44-stock coverage and grounds every source-bearing stock in narration',()=>{
+ const script04=read('research_pending/daily-gainers-video-scripts/20261104.json');
+ const news04=read('data_daily_gain_over_5/analysis-news/20261104.json');
+ const ai04=read('data_daily_gain_over_5/analysis-ai/20261104.json');
+ const result=verify(script04,news04,ai04);
+ assert.equal(script04.editorial_quality.version,'news-to-narration-v1');
+ assert.equal(result.status,'PASS');
+ assert.equal(result.covered_stock_count,44);
+ assert.equal(result.attributed_stock_count,4);
+ assert.deepEqual(result.attributions.map(x=>x.code).sort(),['3515','6933','7710','7711']);
+ assert.equal(script04.scenes.filter(s=>s.scene_type==='stock_list').length,15);
+ assert.equal(script04.scenes.filter(s=>s.scene_type==='closing_summary').length,1);
+});
