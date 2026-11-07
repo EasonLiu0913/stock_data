@@ -2297,3 +2297,18 @@ The owner explicitly requested completion of R2 safety acceptance and repair of 
 **Pages follow-up:** run 42403883893 is now terminal `cancelled`. Job 128497329873 shows artifact preparation, artifact upload and Deploy to GitHub Pages were `skipped`; therefore this run did not complete a Pages deployment. The workflow trigger now excludes `data_research/**`. No Render or Pages workflow was dispatched for this verification.
 
 **R2 objective:** verify the trigger repair without causing a test deployment, and repair only the private 20261104 Agent candidate's News Narration contract and source attributions. Reuse the existing 44-stock candidate, Opening, official numeric Receipt and News analysis by exact identity. R2 does not change original MVP10-A/B acceptance or authorize Render, Pages, YouTube, TTS, or publication.
+
+
+## MVP10-OPENING-PIPELINE-REPAIR-R2 R1 — Prompt B closeout (2026-11-08)
+
+**R2 Prompt B: PASS for the narrow registered R2 contract.** R2 is complete; v2 R1 remains permanently **FAILED** and is not changed by this result. Original MVP10-A/B acceptance remains unchanged. R2 does not authorize or automatically promote MVP10-A.
+
+**Safety evidence:** latest remote Pages workflow excludes `data_research/**`; 20261102 and 20261103 Render-only workflows are manual-dispatch-only. The R2 registration commit `dabf3d43263567d0638e88f4aad18c951ac0475a` produced no Actions runs. The candidate/test commit `290d70c449575de521ed2fbfd91120b36fcc6bd7` started only Node Regression Suite run 42405164254; no Pages or Render-only run was listed for either R2 commit. R2 did not dispatch Render or Pages.
+
+R1 history remains recorded: Render-only runs 42401534137 and 42401534168 were push-triggered and failed before rendering; Pages run 42401534231's Deploy step failed. R2-draft Pages run 42403883893 is terminal `cancelled`; job 128497329873 shows artifact preparation, upload and Deploy steps all `skipped`, with no artifacts. This records that there was no completed deployment for that run, while retaining the fact that its Pages workflow had been triggered.
+
+**News Narration:** candidate commit `290d70c449575de521ed2fbfd91120b36fcc6bd7`, blob `f690c703058a4367ac1f619dd786d61f9d55eab0`. Regression test blob `dbd5d64cbd774060488c5e846bd21043b11d2fd0`. Using the exact remote-main validator, tests, candidate and source files in an isolated temporary tree: `node --test tests/daily_gainers_news_narration.test.js` passed **9/9**; direct `verify()` returned `PASS`, 44 covered stocks, 4 attributed stocks. The four attributions are grounded in unchanged News blob `c31055e4c0f3e60899be5e8e4fe9358c923190a6`: 6933, 3515, 7711 and 7710. The remaining 40 have no News source rows and were not given invented citations. The candidate retains 15 stock scenes, 44 unique codes and one final closing scene.
+
+Opening blob `3578047ff03548e2bcb65d908228e9753deb434b` and official numeric Receipt run 42231051247 were reused unchanged. No production materialization, Render, Pages deployment, TTS/media, YouTube upload, scheduling, publication or release unlock occurred. The broader Node regression workflow run 42405164254 was still `in_progress` at last observation; it is not represented as green and did not trigger a publishing workflow.
+
+**Current state / next action:** R2 A and B complete; v2 R1 B remains failed. The ultimate project is incomplete. MVP10-A remains pending an owner decision because R1's historical failure is preserved. Do not start MVP10-A or any render/publish action automatically.
