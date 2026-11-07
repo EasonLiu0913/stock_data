@@ -53,3 +53,8 @@ No history rewrite; no ordinary-stock archive loop; no re-running successful Ope
 ## Owner decision required
 
 Review this draft and either approve creating a separate immutable R2 paired A/B contract for registration, request changes, or decline it. Until explicit approval and durable registration of the pair, R2 is not active and no implementation or Prompt B may start.
+
+
+## Post-draft trigger incident (2026-11-08)
+
+The draft itself was committed in `e08be67c34f8716056bf71e87d42a741238906e7`; because `.github/workflows/deploy-pages.yml` matched the broad `data*/**` path, Pages run 42403883893/job 128497329873 started. Last observed in progress during “Audit every frontend data dependency”; no artifact or deployment step had begun at that observation. Cancellation was unavailable through the active GitHub connector, and the available browser session was logged out. This event is recorded, not hidden. Follow-up mitigation excludes `data_research/**` from Pages deployment paths. This draft remains unregistered and no R2 A/B execution is authorized.
