@@ -2233,3 +2233,14 @@ The owner approved CHANGE_PROPOSAL v1 and the separate immutable Prompt A/B pair
 **Still required by frozen Prompt A:** make the official MI_INDEX breadth producer and merge emit both fields with their own SHA provenance; produce the date-scoped eligible-universe evidence only from an authentic 20261104 historical classification archive; build the complete opening only after that gate; add the manual date-only least-privilege opening workflow after the builders exist; run the fixed downstream gates when inputs exist; verify all outputs on remote main. No workflow was dispatched. No Render or YouTube operation occurred. Publishing locks remain closed.
 
 **Next action:** obtain an official TWSE archive or other owner-approved, date-effective classification evidence for 20261104 with original bytes and verifiable SHA. Keep the remaining implementation bounded to the frozen pair and resume with a fresh `promptA` after new source evidence is available. Automatic continuation is not permitted.
+
+
+## Owner-directed phase revision — MVP10-OPENING-PIPELINE-REPAIR-v2 (2026-11-08)
+
+The owner asked to revise Prompt A so the work advances an automatable video pipeline instead of spending repeated cycles on historical ordinary-stock classification. The v1 pair remains immutable and its R1 result remains **BLOCKED / incomplete**; that work is not retroactively passed. The owner approved a prospective versioned proposal and pair: `data_research/m5/change-proposals/DATE-OPENING-PIPELINE-CHANGE-PROPOSAL-v2.md` and `data_research/m5/change-proposals/DATE-OPENING-PIPELINE-REPAIR-PAIR-v2.md`.
+
+**New phase direction:** official market opening is built from verified same-date TWSE MI_INDEX stock-column breadth, FMTQIK/market-chart, institutional data and five-session turnover evidence. Its scope remains `TWSE_MI_INDEX_OFFICIAL_STOCK_COLUMN`; a historical ordinary-stock archive is not an opening gate. Any downstream featured-stock eligibility gate is handled separately and only when a current formal validator explicitly requires it. Do not repeat archive/classification research as an opening task. The v2 phase builds the reusable source-to-opening builder, v3 validator/materializer contract, regression tests and date-only Actions workflow. No Render or YouTube action is authorized.
+
+**Phase state after registration:** active project and goal unchanged; v1 preserved as blocked historical phase; `MVP10-OPENING-PIPELINE-REPAIR-v2` R1 is active with Prompt A not started and Prompt B frozen/ineligible. Original MVP10-A/B acceptance and publication locks remain unchanged. Next permitted command is a fresh owner `promptA`; do not start it in the registration turn.
+
+**Plan changed:** YES, prospectively under the owner's 2026-11-08 instruction. No code implementation or workflow dispatch was performed in the v2 registration turn.
