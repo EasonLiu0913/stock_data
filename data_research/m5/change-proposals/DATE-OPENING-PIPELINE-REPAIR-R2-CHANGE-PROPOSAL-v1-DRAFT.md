@@ -1,6 +1,6 @@
 # TAIWAN STOCK｜Date Opening Pipeline Repair R2 — CHANGE_PROPOSAL v1 (DRAFT)
 
-**Status:** Draft for owner review only. Not registered as an active phase; no Prompt A/B is authorized or executable from this document.
+**Status:** Owner-approved for versioned registration and execution on 2026-11-08, based on the owner's explicit request to complete R2 safety acceptance and repair the 20261104 44-stock narration attribution. R2 does not revise or pass R1.
 **Repository:** `EasonLiu0913/stock_data`
 **Project / goal:** `daily-gainers-market-opening-end-to-end` / `goal-v3/MVP-10DAY-v1`
 **Predecessor:** `MVP10-OPENING-PIPELINE-REPAIR-v2` R1
@@ -58,3 +58,8 @@ Review this draft and either approve creating a separate immutable R2 paired A/B
 ## Post-draft trigger incident (2026-11-08)
 
 The draft itself was committed in `e08be67c34f8716056bf71e87d42a741238906e7`; because `.github/workflows/deploy-pages.yml` matched the broad `data*/**` path, Pages run 42403883893/job 128497329873 started. Last observed in progress during “Audit every frontend data dependency”; no artifact or deployment step had begun at that observation. Cancellation was unavailable through the active GitHub connector, and the available browser session was logged out. This event is recorded, not hidden. Follow-up mitigation excludes `data_research/**` from Pages deployment paths. This draft remains unregistered and no R2 A/B execution is authorized.
+
+
+## Owner authorization — 2026-11-08
+
+The owner explicitly directed: complete R2 safety acceptance and repair news attribution in the 20261104 44-stock script. This authorizes only the bounded R2 scope registered in `DATE-OPENING-PIPELINE-REPAIR-PAIR-R2-v1.md`. It does not authorize Render, Pages, TTS/media generation, YouTube actions, or changing the original MVP10 acceptance. R1 remains failed.

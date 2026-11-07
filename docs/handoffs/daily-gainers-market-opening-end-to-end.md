@@ -2288,3 +2288,12 @@ The owner asked to revise Prompt A so the work advances an automatable video pip
 **Correction to prior checkpoint:** committing the draft proposal at `data_research/m5/change-proposals/DATE-OPENING-PIPELINE-REPAIR-R2-CHANGE-PROPOSAL-v1-DRAFT.md` in commit `e08be67c34f8716056bf71e87d42a741238906e7` matched the Pages workflow's broad `data*/**` push filter and started Pages run 42403883893/job 128497329873. At the last check the job was still `in_progress` at “Audit every frontend data dependency”; no artifact or Deploy step had started. The R2 proposal and task state now record this event. This is an unintended Pages workflow trigger; it is not a successful deployment and must be preserved as evidence.
 
 The repository had no GitHub workflow cancellation tool, and the visible browser was logged out. The owner must cancel [Pages run 42403883893](https://github.com/EasonLiu0913/stock_data/actions/runs/42403883893) immediately if it remains active. The Pages trigger is being narrowed to exclude `data_research/**`; the workflow-file path is not self-triggering, so this mitigation commit should not start another Pages deployment. No Render, YouTube, schedule, publication, or release-lock action was taken.
+
+
+## Owner-authorized R2 registration — 2026-11-08
+
+The owner explicitly requested completion of R2 safety acceptance and repair of the 20261104 44-stock narration's News attribution. The exact scope and paired A/B criteria are frozen in `data_research/m5/change-proposals/DATE-OPENING-PIPELINE-REPAIR-PAIR-R2-v1.md`, registered before implementation in commit pending below. This does not pass or revise v2 R1: R1 Prompt B remains FAILED with runs 42401534137, 42401534168 and 42401534231 preserved.
+
+**Pages follow-up:** run 42403883893 is now terminal `cancelled`. Job 128497329873 shows artifact preparation, artifact upload and Deploy to GitHub Pages were `skipped`; therefore this run did not complete a Pages deployment. The workflow trigger now excludes `data_research/**`. No Render or Pages workflow was dispatched for this verification.
+
+**R2 objective:** verify the trigger repair without causing a test deployment, and repair only the private 20261104 Agent candidate's News Narration contract and source attributions. Reuse the existing 44-stock candidate, Opening, official numeric Receipt and News analysis by exact identity. R2 does not change original MVP10-A/B acceptance or authorize Render, Pages, YouTube, TTS, or publication.
