@@ -1,6 +1,5 @@
 'use strict';
 // Pure, network-free data contract gate for the TWSE-only market-opening snapshot.
-// Do not use string-length heuristics to determine security type.
 const fs=require('node:fs');
 const path=require('node:path');
 function assertDate(value) {
@@ -17,7 +16,7 @@ function validateOpeningSnapshot(snapshot) {
   if (!snapshot || typeof snapshot !== 'object') throw new Error('MISSING_SNAPSHOT');
   assertDate(snapshot.target_date);
   if (snapshot.market !== 'TWSE') throw new Error('MARKET_NOT_TWSE');
-  if (snapshot.schema_version !== 2) throw new Error('SCHEMA_VERSION');
+  if (snapshot.schema_version !== 3) throw new Error('SCHEMA_VERSION');
   if (snapshot.status!=='verified_official_market_aggregate') throw new Error('OPENING_NOT_COMPLETE');
   if (!Array.isArray(snapshot.source_manifest) || !snapshot.source_manifest.length) throw new Error('MISSING_PROVENANCE');
   for(const source of snapshot.source_manifest) {
@@ -27,46 +26,37 @@ function validateOpeningSnapshot(snapshot) {
     if (!source.unit || !source.source_name) throw new Error('SOURCE_METADATA_MISSING');
     if (!/^[a-f0-9]{64}$/.test(source.sha256||'')) throw new Error('SOURCE_SHA256_INVALID:'+source.source_name);
   }
-  assertNum(snapshot.taiex,['close','previous_close','change_points','change_pct'],'taiex');
-  if (snapshot.taiex.previous_close <= 0) throw new Error('INVALID_PREVIOUS_CLOSE');
-  const expected = (snapshot.taiex.close/snapshot.taiex.previous_close-1)*100;
-  if (Math.abs(expected-snapshot.taiex.change_pct)>0.011) throw new Error('INDEX_PERCENT_MISMATCH');
-  if (Math.abs(snapshot.taiex.close-snapshot.taiex.previous_close-snapshot.taiex.change_points)>0.011) throw new Error('INDEX_POINTS_MISMATCH');
-  assertNum(snapshot.market_trading,['turnover_twd','shares','transactions'],'market_trading');
-  if (snapshot.market_trading.turnover_twd<0 || snapshot.market_trading.shares<0 || snapshot.market_trading.transactions<0) throw new Error('NEGATIVE_TRADING_DATA');
-  const b=snapshot.breadth;
-  if (!b || b.scope!=='TWSE_COMMON_STOCK') throw new Error('BREADTH_SCOPE');
-  assertNum(b,['advancers','decliners','unchanged','eligible_count','gainers_5pct_count'],'breadth');
-  for(const k of ['advancers','decliners','unchanged','eligible_count','gainers_5pct_count']) if (!Number.isInteger(b[k]) || b[k]<0) throw new Error('BREADTH_COUNT');
-  if (!Number.isInteger(b.no_trade_count) || b.no_trade_count<0) throw new Error('BREADTH_NO_TRADE_COUNT');
-  if (!Number.isInteger(b.no_comparison_count) || b.no_comparison_count<0) throw new Error('BREADTH_NO_COMPARISON_COUNT');
-  if (b.advancers+b.decliners+b.unchanged+b.no_trade_count+b.no_comparison_count!==b.eligible_count || b.gainers_5pct_count>b.advancers) throw new Error('BREADTH_INCONSISTENT');
-  if (!Array.isArray(b.identities) || b.identities.length!==b.eligible_count) throw new Error('MISSING_CLASSIFIED_UNIVERSE');
-  if (!Array.isArray(b.source_manifest) || !b.source_manifest.length) throw new Error('MISSING_COMMON_BREADTH_PROVENANCE');
-  for(const source of b.source_manifest) {
-    if(source.source_date!==snapshot.target_date || source.market_scope!=='TWSE' || source.verified!==true || !source.source_name || !/^[a-f0-9]{64}$/.test(source.sha256||'')) throw new Error('INVALID_COMMON_BREADTH_PROVENANCE');
-  }
-  const seen = new Set();
-  for(const item of b.identities) {
-    if (item.market!=='TWSE' || item.security_type!=='COMMON_STOCK' || item.classification_verified!==true || typeof item.code!=='string' || !item.code) throw new Error('INVALID_SECURITY_CLASSIFICATION');
-    if(seen.has(item.code)) throw new Error('DUPLICATE_SECURITY');
-    seen.add(item.code);
-  }
+  assertNum(snapshot.index,['close','previous_close','change_points','change_pct'],'index');
+  if (snapshot.index.previous_close <= 0) throw new Error('INVALID_PREVIOUS_CLOSE');
+  const expected = (snapshot.index.close/snapshot.index.previous_close-1)*100;
+  if (Math.abs(expected-snapshot.index.change_pct)>0.011) throw new Error('INDEX_PERCENT_MISMATCH');
+  if (Math.abs(snapshot.index.close-snapshot.index.previous_close-snapshot.index.change_points)>0.011) throw new Error('INDEX_POINTS_MISMATCH');
+  assertNum(snapshot.trading,['turnover_twd','shares','transactions','turnover_ma5_twd','turnover_ratio_ma5'],'trading');
+  if (snapshot.trading.turnover_twd<0 || snapshot.trading.shares<0 || snapshot.trading.transactions<0 || snapshot.trading.turnover_ma5_twd<=0 || Math.abs(snapshot.trading.turnover_twd/snapshot.trading.turnover_ma5_twd-snapshot.trading.turnover_ratio_ma5)>0.0001) throw new Error('INVALID_TRADING_DATA');
+  // Market-opening breadth is the official MI_INDEX "股票" column. It is not
+  // represented as ordinary-stock-only breadth and has its own explicit scope.
   const mb=snapshot.market_opening_breadth;
   if (!mb || mb.scope!=='TWSE_MI_INDEX_OFFICIAL_STOCK_COLUMN') throw new Error('MARKET_OPENING_BREADTH_SCOPE');
   if (mb.source_date!==snapshot.target_date) throw new Error('MARKET_OPENING_BREADTH_DATE_MISMATCH');
   assertNum(mb,['advancers','decliners','unchanged','limit_up','limit_down','no_trade','no_comparison'],'market_opening_breadth');
   for(const k of ['advancers','decliners','unchanged','limit_up','limit_down','no_trade','no_comparison']) if(!Number.isInteger(mb[k])||mb[k]<0) throw new Error('MARKET_OPENING_BREADTH_COUNT');
+  if(mb.eligible_count!==mb.advancers+mb.decliners+mb.unchanged+mb.no_trade+mb.no_comparison||mb.limit_up>mb.advancers||mb.limit_down>mb.decliners) throw new Error('MARKET_OPENING_BREADTH_INCONSISTENT');
   if (!Array.isArray(mb.source_manifest) || !mb.source_manifest.length) throw new Error('MISSING_MARKET_OPENING_BREADTH_PROVENANCE');
   for(const source of mb.source_manifest) {
     if(source.source_date!==snapshot.target_date || source.market_scope!=='TWSE' || source.verified!==true || !source.source_name || !/^[a-f0-9]{64}$/.test(source.sha256||'')) throw new Error('INVALID_MARKET_OPENING_BREADTH_PROVENANCE');
   }
-  for(const [group,data] of Object.entries(snapshot.institutional || {})) {
-    if (!['foreign','investment_trust','dealers'].includes(group)) throw new Error('UNKNOWN_INSTITUTION');
+  const inst=snapshot.institutional || {};
+  if(inst.scope!=='TWSE_BFI82U_TWD'||inst.source_date!==snapshot.target_date) throw new Error('INSTITUTIONAL_SCOPE_OR_DATE');
+  for(const group of ['foreign','investment_trust','dealers']) {
+    const data=inst[group];
+    if (!data) throw new Error('MISSING_INSTITUTION:'+group);
     assertNum(data,['buy_twd','sell_twd','net_twd'],'institutional.'+group);
-    if (Math.abs(data.buy_twd-data.sell_twd-data.net_twd)>1) throw new Error('INSTITUTIONAL_NET_MISMATCH:'+group);
+    if (data.buy_twd-data.sell_twd!==data.net_twd) throw new Error('INSTITUTIONAL_NET_MISMATCH:'+group);
     if (data.unit!=='TWD' || data.market_scope!=='TWSE') throw new Error('INSTITUTIONAL_UNIT_OR_SCOPE:'+group);
   }
+  assertNum(inst,['foreign_net_twd','investment_trust_net_twd','dealers_net_twd','total_net_twd'],'institutional');
+  if(inst.foreign_net_twd!==inst.foreign.net_twd || inst.investment_trust_net_twd!==inst.investment_trust.net_twd || inst.dealers_net_twd!==inst.dealers.net_twd) throw new Error('INSTITUTIONAL_FLAT_NESTED_MISMATCH');
+  if(inst.foreign_net_twd+inst.investment_trust_net_twd+inst.dealers_net_twd!==inst.total_net_twd) throw new Error('INSTITUTIONAL_TOTAL_MISMATCH');
   return {ok:true,target_date:snapshot.target_date,market:'TWSE'};
 }
 function main(argv=process.argv.slice(2)) {

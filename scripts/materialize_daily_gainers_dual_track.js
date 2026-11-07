@@ -22,7 +22,7 @@ function opening(date,m,count){
  const c={advancers:b.advancers,decliners:b.decliners,unchanged:b.unchanged,limit_up:b.limit_up,index_close:i.close,index_change_points:i.change_points,index_change_pct:i.change_pct,turnover_twd:t.turnover_twd,foreign_net_twd:f.foreign_net_twd,investment_trust_net_twd:f.investment_trust_net_twd,dealers_net_twd:f.dealers_net_twd,total_net_twd:f.total_net_twd};
  for(const [k,n] of Object.entries(c))failUnless(typeof n==='number'&&Number.isFinite(n),'missing '+k);
  for(const k of ['advancers','decliners','unchanged','limit_up'])failUnless(Number.isSafeInteger(c[k])&&c[k]>=0,'invalid count '+k);
- failUnless(m.source_manifest?.length>=3&&m.source_manifest.every(x=>x.source_date===date&&x.source&&x.url),'invalid source provenance');
+ failUnless(m.source_manifest?.length>=3&&m.source_manifest.every(x=>x.source_date===date&&x.source_name&&x.source_path_or_endpoint&&x.verified===true&&/^[a-f0-9]{64}$/.test(x.sha256||'')),'invalid source provenance');
  failUnless(t.turnover_ma5_twd>0&&Math.abs(t.turnover_twd/t.turnover_ma5_twd-t.turnover_ratio_ma5)<0.0001,'invalid 5-day turnover');
  failUnless(Math.abs(i.close-i.previous_close-i.change_points)<0.02,'index delta mismatch');
  failUnless(Math.abs(f.foreign_net_twd+f.investment_trust_net_twd+f.dealers_net_twd-f.total_net_twd)<1,'institutional total mismatch');

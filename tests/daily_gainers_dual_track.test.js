@@ -5,7 +5,7 @@ const date='20261102';
 const legacyMarket=JSON.parse(fs.readFileSync('data_daily_gain_over_5/market-opening-video/'+date+'.json','utf8'));
 // The historical fixture is schema v1; map its official MI_INDEX field into
 // the new dedicated field for generator unit tests only. It is not a v2 PASS.
-const market={...legacyMarket,market_opening_breadth:legacyMarket.breadth};
+const market={...legacyMarket,market_opening_breadth:legacyMarket.breadth,source_manifest:legacyMarket.source_manifest.map((x,i)=>({...x,source_name:x.source_name||x.source||`legacy fixture ${i}`,source_path_or_endpoint:x.source_path_or_endpoint||x.url||'legacy-test-fixture',verified:true,sha256:x.sha256||'d'.repeat(64)}))};
 const agent=JSON.parse(fs.readFileSync('research_pending/daily-gainers-video-scripts/'+date+'.json','utf8'));
 test('spoken numbers cover TWD magnitude and Taiwan date',()=>{
  assert.equal(chineseInt(44920),'四萬四千九百二十');

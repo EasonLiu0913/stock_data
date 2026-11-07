@@ -1,0 +1,65 @@
+name: "[07 驗證] Build Daily Gainers Official Market Opening"
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_date:
+        description: "TWSE trading date in YYYYMMDD"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-gainers-market-opening-${{ inputs.target_date }}
+  cancel-in-progress: false
+
+jobs:
+  build-opening:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Validate target date and required official inputs
+        env:
+          TARGET_DATE: ${{ inputs.target_date }}
+        run: |
+          node -e "const d=process.env.TARGET_DATE; if(!/^20\\d{6}$/.test(d||'')) process.exit(1); const x=new Date(d.slice(0,4)+'-'+d.slice(4,6)+'-'+d.slice(6,8)+'T00:00:00Z'); if(Number.isNaN(x.getTime())||x.toISOString().slice(0,10)!==d.slice(0,4)+'-'+d.slice(4,6)+'-'+d.slice(6,8)) process.exit(1)"
+          test -f "data_twse_mi_index/${TARGET_DATE}_twse_mi_index.json"
+          test -f "data_twse_market_chart/market_chart.json"
+          test -f "data_daily_gain_over_5/verification/official-numeric/${TARGET_DATE}.json"
+      - name: Capture date-specific official BFI82U in TWD
+        run: node scripts/capture_twse_bfi82u.js "${{ inputs.target_date }}"
+      - name: Build deterministic market opening
+        run: node scripts/build_daily_gainers_market_opening_video.js "${{ inputs.target_date }}"
+      - name: Validate complete official opening
+        run: node scripts/validate_daily_gainers_market_opening.js "${{ inputs.target_date }}"
+      - name: Commit and push generated evidence
+        env:
+          TARGET_DATE: ${{ inputs.target_date }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "data_twse_bfi82u/${TARGET_DATE}_twse_bfi82u.json" "data_daily_gain_over_5/market-opening-video/${TARGET_DATE}.json"
+          if git diff --cached --quiet; then
+            echo "No generated changes for ${TARGET_DATE}; repository is already idempotent."
+          else
+            git commit -m "data: build official market opening ${TARGET_DATE}"
+            git push origin HEAD:main
+          fi
+      - name: Verify generated files on remote main
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_DATE: ${{ inputs.target_date }}
+        run: |
+          for file in "data_twse_bfi82u/${TARGET_DATE}_twse_bfi82u.json" "data_daily_gain_over_5/market-opening-video/${TARGET_DATE}.json"; do
+            remote_blob=$(gh api "repos/${GITHUB_REPOSITORY}/contents/${file}?ref=main" --jq '.sha')
+            local_blob=$(git hash-object "$file")
+            test "$remote_blob" = "$local_blob"
+          done
+          echo "Remote main contains both date-scoped outputs with matching Git blob identities."
