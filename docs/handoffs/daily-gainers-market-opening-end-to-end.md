@@ -2244,3 +2244,20 @@ The owner asked to revise Prompt A so the work advances an automatable video pip
 **Phase state after registration:** active project and goal unchanged; v1 preserved as blocked historical phase; `MVP10-OPENING-PIPELINE-REPAIR-v2` R1 is active with Prompt A not started and Prompt B frozen/ineligible. Original MVP10-A/B acceptance and publication locks remain unchanged. Next permitted command is a fresh owner `promptA`; do not start it in the registration turn.
 
 **Plan changed:** YES, prospectively under the owner's 2026-11-08 instruction. No code implementation or workflow dispatch was performed in the v2 registration turn.
+
+
+## MVP10-OPENING-PIPELINE-REPAIR-v2 R1 — Prompt A implementation checkpoint (2026-11-08)
+
+**Prompt A status:** COMPLETE — ready for the preregistered Prompt B closeout. This closes no MVP10-A/B gate and does not authorize Render or publication.
+
+**Implementation commit:** `28aaaad96c61ede33d12f4ede8144aab3c593cde` on remote `main` (parent `e6e1a5d4f6bf33c994ae2f06b6f5efaa1090f0ee`). The committed set is limited to the v3 official-opening builder/capture, opening and script validators/materializer, partial breadth merge alignment, regression tests, manual date-only workflow, and date-specific BFI82U/opening evidence. The private materialized script was not committed because its News narration gate did not pass.
+
+**Durable 20261104 outputs:** `data_twse_bfi82u/20261104_twse_bfi82u.json` Git blob `a9a8924f030a6e60b24d93abb0daebaee361e9ce`; `data_daily_gain_over_5/market-opening-video/20261104.json` Git blob `3578047ff03548e2bcb65d908228e9753deb434b`. Opening breadth is the exact MI_INDEX `股票` column scope: up 438 (limit-up 20), down 544 (limit-down 2), unchanged 99, no-trade 0, no-comparison 7; denominator 1,088. BFI82U TWD net is foreign -149,899,834,076; trust +27,258,458,843; dealers -37,518,970,501; total -160,160,345,734. The source page states foreign-dealer values are already included in dealer totals. BFI82U values were extracted from the official date-specific page at https://www.twse.com.tw/rwd/zh/fund/BFI82U?dayDate=20261104&response=html&type=day; the committed file transparently records this as an official-page extraction, not a raw-response archive. The new workflow captures the raw date-specific JSON response and hashes it when run.
+
+**Verification:** frozen regression command passed 36/36. `node scripts/validate_daily_gainers_market_opening.js 20261104` PASS. `node scripts/validate_daily_gainers_video_script.js 20261104` PASS (17 scenes; 3,397 narration characters). `node scripts/validate_daily_gainers_news_analysis.js 20261104` PASS (44 stocks). `node scripts/validate_daily_gainers_news_narration.js 20261104` remains FAIL because the private candidate lacks required `editorial_quality.version=news-to-narration-v1`; no passing metadata was fabricated and the unpassed materialized script was not committed.
+
+**Workflow:** `.github/workflows/build-daily-gainers-market-opening-video.yml` is manual `workflow_dispatch` only, validates the target date, fetches BFI82U, builds and validates the official opening, commits only date-specific evidence, and compares remote blob IDs with local Git blob IDs. YAML parsed successfully. It was not dispatched, as the frozen v2 Prompt A explicitly prohibits dispatch in this round. No Render, rerun, or YouTube action occurred; publication locks remain closed.
+
+**Remote verification:** implementation files and both date-scoped outputs were read back from current `main`; every remote content Git blob matched the created blob SHA. At checkpoint creation, implementation commit is `28aaaad96c61ede33d12f4ede8144aab3c593cde`.
+
+**Next round:** owner may send `promptB` for independent closeout under the already-frozen v2 pair. The original MVP10-A remains pending predecessor until Prompt B passes. The News narration candidate gap remains a separately recorded downstream blocker; no Render or YouTube action is authorized. Automatic continuation is not permitted.
