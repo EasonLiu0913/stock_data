@@ -14,7 +14,9 @@ const base=()=>({
 test('verified schema-v3 TWSE opening passes without security-classification archive',()=>assert.equal(validateOpeningSnapshot(base()).ok,true));
 for(const [name,mutate,code] of [
  ['rejects OTC market',s=>s.market='TPEX','MARKET_NOT_TWSE'],
+ ['rejects incomplete opening status',s=>s.status='partial','OPENING_NOT_COMPLETE'],
  ['rejects stale source date',s=>s.source_manifest[0].source_date='20261007','SOURCE_DATE_MISMATCH'],
+ ['rejects invalid source SHA format',s=>s.source_manifest[0].sha256='not-a-sha','SOURCE_SHA256_INVALID'],
  ['rejects unit confusion',s=>s.institutional.foreign.unit='shares','INSTITUTIONAL_UNIT_OR_SCOPE'],
  ['rejects buy/sell/net mismatch',s=>s.institutional.foreign.net_twd=200,'INSTITUTIONAL_NET_MISMATCH'],
  ['rejects incorrect TAIEX return',s=>s.index.change_pct=5,'INDEX_PERCENT_MISMATCH'],
