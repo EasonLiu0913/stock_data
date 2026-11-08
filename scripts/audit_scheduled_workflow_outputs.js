@@ -443,7 +443,7 @@ function buildRules() {
     },
     exactRule('collect-institutional-accumulation-catalyst-prospective-canary.yml', 'repository_versioned_snapshot',
       () => ['data_research/institutional-flow/institutional-accumulation-catalyst-bounded-scheduled-canary-state-v1.json'],
-      'The bounded canary's durable state is its versioned occurrence checkpoint.'),
+      'The bounded canary durable state is its versioned occurrence checkpoint.'),
     prefixFilesRule('daily-gainers-video-upload-orchestrator.yml', 'upload_receipt',
       'video_upload_receipts/daily-gainers',
       (f) => /^20\\d{6}\\.json$/.test(f),
