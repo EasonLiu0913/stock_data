@@ -25,7 +25,9 @@ for(const file of [p,png]){
  const probe=spawnSync('ffprobe',['-v','error','-select_streams','v:0','-show_entries','stream=width,height','-of','csv=p=0',file],{encoding:'utf8'});
  if(probe.status!==0||probe.stdout.trim()!=='1280,720')error('invalid resolution '+file);
 }
-const im=spawnSync('ffmpeg',['-loglevel','error','-i',png,'-vf','crop=4:1:0:0,format=rgb24','-f','rawvideo','-'],{encoding:null,maxBuffer:1024*1024});
+// Sample perpendicular to the top edge at x=10. Sampling along the top row
+// only observes the horizontal 3px border and cannot detect its thickness.
+const im=spawnSync('ffmpeg',['-loglevel','error','-i',png,'-vf','crop=1:4:10:0,format=rgb24','-f','rawvideo','-'],{encoding:null,maxBuffer:1024*1024});
 if(im.status!==0||im.stdout?.length!==12)error('PNG pixel probe failed');
 const rgb={up:[0xD9,0x1F,0x32],down:[0x0C,0xA7,0x4D],flat:[0x44,0x7D,0xA8]}[regime];
 for(let pixel=0;pixel<3;pixel++)if(!rgb.every((x,i)=>im.stdout[pixel*3+i]===x))error('3px border color incorrect at pixel '+pixel);
