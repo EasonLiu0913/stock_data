@@ -2495,3 +2495,14 @@ Prompt A completion requires targeted tests, remote-verified bounded code/docs c
 - No production voice, rate, inter-request delay, concurrency, retry/backoff, fallback, output, or gate behavior was changed. Diagnostic persistence is best-effort and does not turn TTS failure into success.
 - Current remote main: `422e09ad0d0ba3684a4aa329791b3b9b9d3d2b20`. The pair was preregistered before implementation. The next valid operation is explicit `promptB` for independent closeout of this diagnostic subround; do not dispatch Render-only as part of this closeout.
 - YouTube upload, scheduling, public release and release locks remain prohibited. Plan changed: YES, only by the owner-authorized diagnostic child subround.
+
+
+## Post-commit automation observation — TTS diagnostics v1 (2026-11-08)
+
+After implementation commit `422e09ad0d0ba3684a4aa329791b3b9b9d3d2b20`, automatic push checks were inspected:
+- Run `42456584224` — Multi-date video scheduling safety gates: PASS.
+- Run `42456584240` — Public Page Registry CI: PASS. Its jobs validate homepage registry and workflow deployment safety; the workflow contains no Pages deploy action. The changed file is not in the path filter for `deploy-pages.yml`; no Pages deployment occurred.
+- Run `42456584253` — Ensure Workflow Schedule Summary: FAIL at “Verify every workflow uses repository-pinned summary”. The audit reports a repository-wide set of 67 workflow normalization changes; its logs include the edited date-render-only workflow but do not isolate this diagnostic change as the cause. No unrelated workflow-summary migration was included in this scope.
+- Runs `42456584225` (Node Regression Suite), `42456584241` (Scheduled Workflow Registry Contract), and `42456584307` (Actions Node 24 audit) were still in progress at the last observation. These automatic checks are not TTS transport tests and were not rerun.
+
+No run was a Render-only dispatch, Pages deployment, or YouTube action. The existing failed render `42452797309` remains the latest render attempt; this diagnostic commit did not rerun it.
