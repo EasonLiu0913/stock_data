@@ -138,7 +138,7 @@ jobs:
               boundaries=json.loads(boundary_file.read_text(encoding="utf-8"))
               scenes.append({"id":item["scene_id"],"engine":"edge-tts","file":item["audio_file"],"spoken_text":normalize_spoken_text(plan_scenes[int(item["scene_id"])]["narration"]),"word_boundaries":boundaries,"sha256":item["audio_sha256"]})
           result={"voice":source["voice"],"rate":source["rate"],"engine":"edge-tts","target_date":source["target_date"],"source_script_sha256":source["script_sha256"],"scenes":scenes}
-          pathlib.Path(sys.argv[2]).write_text(json.dumps(result,ensure_ascii=False,indent=2)+"\\n",encoding="utf-8")
+          pathlib.Path(sys.argv[2]).write_text(json.dumps(result,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
           PY
           python - "$frozen" "$date_dir/tts-manifest.json" <<'PY'
           import json, pathlib, sys
