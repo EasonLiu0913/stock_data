@@ -31,7 +31,7 @@ jobs:
       YOUTUBE_TTS_RATE: '+15%'
     steps:
       - name: Checkout validated script inputs
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
@@ -69,12 +69,12 @@ jobs:
         if: steps.resolve.outputs.target_date == ''
         run: echo "No candidate; no TTS request was made."
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         if: steps.resolve.outputs.target_date != ''
         with:
           node-version: '24'
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         if: steps.resolve.outputs.target_date != ''
         with:
           python-version: '3.12'
@@ -181,7 +181,7 @@ jobs:
 
       - name: Upload immutable plan for fresh scene runners
         if: steps.queue.outputs.has_work == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: tts-recovery-plan-${{ steps.resolve.outputs.target_date }}-${{ github.run_id }}
           path: ${{ runner.temp }}/tts-plan/plan.json
@@ -204,7 +204,7 @@ jobs:
       TAIWAN_STOCK_TTS_MAX_ATTEMPTS: '1'
     steps:
       - name: Checkout latest workflow code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
@@ -214,7 +214,7 @@ jobs:
           sparse-checkout-cone-mode: false
 
       - name: Download frozen plan
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: tts-recovery-plan-${{ needs.prepare.outputs.target_date }}-${{ github.run_id }}
           path: ${{ runner.temp }}/tts-plan
@@ -272,6 +272,75 @@ jobs:
           git -C "$RUNNER_TEMP/checkpoint" commit -m "tts: checkpoint $DATE scene $SCENE_ID"
           git -C "$RUNNER_TEMP/checkpoint" push origin "HEAD:refs/heads/tts-audio-pending-$DATE"
 
+  sync-status:
+    needs: [prepare, synthesize]
+    if: always() && needs.prepare.result == 'success' && needs.prepare.outputs.target_date != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DATE: ${{ needs.prepare.outputs.target_date }}
+    steps:
+      - name: Checkout latest main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Restore text manifest from durable date checkpoint
+        uses: actions/checkout@v7
+        with:
+          ref: tts-audio-pending-${{ needs.prepare.outputs.target_date }}
+          path: .tts-checkpoint
+          fetch-depth: 1
+          sparse-checkout: tts-audio/${{ needs.prepare.outputs.target_date }}
+          sparse-checkout-cone-mode: false
+      - name: Publish text-only scene status to main
+        shell: bash
+        run: |
+          set -euo pipefail
+          source=".tts-checkpoint/tts-audio/$DATE/manifest.json"
+          destination="research_pending/daily-gainers-tts/$DATE.json"
+          test -s "$source"
+          node - "$DATE" "$source" <<'NODE'
+          const fs = require('node:fs');
+          const [date, file] = process.argv.slice(2);
+          const manifest = JSON.parse(fs.readFileSync(file, 'utf8'));
+          if (manifest.target_date !== date || !Array.isArray(manifest.scenes)) {
+            throw new Error('TTS_STATUS_MANIFEST_IDENTITY_INVALID');
+          }
+          if (!/^[a-f0-9]{64}$/.test(manifest.script_sha256 || '')) {
+            throw new Error('TTS_STATUS_SCRIPT_SHA_INVALID');
+          }
+          for (const scene of manifest.scenes) {
+            if (scene.status === 'success'
+              && (!Array.isArray(scene.word_boundaries)
+                || !/^[a-f0-9]{64}$/.test(scene.audio_sha256 || '')
+                || !/^[a-f0-9]{64}$/.test(scene.wordboundaries_sha256 || ''))) {
+              throw new Error('TTS_STATUS_SUCCESS_SCENE_INCOMPLETE');
+            }
+          }
+          NODE
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+            mkdir -p "$(dirname "$destination")"
+            cp "$source" "$destination"
+            git add "$destination"
+            if git diff --cached --quiet; then
+              echo "TTS text manifest already matches durable checkpoint."
+              exit 0
+            fi
+            git commit -m "tts: sync text manifest $DATE"
+            if git push origin HEAD:main; then
+              echo "Published TTS text manifest for $DATE on main."
+              exit 0
+            fi
+            echo "main advanced during TTS manifest publish; rebuilding from latest main (attempt $attempt)." >&2
+          done
+          echo "TTS text manifest publish exhausted bounded retries." >&2
+          exit 1
+
   schedule-timing-summary:
     # schedule-timing-summary:v1
     name: 排程時間摘要
@@ -279,7 +348,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository for schedule summary
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
           fetch-depth: 1
