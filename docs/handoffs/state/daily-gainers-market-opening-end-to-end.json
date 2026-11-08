@@ -35,9 +35,11 @@
     "Remote main fd9e4ac verified the 20261104 SEO inputs (source blobs match raw/Facts/News; stock_count 44). Reused verified source identities without re-research.",
     "Removed two unsupported decorative glyphs from scripts/build_daily_gainers_thumbnail.js; remote builder commit 52afc5a blob deff987. Added regression guard in tests/daily_gainers_thumbnail_gate.test.js; commit/current main 462188f blob b1f1d71.",
     "Isolated 20261104 thumbnail regeneration: 1280x720 JPEG, 44 stocks, 3px down-market green frame, builder PASS and verifier THUMBNAIL_RENDER_VERIFIED; JPEG SHA256 ca2c8881... output remains temporary and is not a durable remote artifact.",
-    "Remote Node regression run 42451025909 was still in_progress at checkpoint time; Pages Registry CI run 42451001197 validated workflow deployment safety and completed success without a deploy job."
+    "Remote Node regression run 42451025909 was still in_progress at checkpoint time; Pages Registry CI run 42451001197 validated workflow deployment safety and completed success without a deploy job.",
+    "TTS failure diagnosis: exact run-head synthesize script blob 5763cea is serial (await per scene), sleeps 2.5s between completed scenes, and retries with exponential jittered backoff capped at 35s; workflow permits 3 passes with 20s between. Failure logs recorded 31 NoAudioReceived attempts, 8 scene outputs, 7 recoveries and 8 verified reuses, reaching scene 9; no HTTP/WebSocket status, close code, received-frame diagnostics or per-attempt duration is recorded.",
+    "Same TTS script blob/config succeeded for 12 scenes with zero failed attempts in run 41799842426. Edge-tts upstream issue #512 reports a closely matching intermittent NoAudioReceived symptom on version 7.3.1 under sequential one-at-a-time fresh connections; issue #473 also reports such errors at concurrency 1. These are corroborating reports, not proof of the cause in this repository."
   ],
-  "research_progress_reason": "A bounded visual defect was repaired and verified independently. Formal A remains WAITING_TTS because the latest native date-scoped render failed with Edge TTS NoAudioReceived; no MP4/SRT or final QA exists.",
+  "research_progress_reason": "Prompt A advanced: thumbnail glyph issue fixed and TTS call-path/log diagnosis completed. Current best-supported cause is intermittent upstream/service/network or voice availability; concurrent request flooding is ruled out by code. The 2.5s inter-scene spacing could still contribute to an unknown rate limit, but available logs do not prove or disprove it. Formal run 42446775140 remains failed at TTS; no MP4/SRT.",
   "next_action": "Do not rerun failed run 42446775140/job 128627241230 or start an unchanged-input retry while TTS recovery is unverified. Wait for an observable Edge TTS recovery signal; then use the native date-scoped Render-only workflow for 20261104 in a new workflow_dispatch run and verify all jobs/logs/artifacts. If no provider health signal is available, a new owner promptA may recheck current Actions/source evidence; it must not claim background continuation.",
   "automatic_continuation_permitted": false,
   "plan_changed": true,
@@ -46,7 +48,7 @@
   "youtube_scheduling_authorized": false,
   "public_release_authorized": false,
   "render_authorized_in_repair_phase": false,
-  "updated_at": "2026-11-08T05:34:00Z",
+  "updated_at": "2026-11-08T05:40:00Z",
   "prompt_b_failure_evidence": [
     "R1 frozen Prompt B criterion 5 required verifying no prohibited workflow was triggered.",
     "Render-only push-trigger runs: 42401534137 (20261102), 42401534168 (20261103); both failed before render and produced no artifacts.",
@@ -312,7 +314,7 @@
       "rerun_attempted": false,
       "youtube_actions_performed": false
     },
-    "next_action": "Recheck regression run 42451025909. Do not rerun failed Render-only run 42446775140 or retry unchanged TTS inputs until an observable Edge TTS recovery signal exists; then dispatch a new native date-scoped Render-only run for 20261104 and verify MP4/SRT/QA/thumbnail artifacts. Upload and publication remain forbidden.",
+    "next_action": "Check Node Regression Suite run 42451025909. Before another full render, obtain a controlled low-volume same-voice zh-TW-YunJheNeural +15% smoke result with playable MP3 and WordBoundary evidence or equivalent provider recovery signal; add per-attempt duration and WebSocket close/message diagnostics if retrying. Do not infer that 2.5s spacing caused the failure; do not rerun run 42446775140 or start an unchanged full render. Then use a new native date-scoped Render-only dispatch for 20261104 and verify all output artifacts.",
     "youtube_actions_performed": false,
     "code_repair": {
       "verifier_commit": "56fba7598b1697342b94da819528e2cdea1e4502",
@@ -320,6 +322,40 @@
       "regression_test_commit": "7347596b2d01925d43389c5c687f99ade9d2384a",
       "regression_test_blob": "cfe1f0ebae0c0260d582f20e4fe4d94567129ccb",
       "test_result": "5 passed, 0 failed"
+    },
+    "tts_diagnosis": {
+      "confidence": "moderate upstream-intermittency hypothesis; request-rate contribution not ruled out",
+      "failed_run": 42446775140,
+      "failed_job": 128627241230,
+      "failed_run_head": "0004f5477ca0c530c588399367d27d890711be8f",
+      "tts_script_blob": "5763cea7a6e7bda4bf506e4ac54e369f678b1df0",
+      "edge_tts_version": "7.3.1",
+      "voice": "zh-TW-YunJheNeural",
+      "rate": "+15%",
+      "observed_failed_requests": 31,
+      "successful_scene_outputs": 8,
+      "recovered_scenes": 7,
+      "reused_verified_scenes_on_resume": 8,
+      "highest_scene_reached": 9,
+      "concurrency": "serial for-loop with await; one active scene request per render job; 2.5s wait between completed scenes",
+      "retry_policy": "6 attempts per scene; min(35s, 3^attempt + 0-2s jitter); 3 workflow passes with 20s between passes",
+      "same_code_comparator": {
+        "run_id": 41799842426,
+        "job_id": 126475875979,
+        "head_sha": "25327abefd2212c86b82386ee86e5cb5b4b2c97a",
+        "tts_script_blob": "5763cea7a6e7bda4bf506e4ac54e369f678b1df0",
+        "voice": "zh-TW-YunJheNeural",
+        "rate": "+15%",
+        "successful_scenes": 12,
+        "failed_attempts": 0
+      },
+      "direct_observation": "Failure log reports NoAudioReceived but no HTTP status, WebSocket close code/reason, received message types, request duration, or server request ID; cannot attribute to throttling vs upstream/network/voice availability.",
+      "external_corroboration": [
+        "https://github.com/rany2/edge-tts/issues/512 reports intermittent NoAudioReceived on edge-tts 7.3.1 with sequential fresh WebSocket requests, failures after ~2.5-3s, and later recovery.",
+        "https://github.com/rany2/edge-tts/issues/473 reports intermittent NoAudioReceived despite concurrency=1; issue discussion notes voice/region/IP/upstream variability."
+      ],
+      "recommendation": "Do not infer concurrent flooding. Before another full render, add or obtain per-attempt timing and WebSocket close/message diagnostics, and use a low-volume same-voice +15% smoke request as the recovery signal. Keep 20261104 render WAITING_TTS until successful audio plus WordBoundary evidence exists.",
+      "code_changed": false
     }
   },
   "mvp10_a_prompt_a_checkpoint_history": [
@@ -393,5 +429,39 @@
     "artifact_digest": "sha256:d61882786bc4734775d8fe22660511836bbfe7fbb5a2cb8eef477997739a5f77",
     "media_verified": false,
     "mp4_srt_visual_qa": "not produced; downstream steps skipped"
+  },
+  "tts_failure_diagnosis": {
+    "confidence": "moderate upstream-intermittency hypothesis; request-rate contribution not ruled out",
+    "failed_run": 42446775140,
+    "failed_job": 128627241230,
+    "failed_run_head": "0004f5477ca0c530c588399367d27d890711be8f",
+    "tts_script_blob": "5763cea7a6e7bda4bf506e4ac54e369f678b1df0",
+    "edge_tts_version": "7.3.1",
+    "voice": "zh-TW-YunJheNeural",
+    "rate": "+15%",
+    "observed_failed_requests": 31,
+    "successful_scene_outputs": 8,
+    "recovered_scenes": 7,
+    "reused_verified_scenes_on_resume": 8,
+    "highest_scene_reached": 9,
+    "concurrency": "serial for-loop with await; one active scene request per render job; 2.5s wait between completed scenes",
+    "retry_policy": "6 attempts per scene; min(35s, 3^attempt + 0-2s jitter); 3 workflow passes with 20s between passes",
+    "same_code_comparator": {
+      "run_id": 41799842426,
+      "job_id": 126475875979,
+      "head_sha": "25327abefd2212c86b82386ee86e5cb5b4b2c97a",
+      "tts_script_blob": "5763cea7a6e7bda4bf506e4ac54e369f678b1df0",
+      "voice": "zh-TW-YunJheNeural",
+      "rate": "+15%",
+      "successful_scenes": 12,
+      "failed_attempts": 0
+    },
+    "direct_observation": "Failure log reports NoAudioReceived but no HTTP status, WebSocket close code/reason, received message types, request duration, or server request ID; cannot attribute to throttling vs upstream/network/voice availability.",
+    "external_corroboration": [
+      "https://github.com/rany2/edge-tts/issues/512 reports intermittent NoAudioReceived on edge-tts 7.3.1 with sequential fresh WebSocket requests, failures after ~2.5-3s, and later recovery.",
+      "https://github.com/rany2/edge-tts/issues/473 reports intermittent NoAudioReceived despite concurrency=1; issue discussion notes voice/region/IP/upstream variability."
+    ],
+    "recommendation": "Do not infer concurrent flooding. Before another full render, add or obtain per-attempt timing and WebSocket close/message diagnostics, and use a low-volume same-voice +15% smoke request as the recovery signal. Keep 20261104 render WAITING_TTS until successful audio plus WordBoundary evidence exists.",
+    "code_changed": false
   }
 }
