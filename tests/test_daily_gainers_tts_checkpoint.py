@@ -39,6 +39,8 @@ class TtsCheckpointTests(unittest.TestCase):
         text = "第一段內容。" if scene_id == 1 else "第二段內容。"
         generated = self.root / f"generated-{scene_id}.json"
         generated.write_text(json.dumps({
+            "voice": "zh-TW-YunJheNeural",
+            "rate": "+15%",
             "scenes": [{
                 "id": scene_id,
                 "engine": "edge-tts",
