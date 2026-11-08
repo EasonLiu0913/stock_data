@@ -208,11 +208,20 @@ def record_success(manifest_path, checkpoint_dir, scene_id, audio_source, bounda
     target = next((item for item in manifest["scenes"] if int(item["scene_id"]) == int(scene_id)), None)
     if target is None or target.get("status") == "success":
         raise ValueError("SCENE_NOT_PENDING")
-    if source_scene.get("spoken_text") != target["identity"]["normalized_text_sha256"] and not source_scene.get("spoken_text"):
-        raise ValueError("GENERATED_TEXT_MISSING")
     expected_text_sha = target["identity"]["normalized_text_sha256"]
-    if sha256_bytes(source_scene["spoken_text"].encode("utf-8")) != expected_text_sha:
+    spoken_text = source_scene.get("spoken_text")
+    if not isinstance(spoken_text, str) or not spoken_text:
+        raise ValueError("GENERATED_TEXT_MISSING")
+    if sha256_bytes(spoken_text.encode("utf-8")) != expected_text_sha:
         raise ValueError("GENERATED_TEXT_FINGERPRINT_MISMATCH")
+    if generated.get("voice") != manifest.get("voice") or generated.get("rate") != manifest.get("rate"):
+        raise ValueError("GENERATED_VOICE_OR_RATE_MISMATCH")
+    if source_scene.get("sha256") != sha256_file(audio_source):
+        raise ValueError("GENERATED_AUDIO_HASH_MISMATCH")
+    if Path(boundaries_source).is_file():
+        supplied_boundaries = json.loads(Path(boundaries_source).read_text(encoding="utf-8"))
+        if supplied_boundaries != boundaries:
+            raise ValueError("GENERATED_WORDBOUNDARY_MISMATCH")
 
     audio_dir = checkpoint_dir / "audio"
     audio_dir.mkdir(parents=True, exist_ok=True)
@@ -252,8 +261,12 @@ def make_scene_plan(script_path, target_date, scene_id, output_path):
 
 
 def cleanup_allowed(manifest, receipt):
+    scenes = manifest.get("scenes", [])
     return (
-        isinstance(receipt, dict)
+        isinstance(scenes, list)
+        and bool(scenes)
+        and all(item.get("status") == "success" for item in scenes)
+        and isinstance(receipt, dict)
         and receipt.get("status") in ("uploaded", "success", "complete")
         and receipt.get("target_date") == manifest.get("target_date")
         and receipt.get("script_sha256") == manifest.get("script_sha256")
