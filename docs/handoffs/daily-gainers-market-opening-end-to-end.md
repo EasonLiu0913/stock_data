@@ -2657,3 +2657,38 @@ Independently fetch current main and verify:
 
 If any check fails, return FAIL/WAITING with exact evidence, preserve all durable successes, and request only a bounded repair within this frozen pair. Do not lower acceptance, change scope, start MVP10-B, or rewrite MVP10-A-R2 history. Prompt B PASS closes this phase only and makes the owner-authorized MVP10-A progression decision eligible; it does not enable YouTube publishing.
 
+
+
+## MVP10-A-TTS-PERSISTENCE-R1 implementation checkpoint — 2026-11-08
+
+Status: implementation in progress on `codex/mvp10-a-tts-persistence-r1`; draft PR #55 targets the unchanged main base `eb07c1d856b6cfa0783975eb492f8646f6699768`. This phase supersedes the stalled R2 execution path for the TTS blocker only. It does not mark MVP10-A complete, change its frozen acceptance, or alter the historical v2 R1 Prompt B FAILED evidence.
+
+Implemented on the feature branch:
+
+- `scripts/daily_gainers_tts_checkpoint.py`: schema-v1 per-date/per-scene checkpoint identity, text/voice/rate/engine fingerprints, atomic manifest writes, MP3 and WordBoundary SHA checks, missing-scene planning, and upload-receipt-bound cleanup eligibility check.
+- `tests/test_daily_gainers_tts_checkpoint.py`: eight focused contract tests for partial reuse, full validation, corrupt audio, text/config drift, invalid boundaries, cleanup receipt binding, and scene ordering.
+- `scripts/synthesize_daily_gainers_tts.py`: bounded attempt override `TAIWAN_STOCK_TTS_MAX_ATTEMPTS` (default remains six; hard maximum six). Recovery worker sets it to one request per scene.
+- `.github/workflows/daily-gainers-tts-scene-recovery.yml`: 15-minute schedule plus optional date dispatch; validates the formal script/news gates, freezes the deterministic plan under `research_pending/daily-gainers-render-scripts/YYYYMMDD.json`, then processes at most three missing scenes serially on separate runners and checkpoints MP3 + WordBoundary + manifest on `tts-audio-pending-YYYYMMDD`.
+- `.github/workflows/daily-gainers-date-render-only.yml`: removes live Edge TTS requests from Render-only; checks the frozen plan against the rendered plan, validates checkpoint identities and hashes, and restores saved audio/WordBoundary.
+- `.github/workflows/daily-gainers-tts-checkpoint-tests.yml`: focused PR/manual test workflow; no live TTS.
+
+Evidence so far:
+
+- Feature branch head: `2363d382e1f5d3388403b90db658b575d0195e9a`.
+- Draft PR: [#55](https://github.com/EasonLiu0913/stock_data/pull/55).
+- Isolated local run against remote branch files: 8/8 checkpoint unit tests PASS; `py_compile` PASS.
+- PR run `42496615954` focused contract tests: in progress at checkout/setup as last observed; no test result yet.
+- PR run `42496616032` scheduled workflow registry contract: in progress at checkout as last observed.
+- PR run `42496615888` Public Page Registry CI: PASS; this was CI only and did not deploy Pages.
+- No Actions dispatch, Render, YouTube upload, schedule change, publication, or lock change was performed.
+- Local `git fetch origin main` was not used as authority; an earlier attempt failed with `Operation not permitted` opening the linked worktree's `FETCH_HEAD`. GitHub Contents/PR reads and writes were available.
+- The date checkpoint stores MP3 and WordBoundary files on a date-specific branch; the repository main retains only the text plan and validation metadata. Automatic deletion after a public upload is not implemented or authorized in this phase while YouTube publishing remains locked.
+
+Next steps inside the registered Prompt A:
+
+1. Resolve PR checks and fix any issues without changing the registered A/B contract.
+2. Validate the recovery workflow's schedule registry entry and inspect the final workflow diff.
+3. After authorized merge/activation, run a TTS-only recovery for the frozen target date and verify a successful scene persists remotely; a failure must leave prior successes intact and retry only missing scenes on the next invocation.
+4. Once all scenes validate, use the already-authorized Render-only path only if the unchanged MVP10-A gates and run authorization allow it; verify MP4, SRT, subtitles, visual QA, thumbnail, provenance and actual artifacts. Do not upload/publish.
+5. Prompt A is not complete yet. Prompt B remains ineligible until its preregistered A completion contract is met and the owner invokes it.
+
