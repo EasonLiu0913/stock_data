@@ -145,7 +145,12 @@ async def main():
         engine = None
         errors = []
         boundaries = []
-        max_attempts = 6
+        try:
+            max_attempts = int(os.environ.get("TAIWAN_STOCK_TTS_MAX_ATTEMPTS", "6"))
+        except ValueError as error:
+            raise RuntimeError("TAIWAN_STOCK_TTS_MAX_ATTEMPTS must be an integer") from error
+        if max_attempts < 1 or max_attempts > 6:
+            raise RuntimeError("TAIWAN_STOCK_TTS_MAX_ATTEMPTS must be between 1 and 6")
         for attempt in range(1, max_attempts + 1):
             out_path.unlink(missing_ok=True)
             attempt_diagnostic = {"scene_id": sid, "attempt": attempt, "voice": voice, "rate": rate}
