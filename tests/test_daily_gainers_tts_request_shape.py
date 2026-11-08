@@ -8,6 +8,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from research_daily_gainers_tts_request_shape import (  # noqa: E402
     combined_narration,
+    expected_connections,
     partition_narrations,
     validate_expected_request_count,
 )
@@ -19,6 +20,16 @@ from tts_request_shape_transport import (  # noqa: E402
 
 
 class RequestShapeExperimentTests(unittest.TestCase):
+    def test_expected_connections_counts_generator_splits(self):
+        class FakeCommunicate:
+            def __init__(self, **kwargs):
+                self.texts = (item for item in ("first", "second", "third"))
+
+        class FakeEdgeTTS:
+            Communicate = FakeCommunicate
+
+        self.assertEqual(expected_connections(FakeEdgeTTS, "narration"), 3)
+
     def test_ten_contiguous_groups_reconstruct_same_ordered_text(self):
         scenes = [f"scene-{index}-內容" for index in range(16)]
         combined = combined_narration(scenes)
