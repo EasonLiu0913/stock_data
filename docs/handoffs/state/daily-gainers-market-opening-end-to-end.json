@@ -19,7 +19,7 @@
   "mvp10_a_acceptance_changed": false,
   "mvp10_b_status": "frozen_not_eligible",
   "mvp10_b_acceptance_changed": false,
-  "research_progress_status": "TTS_REQUEST_SHAPE_EXPERIMENT_IN_PROGRESS",
+  "research_progress_status": "TTS_REQUEST_SHAPE_EXPERIMENT_PROMPT_B_PASS",
   "research_progress_evidence": [
     "https://github.com/EasonLiu0913/stock_data/actions/runs/41799842426",
     "https://github.com/EasonLiu0913/stock_data/actions/runs/41799842426/artifacts/13308740997",
@@ -40,10 +40,15 @@
     "Same TTS script blob/config succeeded for 12 scenes with zero failed attempts in run 41799842426. Edge-tts upstream issue #512 reports a closely matching intermittent NoAudioReceived symptom on version 7.3.1 under sequential one-at-a-time fresh connections; issue #473 also reports such errors at concurrency 1. These are corroborating reports, not proof of the cause in this repository.",
     "Node Regression Suite run 42451025909 completed failure: 1,226 passed / 24 failed. The newly added thumbnail glyph test passed. Baseline run 42446059270 had 1,225 passed / 24 failed and the exact same failed test labels, so the thumbnail change did not add a failing test; repository-wide suite remains red for pre-existing unrelated failures.",
     "Native Render-only workflow_dispatch run 42472929875, job 128707732752, date 20261104, branch main, head SHA e48384b6c04ca83e9c49f0306fd6f7086f6c003d, workflow blob ff11a64973d5d7c746e909db9166d97ccebe79e3. Date validation, read-only checkout, materialization/script/news narration/subtitle text preflight passed; TTS failed after three bounded passes at scene 17 with repeated NoAudioReceived. All scene requests remained serialized. No VTuber render, SRT, MP4, visual QA, or thumbnail stage ran. Artifact 13614457211 (33,116 bytes; sha256 1d91d2f6d54319f656519fbbc3af32d2de0b7a135e1429b9bc24108d1a5be26b) was uploaded; artifact manifest path includes tts-transport-diagnostics.json, but this session could not read the ZIP contents, so per-attempt diagnostic fields remain unverified. No rerun or YouTube/Pages action.",
-    "Run 42472929875 scene 17 maps to the final 20261104 closing_summary in private candidate blob f690c703058a4367ac1f619dd786d61f9d55eab0; narration length=190 Unicode code points. The TTS failure therefore repeats on the closing scene across workflow passes; this does not distinguish content-specific rejection from cumulative provider/network behavior, and the candidate itself is not shown to be malformed."
+    "Run 42472929875 scene 17 maps to the final 20261104 closing_summary in private candidate blob f690c703058a4367ac1f619dd786d61f9d55eab0; narration length=190 Unicode code points. The TTS failure therefore repeats on the closing scene across workflow passes; this does not distinguish content-specific rejection from cumulative provider/network behavior, and the candidate itself is not shown to be malformed.",
+    "TTS request-shape frozen pair/proposal registered at b0649717a47c34651579d6736ee20087bf7f436e 12:16:12 UTC before implementation 07d479e6b29b40bfe73c115d90dd31e5f7d65808 12:25:48 UTC.",
+    "Run 42481331662/job 128735340850 success; artifact 13618111782 sha256 6df300973424c6967973eb5f3bc72b4e4befe759d3663b65cfae05075ec5d911; user-provided diagnostic sha256 7767f9d375a6166869e4c7f0574e9bbec69a137b1a4dbf2dc271d9ae3a580e02; 11 connections, combined failed first, ten outputs 6/10.",
+    "Run 42488724106/job 128756179710 success; artifact 13621267399 sha256 015dd18e83fdd8b28210e57c8a484ce3d1ca611718d25cc2edd7bc4eb0404cb8; user-provided diagnostic sha256 baae4efb36218db307bc7a3f494bb50e83cb0564f02fa351328fc78eadbbd9a6; 13 connections, combined success with 3, ten outputs 7/10.",
+    "Independent source audit recomputed all combined and ten-segment SHA-256 inputs from source blob f690c703058a4367ac1f619dd786d61f9d55eab0 and normalizer blob 447ad17343e7bbb333130832342b6af2831441a9; every hash and byte count matched both diagnostics.",
+    "Child Prompt B PASS; no provider quota inferred and no production TTS, Render, Pages or YouTube changes. Parent remains MVP10-A-R2 WAITING_TTS."
   ],
-  "research_progress_reason": "The resumed parent Prompt A dispatched the authorized native date-scoped Render-only workflow once on current main. Preflight passed, but real YunJhe +15% TTS again failed with NoAudioReceived at scene 17 after three serial bounded passes. The run produced a failure artifact but no media/SRT/visual QA. Low-volume synthetic probes (3/3) remain only a limited recovery signal; they do not establish full-run stability. Do not rerun unchanged input. Parent remains WAITING_TTS; inspect the uploaded diagnostic JSON if accessible and require an owner-authorized, versioned behavior repair or a new observable provider recovery signal before another full render. The failed scene maps to the candidate's closing_summary, not a stock scene; no direct evidence yet proves whether that text or cumulative service/network state is causal.",
-  "next_action": "Complete the owner-authorized TTS request-shape diagnostic on an isolated PR branch; do not change parent MVP10-A acceptance or run production Render.",
+  "research_progress_reason": "The TTS request-shape diagnostic child passed its frozen A/B verification. Across two automatic PR runs, the combined variant failed once then succeeded using three actual connections; the ten-output variant remained partial (6/10 then 7/10). This is limited feasibility evidence, not a provider quota or full-production recovery signal. Parent MVP10-A remains WAITING_TTS and its acceptance is unchanged.",
+  "next_action": "Resume parent MVP10-A Prompt A within its frozen acceptance; evaluate the TTS evidence without changing production behavior or triggering Render absent an authorized recovery step.",
   "automatic_continuation_permitted": false,
   "plan_changed": true,
   "publication_authorized": false,
@@ -518,7 +523,7 @@
   "tts_request_shape_experiment_subround": {
     "proposal_path": "data_research/m5/change-proposals/MVP10-A-R2-TTS-REQUEST-SHAPE-EXPERIMENT-CHANGE-PROPOSAL-v1.md",
     "pair_path": "data_research/m5/change-proposals/MVP10-A-R2-TTS-REQUEST-SHAPE-EXPERIMENT-PAIR-v1.md",
-    "status": "registered_owner_authorized_promptA_in_progress",
+    "status": "promptB_PASS_closed",
     "parent_phase_id": "MVP10-A-R2-INCLUSIVE-ELIGIBILITY",
     "parent_prompt_a_status": "in_progress",
     "parent_prompt_b_status": "not_eligible",
@@ -530,6 +535,35 @@
     "retries": 0,
     "automatic_trigger": "pull_request to main with bounded experiment-path changes",
     "render_or_publication_authorized": false,
-    "updated_at_utc": "2026-11-08 12:15:36 UTC"
+    "updated_at_utc": "2026-11-08 12:15:36 UTC",
+    "prompt_a_status": "complete",
+    "prompt_b_status": "PASS",
+    "prompt_a_commit": "400ff9bbf1d252f70a248f6bd72e5c1e39d9b7f4",
+    "prompt_b_closed_at_utc": "2026-11-08T14:49:59Z",
+    "verified_runs": [
+      {
+        "run_id": 42481331662,
+        "job_id": 128735340850,
+        "artifact_id": 13618111782,
+        "artifact_sha256": "6df300973424c6967973eb5f3bc72b4e4befe759d3663b65cfae05075ec5d911",
+        "actual_connections": 11,
+        "single_mp3": "failed on first connection",
+        "ten_mp3": "6/10 outputs succeeded",
+        "diagnostic_sha256": "7767f9d375a6166869e4c7f0574e9bbec69a137b1a4dbf2dc271d9ae3a580e02"
+      },
+      {
+        "run_id": 42488724106,
+        "job_id": 128756179710,
+        "artifact_id": 13621267399,
+        "artifact_sha256": "015dd18e83fdd8b28210e57c8a484ce3d1ca611718d25cc2edd7bc4eb0404cb8",
+        "actual_connections": 13,
+        "single_mp3": "success using 3 connections",
+        "ten_mp3": "7/10 outputs succeeded",
+        "diagnostic_sha256": "baae4efb36218db307bc7a3f494bb50e83cb0564f02fa351328fc78eadbbd9a6"
+      }
+    ],
+    "results": "Both runs use exact source blob f690c703058a4367ac1f619dd786d61f9d55eab0 and all combined/ten contiguous input hashes recompute exactly; concurrency=1, zero retries, hard cap 15 respected. Experiment does not prove a quota or production recovery.",
+    "parent_phase_status": "R2_promptA_WAITING_TTS",
+    "parent_acceptance_changed": false
   }
 }
