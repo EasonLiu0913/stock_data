@@ -2462,3 +2462,18 @@ The GitHub Node Regression Suite [run 42451025909](https://github.com/EasonLiu09
 - **No production pacing/client change was made.** The current frozen R2 Prompt A does not explicitly authorize modifying the TTS client or workflow based on this inconclusive experiment. Do not increase delays or retry unchanged renders as a guess. A next diagnostic code change should first be registered/authorized within a narrow versioned scope and capture attempt duration, WebSocket close code/reason and received message types.
 - The newest valid render state is `WAITING_TTS`; 20261104 remains incomplete and MVP10-B remains ineligible. The next action is an owner decision on whether to authorize the narrowly scoped TTS telemetry diagnostic, or to wait for a stable provider recovery signal before a new native Render-only dispatch. After the relevant condition changes, re-run `promptA` to reassess; do not use a rerun action as a substitute for native dispatch.
 - The TTS and interval findings do not change any frozen acceptance criteria. All YouTube upload, scheduling, public release and release-lock actions remain prohibited. Plan changed: **NO**.
+
+
+## Owner-authorized child subround — TTS transport diagnostics v1 (2026-11-08)
+
+The owner authorized a narrow, versioned diagnostic proposal and explicitly directed: add transport-layer diagnostics first, then test. This authorization is limited to the registered proposal and pair:
+- Proposal: `data_research/m5/change-proposals/MVP10-A-R2-TTS-TRANSPORT-DIAGNOSTICS-CHANGE-PROPOSAL-v1.md`
+- Frozen pair: `data_research/m5/change-proposals/MVP10-A-R2-TTS-TRANSPORT-DIAGNOSTICS-PAIR-v1.md`
+- Proposal registration commit: `67309014ed29601be8f0b14819f50ef40a92a1c5`
+- Pair registration commit: `6e589c0c9804da6584c30b018636581dea93c7c4`
+
+The child subround is active for this bounded implementation/test. Parent phase `MVP10-A-R2-INCLUSIVE-ELIGIBILITY` remains incomplete and `WAITING_TTS`; its original Prompt A/B and acceptance are unchanged. R1 failure history and the R2 inclusive-eligibility pair remain immutable.
+
+This child may add redacted per-attempt elapsed time, WebSocket handshake status, message-type/byte counts, close code/error class, audio byte count and WordBoundary count to an opt-in diagnostic record; wire it into the existing Render-only failure artifact; add deterministic mocked tests; and perform at most three serial, low-volume synthetic tests with the same voice/rate and at least 15 seconds between requests. It does not authorize full Render, Render dispatch/rerun, Pages, YouTube actions, TTS voice/rate/pacing/retry/fallback changes, parent acceptance changes, or publication-lock changes.
+
+Prompt A completion requires targeted tests, remote-verified bounded code/docs changes, and either a completed bounded smoke or a precisely verified external/tool blocker. Prompt B must be invoked explicitly and independently verify redaction, no behavior change, remote durable state, test/smoke evidence, and absence of prohibited side effects. A diagnostic child closeout does not complete parent MVP10-A.
