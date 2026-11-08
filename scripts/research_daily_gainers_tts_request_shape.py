@@ -68,7 +68,9 @@ def validate_expected_request_count(expected: int, limit: int = HARD_CONNECTION_
 
 def expected_connections(edge_tts, text: str) -> int:
     communicate = edge_tts.Communicate(text=text, voice=VOICE, rate=RATE, boundary="WordBoundary")
-    return len(communicate.texts)
+    # edge-tts 7.3.1 exposes the split messages as a generator, not a sized
+    # collection. Count it without retaining transcript payloads.
+    return sum(1 for _ in communicate.texts)
 
 
 def _utc_now() -> str:
