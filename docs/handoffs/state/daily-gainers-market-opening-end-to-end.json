@@ -5,9 +5,9 @@
   "project_state": "active",
   "goal_id": "goal-v3/MVP-10DAY-v1",
   "ultimate_goal_status": "not_complete",
-  "current_phase_id": "MVP10-A-R2-INCLUSIVE-ELIGIBILITY",
+  "current_phase_id": "MVP10-A-R2-TTS-TRANSPORT-DIAGNOSTICS-v1",
   "phase_status": "active",
-  "round_id": "MVP10-A-R2-INCLUSIVE-ELIGIBILITY",
+  "round_id": "MVP10-A-R2-TTS-TRANSPORT-DIAGNOSTICS-v1",
   "prompt_a_status": "in_progress",
   "prompt_b_status": "not_eligible",
   "owner_approved_on": "2026-11-08",
@@ -41,15 +41,15 @@
     "Node Regression Suite run 42451025909 completed failure: 1,226 passed / 24 failed. The newly added thumbnail glyph test passed. Baseline run 42446059270 had 1,225 passed / 24 failed and the exact same failed test labels, so the thumbnail change did not add a failing test; repository-wide suite remains red for pre-existing unrelated failures."
   ],
   "research_progress_reason": "Native date-scoped run 42452797309 on current main passed date, checkout, script materialization and subtitle rules, then failed at Edge TTS scene 12 with 37 NoAudioReceived events across three bounded passes. A bounded local interval comparison succeeded 1/3 at both 2.5s and 15s gaps; too small to infer a pacing effect. No MP4/SRT or visual QA was produced.",
-  "next_action": "Do not rerun the same full render or change inter-request pacing based on the inconclusive sample. The current frozen Prompt A does not explicitly authorize modifying the TTS client/workflow. Obtain owner authorization for a narrow, versioned diagnostic-only TTS instrumentation step (attempt duration, WebSocket close code/reason, received message types and connection outcome), or an observable stable provider recovery signal; then use the native date-scoped Render-only workflow for 20261104 and verify all artifacts.",
+  "next_action": "Continue the registered TTS transport diagnostics Prompt A: implement telemetry and targeted tests, perform at most three low-volume serial synthetic probes, remote-verify results, then stop for explicit promptB. Do not dispatch/rerun Render-only or change TTS behavior.",
   "automatic_continuation_permitted": false,
-  "plan_changed": false,
+  "plan_changed": true,
   "publication_authorized": false,
   "youtube_upload_authorized": false,
   "youtube_scheduling_authorized": false,
   "public_release_authorized": false,
   "render_authorized_in_repair_phase": false,
-  "updated_at": "2026-11-08T06:19:46Z",
+  "updated_at": "2026-11-08",
   "prompt_b_failure_evidence": [
     "R1 frozen Prompt B criterion 5 required verifying no prohibited workflow was triggered.",
     "Render-only push-trigger runs: 42401534137 (20261102), 42401534168 (20261103); both failed before render and produced no artifacts.",
@@ -93,7 +93,7 @@
   "prior_r1_failure_preserved": true,
   "r2_pair": "data_research/m5/change-proposals/DATE-OPENING-PIPELINE-REPAIR-PAIR-R2-v1.md",
   "owner_authorization_date": "2026-11-08",
-  "owner_authorization_scope": "complete R2 safety acceptance and repair 20261104 44-stock news narration attribution; no Render/Pages/YouTube actions",
+  "owner_authorization_scope": "Narrow diagnostic-only transport telemetry, deterministic tests, and at most three serial synthetic smoke requests; no changes to synthesis behavior or parent acceptance.",
   "pages_run_id": 42403883893,
   "pages_run_artifact_steps": "skipped",
   "pages_run_deploy_step": "skipped",
@@ -203,7 +203,7 @@
     "public_release_authorized": false,
     "pages_deployment_triggered": false
   },
-  "plan_version": "goal-v3/MVP-10DAY-v1 + MVP10-A-INCLUSIVE-ELIGIBILITY-v1",
+  "plan_version": "goal-v3/MVP10-A-R2-TTS-TRANSPORT-DIAGNOSTICS-v1",
   "mvp10_a_r1_status": "SUPERSEDED_OWNER_APPROVED_WAITING_SOURCE_NOT_PASS",
   "mvp10_a_r1_historical_checkpoint": {
     "date": "2026-11-08",
@@ -552,5 +552,21 @@
       "failed_calls": "NoAudioReceived with zero stream chunks",
       "conclusion": "Small sample; slower interval showed no observed success-rate improvement. Neither establishes nor excludes a cumulative rate limit; do not change production pacing from this evidence."
     }
+  },
+  "parent_phase_id": "MVP10-A-R2-INCLUSIVE-ELIGIBILITY",
+  "parent_round_id": "MVP10-A-R2-INCLUSIVE-ELIGIBILITY",
+  "tts_diagnostics_subround": {
+    "proposal_path": "data_research/m5/change-proposals/MVP10-A-R2-TTS-TRANSPORT-DIAGNOSTICS-CHANGE-PROPOSAL-v1.md",
+    "pair_path": "data_research/m5/change-proposals/MVP10-A-R2-TTS-TRANSPORT-DIAGNOSTICS-PAIR-v1.md",
+    "proposal_commit": "67309014ed29601be8f0b14819f50ef40a92a1c5",
+    "pair_commit": "6e589c0c9804da6584c30b018636581dea93c7c4",
+    "status": "promptA_in_progress_promptB_not_eligible",
+    "parent_phase_id": "MVP10-A-R2-INCLUSIVE-ELIGIBILITY",
+    "parent_status": "R2_promptA_WAITING_TTS",
+    "acceptance_changed": false,
+    "render_dispatch_authorized": false,
+    "youtube_upload_authorized": false,
+    "youtube_scheduling_authorized": false,
+    "public_release_authorized": false
   }
 }
