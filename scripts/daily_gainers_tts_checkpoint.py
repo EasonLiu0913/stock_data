@@ -145,6 +145,7 @@ def initialize(script_path, target_date, manifest_path, checkpoint_dir, voice, r
             "audio_bytes": prior.get("audio_bytes") if reusable else None,
             "wordboundaries_file": f'audio/{scene["id"]:02d}.wordboundaries.json' if reusable else None,
             "wordboundaries_sha256": prior.get("wordboundaries_sha256") if reusable else None,
+            "word_boundaries": json.loads(prior_boundary.read_text(encoding="utf-8")) if reusable else None,
             "workflow_run_id": prior.get("workflow_run_id") if reusable else None,
             "updated_at": prior.get("updated_at") if reusable else None,
         })
@@ -238,6 +239,7 @@ def record_success(manifest_path, checkpoint_dir, scene_id, audio_source, bounda
         "audio_bytes": audio_target.stat().st_size,
         "wordboundaries_file": f"audio/{int(scene_id):02d}.wordboundaries.json",
         "wordboundaries_sha256": sha256_file(boundary_target),
+        "word_boundaries": boundaries,
         "workflow_run_id": str(run_id),
         "updated_at": os.environ.get("GITHUB_RUN_STARTED_AT", ""),
     })
