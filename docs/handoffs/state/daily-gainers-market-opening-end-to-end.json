@@ -15,7 +15,7 @@
   "paired_prompt": "data_research/m5/change-proposals/MVP10-A-INCLUSIVE-ELIGIBILITY-PAIR-R2-v1.md",
   "predecessor_phase": "MVP10-A-R1",
   "next_phase_id": null,
-  "mvp10_a_status": "R2_promptA_render_running",
+  "mvp10_a_status": "R2_promptA_WAITING_WORKFLOW",
   "mvp10_a_acceptance_changed": false,
   "mvp10_b_status": "frozen_not_eligible",
   "mvp10_b_acceptance_changed": false,
@@ -33,8 +33,8 @@
     "News-narration validator remains FAIL: candidate missing editorial_quality.version=news-to-narration-v1; no false PASS metadata or materialized production script committed.",
     "Manual date-only opening workflow committed and YAML parsed; not dispatched as v2 Prompt A forbids; no Render/YouTube actions."
   ],
-  "research_progress_reason": "Fixed the thumbnail verifier's incorrect perimeter sampling without changing the 3px gate; actual 20261104 PNG/JPEG generated and verified. Native date-scoped Render-only is now running.",
-  "next_action": "Monitor Render-only run 42445765453 / job 128624244595, inspect logs and artifacts, and complete media/visual QA before closing Prompt A.",
+  "research_progress_reason": "Fixed the Render-only Dashboard consumer to read the registered same-date MI_INDEX breadth contract; regression test and local 44-stock dashboard generation pass. Current native dispatch is unavailable in this session.",
+  "next_action": "Owner must open https://github.com/EasonLiu0913/stock_data/actions/workflows/daily-gainers-date-render-only.yml in an authenticated GitHub session, select branch main and required date 20261104, and trigger the native workflow. Then rerun bare promptA to inspect the new run/jobs/logs/artifacts; do not rerun failed run 42445765453.",
   "automatic_continuation_permitted": false,
   "plan_changed": true,
   "publication_authorized": false,
@@ -158,16 +158,14 @@
   ],
   "mvp10_a_prompt_a_checkpoint": {
     "date": "2026-11-08",
-    "remote_main_before_checkpoint": "14a7ab4f57edc51e43e1db0e76df699e325b271a",
-    "handoff_checkpoint_commit": "b6f196b8e2e524fc00137e06bcec48dd6e62bd46",
-    "status": "WAITING_SOURCE",
+    "remote_main_before_checkpoint": "2596993a8ac44b8d647330e51d35ec84d288a293",
+    "handoff_checkpoint_commit": "2596993a8ac44b8d647330e51d35ec84d288a293",
+    "status": "WAITING_WORKFLOW",
     "prompt_a_complete": false,
     "prompt_b_eligible": false,
     "blockers": [
-      "Frozen ordinary-common-only featured set is not evidenced: current 20261104 candidate includes 910322 康師傅-DR; preserve raw 44-row list.",
-      "Frozen TWSE_COMMON_STOCK breadth is absent; verified opening uses TWSE_MI_INDEX_OFFICIAL_STOCK_COLUMN.",
-      "Date-matched SEO metadata and thumbnail QA are absent; eligible stock count must be resolved first.",
-      "Current session GitHub plugin has no workflow_dispatch tool; no dispatch/rerun attempted."
+      "This GitHub plugin has no workflow_dispatch operation; its exposed rerun methods cannot dispatch a new workflow.",
+      "Authenticated native dispatch UI is unavailable: Brave GitHub tab is logged out and Chrome is unavailable. The actual Render-only dispatch must be performed in an authenticated GitHub session."
     ],
     "reused": {
       "opening_blob": "3578047ff03548e2bcb65d908228e9753deb434b",
@@ -179,14 +177,24 @@
       "candidate_blob": "f690c703058a4367ac1f619dd786d61f9d55eab0"
     },
     "render_workflow": "daily-gainers-date-render-only.yml",
-    "render_workflow_mode": "workflow_dispatch_only_read_only",
-    "upload_push_listener": "daily-gainers-video-upload-orchestrator.yml watches video_scripts/daily-gainers/*.json",
+    "render_workflow_url": "https://github.com/EasonLiu0913/stock_data/actions/workflows/daily-gainers-date-render-only.yml",
+    "required_input": {
+      "branch": "main",
+      "date": "20261104"
+    },
+    "prior_failed_run_id": 42445765453,
+    "prior_failed_job_id": 128624244595,
+    "prior_run_rerun_attempted": false,
+    "new_dispatch_attempted": false,
+    "dashboard_repair_commits": [
+      "c9bb8805f2c230e3d29c1d2aed1f887ba01958bd",
+      "bf5f475f9bd4c4e32c7c8b3c8941ed4b6615ac49",
+      "67f6b97850c0a8aa3c213bd89355c73aee8e7cd2"
+    ],
     "youtube_upload_authorized": false,
     "youtube_scheduling_authorized": false,
     "public_release_authorized": false,
-    "dispatch_attempted": false,
-    "rerun_attempted": false,
-    "render_attempted": false
+    "pages_deployment_triggered": false
   },
   "plan_version": "goal-v3/MVP-10DAY-v1 + MVP10-A-INCLUSIVE-ELIGIBILITY-v1",
   "mvp10_a_r1_status": "SUPERSEDED_OWNER_APPROVED_WAITING_SOURCE_NOT_PASS",
@@ -295,5 +303,58 @@
       "regression_test_blob": "cfe1f0ebae0c0260d582f20e4fe4d94567129ccb",
       "test_result": "5 passed, 0 failed"
     }
+  },
+  "mvp10_a_prompt_a_checkpoint_history": [
+    {
+      "date": "2026-11-08",
+      "remote_main_before_checkpoint": "14a7ab4f57edc51e43e1db0e76df699e325b271a",
+      "handoff_checkpoint_commit": "b6f196b8e2e524fc00137e06bcec48dd6e62bd46",
+      "status": "WAITING_SOURCE",
+      "prompt_a_complete": false,
+      "prompt_b_eligible": false,
+      "blockers": [
+        "Frozen ordinary-common-only featured set is not evidenced: current 20261104 candidate includes 910322 康師傅-DR; preserve raw 44-row list.",
+        "Frozen TWSE_COMMON_STOCK breadth is absent; verified opening uses TWSE_MI_INDEX_OFFICIAL_STOCK_COLUMN.",
+        "Date-matched SEO metadata and thumbnail QA are absent; eligible stock count must be resolved first.",
+        "Current session GitHub plugin has no workflow_dispatch tool; no dispatch/rerun attempted."
+      ],
+      "reused": {
+        "opening_blob": "3578047ff03548e2bcb65d908228e9753deb434b",
+        "numeric_receipt_run": 42231051247,
+        "facts_blob": "75e0573aa2fb394712f40cb9b115096b3e136c07",
+        "news_blob": "c31055e4c0f3e60899be5e8e4fe9358c923190a6",
+        "market_summary_blob": "5560810319b843c1b5e57c3ddbf009ff51946bc4",
+        "ai_v3_blob": "24cf09ade6b98488b792aebc5036db9240c58a30",
+        "candidate_blob": "f690c703058a4367ac1f619dd786d61f9d55eab0"
+      },
+      "render_workflow": "daily-gainers-date-render-only.yml",
+      "render_workflow_mode": "workflow_dispatch_only_read_only",
+      "upload_push_listener": "daily-gainers-video-upload-orchestrator.yml watches video_scripts/daily-gainers/*.json",
+      "youtube_upload_authorized": false,
+      "youtube_scheduling_authorized": false,
+      "public_release_authorized": false,
+      "dispatch_attempted": false,
+      "rerun_attempted": false,
+      "render_attempted": false
+    }
+  ],
+  "latest_render_only_run": {
+    "run_id": 42445765453,
+    "status": "failure",
+    "job_id": 128624244595,
+    "head_sha": "7347596b2d01925d43389c5c687f99ade9d2384a",
+    "artifact_id": 13603517100,
+    "artifact_digest": "sha256:618767e17e6c4fc3ced0e5a809b6f5bfdde65d223f4e9005cd1f17544369ad70",
+    "failure": "Dashboard builder read m.breadth.advancers; verified opening uses market_opening_breadth. No MP4/SRT; downstream TTS/render/visual/thumbnail steps skipped."
+  },
+  "latest_dashboard_repair": {
+    "implementation_commit": "c9bb8805f2c230e3d29c1d2aed1f887ba01958bd",
+    "implementation_blob": "358034b6180178420b24658eab2ccb557bf38970",
+    "test_commit": "bf5f475f9bd4c4e32c7c8b3c8941ed4b6615ac49",
+    "test_blob": "4c76e20b55931df83666ee0b6b078c6283868974",
+    "workflow_gate_commit": "67f6b97850c0a8aa3c213bd89355c73aee8e7cd2",
+    "workflow_blob": "83c0fc06a6d789f54d89333b06bc3d2de4a2b461",
+    "local_test": "2 passed; materializer PASS; package 17 scenes/3451 chars; dashboard 44/44",
+    "current_main_before_state_write": "2596993a8ac44b8d647330e51d35ec84d288a293"
   }
 }
