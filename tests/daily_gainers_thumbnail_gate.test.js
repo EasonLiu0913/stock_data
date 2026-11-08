@@ -3,7 +3,7 @@ const test=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const {spawnSync}=require('node:child_process');
-const {svgArtwork}=require('../scripts/build_daily_gainers_thumbnail.js');
+const {svgArtwork,footerLabel}=require('../scripts/build_daily_gainers_thumbnail.js');
 
 test('up/down/flat market direction uses verified visual colors and direction',()=>{
   const checks=[
@@ -18,6 +18,15 @@ test('up/down/flat market direction uses verified visual colors and direction',(
     assert.ok(s.includes('11/05')&&s.includes('44</tspan>檔盤點'));
     assert.ok(s.includes('大盤震盪，資金去哪？'));
   }
+});
+
+test('thumbnail brand and dynamic footer avoid unsupported decorative glyphs',()=>{
+  const svg=svgArtwork('20261104',44,{regime:'down'});
+  assert.match(svg,/TAIWAN STOCK/);
+  assert.doesNotMatch(svg,/▥|📈/);
+  const footer=footerLabel(['低流動性','法人分歧','催化待證']);
+  assert.equal(footer,'低流動性　 •　 法人分歧　 •　 催化待證');
+  assert.doesNotMatch(footer,/▥|📈/);
 });
 
 test('existing SVG-only mock renderer is backwards compatible',()=>{
