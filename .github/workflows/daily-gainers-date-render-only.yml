@@ -101,6 +101,9 @@ jobs:
           ref: tts-audio-pending-${{ inputs.date }}
           path: .tts-checkpoint
           fetch-depth: 1
+          sparse-checkout: |
+            tts-audio/${{ inputs.date }}
+          sparse-checkout-cone-mode: false
       - name: Verify frozen narration plan and restore verified MP3 plus WordBoundary
         shell: bash
         run: |
