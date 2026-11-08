@@ -47,6 +47,7 @@ jobs:
             tests/daily_gainers_video_date_gate.test.js
             tests/daily_gainers_dual_track.test.js
             tests/daily_gainers_news_narration.test.js
+            tests/daily_gainers_list_dashboard_slides.test.js
           sparse-checkout-cone-mode: false
       - uses: actions/setup-node@v4
         with:
@@ -67,6 +68,7 @@ jobs:
           set -euo pipefail
           mkdir -p video_scripts/daily-gainers
           node --test tests/daily_gainers_dual_track.test.js
+          node --test tests/daily_gainers_list_dashboard_slides.test.js
           node scripts/materialize_daily_gainers_dual_track.js "$DATE"
           sha256sum "video_scripts/daily-gainers/$DATE.json"
           node scripts/validate_daily_gainers_video_script.js "$DATE"
