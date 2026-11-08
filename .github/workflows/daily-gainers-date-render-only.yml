@@ -29,7 +29,7 @@ jobs:
           [[ "$DATE" =~ ^20[0-9]{6}$ ]] || { echo "Explicit YYYYMMDD date required" >&2; exit 1; }
           [[ "$DATE" > "20261102" ]] || { echo "Queue starts at 20261103" >&2; exit 1; }
       - name: Checkout read-only media inputs (no YouTube actions)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 1
@@ -39,6 +39,7 @@ jobs:
             assets/daily-gainers-vtuber-sprite.webp
             data_daily_gain_over_5
             research_pending/daily-gainers-video-scripts
+            research_pending/daily-gainers-render-scripts
             research_pending/daily-gainers-seo
             tests/test_daily_gainers_spoken_text.py
             tests/test_daily_gainers_subtitle_alignment.py
@@ -50,10 +51,10 @@ jobs:
             tests/daily_gainers_news_narration.test.js
             tests/daily_gainers_list_dashboard_slides.test.js
           sparse-checkout-cone-mode: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
       - name: Install media dependencies
@@ -62,7 +63,7 @@ jobs:
           set -euo pipefail
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends ffmpeg librsvg2-bin fonts-noto-cjk espeak-ng
-          python -m pip install --disable-pip-version-check --no-cache-dir edge-tts==7.3.1 mutagen pypinyin pillow
+          python -m pip install --disable-pip-version-check --no-cache-dir mutagen pypinyin pillow
       - name: Materialize ChatGPT script locally without publishing to monitored upload path
         shell: bash
         run: |
@@ -94,26 +95,58 @@ jobs:
           python -m unittest discover -s tests -p 'test_daily_gainers_subtitle_alignment.py'
           python -m unittest discover -s tests -p 'test_daily_gainers_caption_segments.py'
           python -m unittest discover -s tests -p 'test_daily_gainers_tts_transport_diagnostics.py'
-      - name: Real YunJhe +15% TTS and cue timings
+      - name: Restore and validate durable cross-run TTS checkpoint (no TTS requests)
+        uses: actions/checkout@v7
+        with:
+          ref: tts-audio-pending-${{ inputs.date }}
+          path: .tts-checkpoint
+          fetch-depth: 1
+          sparse-checkout: |
+            tts-audio/${{ inputs.date }}
+          sparse-checkout-cone-mode: false
+      - name: Verify frozen narration plan and restore verified MP3 plus WordBoundary
         shell: bash
-        env:
-          TAIWAN_STOCK_TTS_TRANSPORT_DIAGNOSTICS: '1'
         run: |
           set -euo pipefail
-          plan="output/daily-gainers-video/$DATE/plan.json"
-          for trial in 1 2 3; do
-            if [ "$trial" -eq 1 ]; then
-              if python scripts/synthesize_daily_gainers_tts.py "$plan"; then exit 0; fi
-            else
-              if TAIWAN_STOCK_TTS_RESUME=1 python scripts/synthesize_daily_gainers_tts.py "$plan"; then exit 0; fi
-            fi
-            if [ "$trial" -eq 3 ]; then
-              echo "Edge TTS unavailable after 3 bounded passes; preserving fail-closed status" >&2
-              exit 1
-            fi
-            echo "Retry remaining scenes from verified per-scene checkpoint" >&2
-            sleep 20
-          done
+          date_dir="output/daily-gainers-video/$DATE"
+          checkpoint=".tts-checkpoint/tts-audio/$DATE"
+          frozen="research_pending/daily-gainers-render-scripts/$DATE.json"
+          test -s "$frozen"
+          test -s "$checkpoint/manifest.json"
+          node - "$date_dir/plan.json" "$frozen" <<'NODE'
+          const fs=require('node:fs');
+          const normalize=(p)=>{const v=JSON.parse(fs.readFileSync(p,'utf8'));delete v.generated_at;return JSON.stringify(v)};
+          if(normalize(process.argv[2])!==normalize(process.argv[3]))throw Error('FROZEN_TTS_PLAN_MISMATCH');
+          NODE
+          python scripts/daily_gainers_tts_checkpoint.py init \\
+            --script "$frozen" --date "$DATE" \\
+            --manifest "$checkpoint/manifest.json" --checkpoint-dir "$checkpoint" \\
+            --voice "$YOUTUBE_TTS_VOICE" --rate "$YOUTUBE_TTS_RATE" --engine-version "7.3.1"
+          python scripts/daily_gainers_tts_checkpoint.py validate \\
+            --manifest "$checkpoint/manifest.json" --checkpoint-dir "$checkpoint"
+          mkdir -p "$date_dir/audio"
+          cp "$checkpoint"/audio/*.mp3 "$date_dir/audio/"
+          python - "$checkpoint/manifest.json" "$date_dir/tts-manifest.json" "$frozen" <<'PY'
+          import json, pathlib, sys
+          from daily_gainers_spoken_text import normalize_spoken_text
+          source=json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+          plan=json.loads(pathlib.Path(sys.argv[3]).read_text(encoding="utf-8"))
+          plan_scenes={int(item["id"]):item for item in plan["scenes"]}
+          scenes=[]
+          for item in source["scenes"]:
+              boundary_file=pathlib.Path(sys.argv[1]).parent/item["wordboundaries_file"]
+              boundaries=json.loads(boundary_file.read_text(encoding="utf-8"))
+              scenes.append({"id":item["scene_id"],"engine":"edge-tts","file":item["audio_file"],"spoken_text":normalize_spoken_text(plan_scenes[int(item["scene_id"])]["narration"]),"word_boundaries":boundaries,"sha256":item["audio_sha256"]})
+          result={"voice":source["voice"],"rate":source["rate"],"engine":"edge-tts","target_date":source["target_date"],"source_script_sha256":source["script_sha256"],"scenes":scenes}
+          pathlib.Path(sys.argv[2]).write_text(json.dumps(result,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
+          PY
+          python - "$frozen" "$date_dir/tts-manifest.json" <<'PY'
+          import json, pathlib, sys
+          plan=json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+          manifest=json.loads(pathlib.Path(sys.argv[2]).read_text(encoding="utf-8"))
+          if len(plan["scenes"])!=len(manifest["scenes"]): raise SystemExit("TTS_SCENE_COVERAGE_MISMATCH")
+          if [int(s["id"]) for s in plan["scenes"]] != [int(s["id"]) for s in manifest["scenes"]]: raise SystemExit("TTS_SCENE_ORDER_MISMATCH")
+          PY
       - name: Real 1080p VTuber render
         shell: bash
         run: |
@@ -183,7 +216,7 @@ jobs:
           test -s "output/daily-gainers-video/$DATE/thumbnail.jpg"
       - name: Keep MP4 evidence even on partial failures
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: daily-gainers-${{ inputs.date }}-render-only
           path: |

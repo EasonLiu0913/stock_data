@@ -1,0 +1,30 @@
+name: "[08 TTS] Checkpoint contract tests"
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/daily-gainers-tts-checkpoint-tests.yml"
+      - "scripts/daily_gainers_tts_checkpoint.py"
+      - "scripts/synthesize_daily_gainers_tts.py"
+      - "scripts/daily_gainers_spoken_text.py"
+      - "tests/test_daily_gainers_tts_checkpoint.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checkpoint-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install spoken-text test dependency
+        run: python -m pip install --disable-pip-version-check --no-cache-dir pypinyin
+      - name: Compile checkpoint and synthesis scripts
+        run: python -m py_compile scripts/daily_gainers_tts_checkpoint.py scripts/synthesize_daily_gainers_tts.py
+      - name: Run checkpoint recovery contract tests
+        run: python -m unittest discover -s tests -p "test_daily_gainers_tts_checkpoint.py" -v

@@ -441,6 +441,32 @@ function buildRules() {
         };
       },
     },
+    exactRule('collect-institutional-accumulation-catalyst-prospective-canary.yml', 'repository_versioned_snapshot',
+      () => ['data_research/institutional-flow/institutional-accumulation-catalyst-bounded-scheduled-canary-state-v1.json'],
+      'The bounded canary durable state is its versioned occurrence checkpoint.'),
+    prefixFilesRule('daily-gainers-video-upload-orchestrator.yml', 'upload_receipt',
+      'video_upload_receipts/daily-gainers',
+      (f) => /^20\\d{6}\\.json$/.test(f),
+      () => 'YYYYMMDD.json',
+      'The orchestrator records durable date-scoped upload receipts; registering its output does not enable or invoke publishing.'),
+    {
+      workflow: 'daily-gainers-tts-scene-recovery.yml',
+      semantic: 'date_scoped_manifest',
+      note: 'Each frozen final narration plan requires a matching text-only TTS manifest on main; no frozen plan is a valid no-work state.',
+      check() {
+        const scripts = listFiles('research_pending/daily-gainers-render-scripts')
+          .filter((f) => /^20\\d{6}\\.json$/.test(f))
+          .sort();
+        const expected = scripts.map((f) => `research_pending/daily-gainers-tts/${f}`);
+        const missing = expected.filter((p) => !exists(p));
+        return {
+          expected: expected.length ? expected : ['matching TTS manifest for each frozen narration plan, when present'],
+          actual: expected.filter((p) => exists(p)),
+          ok: missing.length === 0,
+          missing,
+        };
+      },
+    },
     {
       workflow: 'warrant-scraper.yml',
       semantic: 'source_observation_date',
