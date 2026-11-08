@@ -38,3 +38,9 @@ test('production thumbnail checks use real source files and refuse preliminary s
   assert.match(src,/verified_official_market_aggregate/);
   assert.match(src,/research_pending\/daily-gainers-seo/);
 });
+
+test('3px perimeter verification samples perpendicular to the edge',()=>{
+  const src=fs.readFileSync('scripts/verify_daily_gainers_thumbnail_before_upload.js','utf8');
+  assert.match(src,/crop=1:4:10:0,format=rgb24/);
+  assert.doesNotMatch(src,/crop=4:1:0:0,format=rgb24/);
+});
