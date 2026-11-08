@@ -33,24 +33,31 @@ function row(s,i){
  ${vals.map(v=>`<text x="${v.x}" y="${y+13}" font-size="${v.size}" font-weight="600" font-family="Noto Sans CJK TC,sans-serif" fill="${v.color}">${esc(v.t)}</text>`).join('')}
  <text x="1230" y="${y+48}" font-size="17" font-family="Noto Sans CJK TC,sans-serif" fill="#94a3b8">賣：${esc(short(sell,8))}</text>`;
 }
+function getOfficialBreadth(m){
+ const breadth=m.market_opening_breadth;
+ if(!breadth||breadth.scope!=='TWSE_MI_INDEX_OFFICIAL_STOCK_COLUMN'||breadth.source_date!==date)
+  throw Error('Missing same-date TWSE MI_INDEX official stock-column breadth');
+ return breadth;
+}
 function marketOpeningSlide(scene){
  const m=JSON.parse(fs.readFileSync(path.join(root,'data_daily_gain_over_5/market-opening-video',date+'.json'),'utf8'));
  if(m.target_date!==date||m.status!=='verified_official_market_aggregate')throw Error('Missing verified official market opening');
+ const breadth=getOfficialBreadth(m);
  const billion=n=>(Math.abs(n)/1e8).toFixed(2);
  const flow=n=>(n<0?'賣超':n>0?'買超':'持平')+(n===0?'':billion(n)+' 億元');
  const movement=m.index.change_points<0?'下跌':m.index.change_points>0?'上漲':'持平';
- const marketTone=(m.breadth.advancers>m.breadth.decliners && m.index.change_points<0 && m.institutional.total_net_twd<0)
+ const marketTone=(breadth.advancers>breadth.decliners && m.index.change_points<0 && m.institutional.total_net_twd<0)
   ?'個股漲多於跌，但指數與法人偏弱，資金分歧'
-  :(m.breadth.advancers>m.breadth.decliners && m.index.change_points>=0 && m.institutional.total_net_twd>=0)
+  :(breadth.advancers>breadth.decliners && m.index.change_points>=0 && m.institutional.total_net_twd>=0)
   ?'漲多於跌、指數與法人同向，盤勢偏強'
-  :(m.breadth.advancers<m.breadth.decliners && m.index.change_points<0)
+  :(breadth.advancers<breadth.decliners && m.index.change_points<0)
   ?'跌多於漲且指數回落，盤勢偏弱':'漲跌與資金方向不一致，盤勢分歧';
  const fixedFields=['加權指數','全市場成交金額','上漲／下跌','平盤／漲停','外資／投信／自營商','三大法人合計','市場強弱摘要'];
  const rows=[
   [fixedFields[0],m.index.close.toLocaleString('en-US')+' 點',movement+' '+Math.abs(m.index.change_points).toFixed(2)+' 點／'+Math.abs(m.index.change_pct).toFixed(2)+'%'],
   [fixedFields[1],billion(m.trading.turnover_twd)+' 億元','前 5 個交易日均值之 '+(m.trading.turnover_ratio_ma5*100).toFixed(1)+'%'],
-  [fixedFields[2],m.breadth.advancers+' 家／'+m.breadth.decliners+' 家','TWSE 上市股票欄'],
-  [fixedFields[3],m.breadth.unchanged+' 家／'+m.breadth.limit_up+' 家','TWSE MI_INDEX'],
+  [fixedFields[2],breadth.advancers+' 家／'+breadth.decliners+' 家','TWSE MI_INDEX 股票欄'],
+  [fixedFields[3],breadth.unchanged+' 家／'+breadth.limit_up+' 家','TWSE MI_INDEX'],
   [fixedFields[4],'外資：'+flow(m.institutional.foreign_net_twd),'投信：'+flow(m.institutional.investment_trust_net_twd),'自營商：'+flow(m.institutional.dealers_net_twd)],
   [fixedFields[5],flow(m.institutional.total_net_twd),'三大法人合計買賣超／新臺幣'],
   [fixedFields[6],marketTone,'依上市漲跌家數、指數與法人資金方向綜合判讀']
@@ -89,10 +96,11 @@ function closingSummarySlide(scene){
  if((scene.stock_codes||[]).length)throw Error('Closing summary cannot contain stock rows');
  const m=JSON.parse(fs.readFileSync(path.join(root,'data_daily_gain_over_5/market-opening-video',date+'.json'),'utf8'));
  if(m.target_date!==date||m.status!=='verified_official_market_aggregate')throw Error('Closing market data incomplete');
+ const breadth=getOfficialBreadth(m);
  const marketDirection=m.index.change_points<0?'下跌':(m.index.change_points>0?'上漲':'持平');
  const flows=m.institutional.total_net_twd<0?'賣超':(m.institutional.total_net_twd>0?'買超':'持平');
  const cardsContent=[
-   '加權指數'+marketDirection+Math.abs(m.index.change_points).toFixed(2)+'點；上漲'+m.breadth.advancers+'家／下跌'+m.breadth.decliners+'家',
+   '加權指數'+marketDirection+Math.abs(m.index.change_points).toFixed(2)+'點；上漲'+breadth.advancers+'家／下跌'+breadth.decliners+'家',
    '三大法人合計'+flows+(Math.abs(m.institutional.total_net_twd)/1e8).toFixed(2)+'億元；資金方向分歧',
    '觀察後續成交量、法人連續性與強勢股能否站穩均線',
    '低量股留意滑價，放量股留意短線震盪與融資風險'
