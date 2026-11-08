@@ -63,7 +63,7 @@ function findFieldIndex(fields, candidates, fallback = -1) {
 }
 function institutionalNetIndex(fields, rows, key, cfg) {
   if (key !== 'dealer') return findFieldIndex(fields, cfg.netNames, cfg.fallbackNet);
-  const normalized = (fields || []).map((v) => String(v ?? '').replace(/\\s+/g, '').trim());
+  const normalized = (fields || []).map((v) => String(v ?? '').replace(/\s+/g, '').trim());
   const genericNetIndexes = [];
   normalized.forEach((name, index) => {
     if (name === '買賣超股數') genericNetIndexes.push(index);
