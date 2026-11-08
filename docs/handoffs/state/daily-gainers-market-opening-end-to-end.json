@@ -8,14 +8,14 @@
   "current_phase_id": "MVP10-A-R2-INCLUSIVE-ELIGIBILITY",
   "phase_status": "active",
   "round_id": "MVP10-A-R2-INCLUSIVE-ELIGIBILITY",
-  "prompt_a_status": "eligible_not_started",
+  "prompt_a_status": "in_progress",
   "prompt_b_status": "not_eligible",
   "owner_approved_on": "2026-11-08",
   "change_proposal": "data_research/m5/change-proposals/MVP10-A-INCLUSIVE-ELIGIBILITY-CHANGE-PROPOSAL-v1.md",
   "paired_prompt": "data_research/m5/change-proposals/MVP10-A-INCLUSIVE-ELIGIBILITY-PAIR-R2-v1.md",
   "predecessor_phase": "MVP10-A-R1",
   "next_phase_id": null,
-  "mvp10_a_status": "R2_registered_not_started",
+  "mvp10_a_status": "R2_promptA_in_progress_waiting_thumbnail_renderer",
   "mvp10_a_acceptance_changed": false,
   "mvp10_b_status": "frozen_not_eligible",
   "mvp10_b_acceptance_changed": false,
@@ -33,8 +33,8 @@
     "News-narration validator remains FAIL: candidate missing editorial_quality.version=news-to-narration-v1; no false PASS metadata or materialized production script committed.",
     "Manual date-only opening workflow committed and YAML parsed; not dispatched as v2 Prompt A forbids; no Render/YouTube actions."
   ],
-  "research_progress_reason": "Owner requested a versioned Prompt A revision to prioritize building the automated official market-opening path. V2 uses the explicitly approved MI_INDEX stock-column scope and separates any downstream stock eligibility gate; it does not alter original MVP10-A/B acceptance.",
-  "next_action": "promptA",
+  "research_progress_reason": "Reused verified inputs and local validators; confirmed the remaining pre-render thumbnail gate is blocked because this environment has no rsvg-convert. No Render dispatch was made.",
+  "next_action": "Install or otherwise make the approved librsvg rsvg-convert renderer available locally, then resume promptA to build and inspect the date-matched thumbnail before Render-only.",
   "automatic_continuation_permitted": false,
   "plan_changed": true,
   "publication_authorized": false,
@@ -244,5 +244,38 @@
     "prompt_b_status": "not_eligible",
     "render_dispatched": false,
     "youtube_action_performed": false
+  },
+  "mvp10_a_r2_prompt_a_checkpoint": {
+    "date": "2026-11-08",
+    "remote_main_before_checkpoint": "f79a26ee4699b671f4d8a585a28cb28a4976f5ba",
+    "status": "WAITING_LOCAL_THUMBNAIL_RENDERER",
+    "prompt_a_complete": false,
+    "prompt_b_eligible": false,
+    "blocker": "scripts/build_daily_gainers_thumbnail.js requires rsvg-convert; command is absent. Its supported invocation failed before PNG/JPEG output. ffmpeg has no SVG decoder; macOS sips cannot extract the SVG image.",
+    "reused": {
+      "seo_metadata_blob": "273b67878d52b3abbb10bd69c48025c953a18383",
+      "opening_blob": "3578047ff03548e2bcb65d908228e9753deb434b",
+      "candidate_blob": "f690c703058a4367ac1f619dd786d61f9d55eab0",
+      "render_workflow_blob": "90fbc0a9884111bfa2b8d603561253b30234a322"
+    },
+    "thumbnail": {
+      "metadata_source_check": "PASS",
+      "builder_result": "BLOCKED: rsvg-convert executable unavailable",
+      "alternate_checks": [
+        "ffmpeg SVG decode unavailable",
+        "sips SVG extraction failed"
+      ],
+      "actual_png_jpeg_qa": "NOT_RUN_NO_OUTPUT"
+    },
+    "render": {
+      "workflow_url": "https://github.com/EasonLiu0913/stock_data/actions/workflows/daily-gainers-date-render-only.yml",
+      "dispatch_tool_plugin": "unavailable",
+      "browser_dispatch_ui": "available_but_not_submitted",
+      "dispatch_attempted": false,
+      "rerun_attempted": false,
+      "render_attempted": false
+    },
+    "next_action": "Install or enable the approved local librsvg rsvg-convert dependency, then resume promptA; build and inspect thumbnail before dispatch.",
+    "youtube_actions_performed": false
   }
 }
