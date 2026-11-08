@@ -53,9 +53,10 @@ jobs:
           set -euo pipefail
           if [ -n "$REQUESTED_DATE" ]; then
             [[ "$REQUESTED_DATE" =~ ^20[0-9]{6}$ ]] || { echo "Invalid target_date" >&2; exit 1; }
+            [[ "$REQUESTED_DATE" > "20261102" ]] || { echo "TTS recovery queue starts at 20261103" >&2; exit 1; }
             date="$REQUESTED_DATE"
           else
-            candidate="$(find research_pending/daily-gainers-video-scripts -maxdepth 1 -type f -name '20????????.json' -print 2>/dev/null | sed -E 's#^.*/([0-9]{8})\.json$#\1#' | sort | head -n 1)"
+            candidate="$(find research_pending/daily-gainers-video-scripts -maxdepth 1 -type f -name '20????????.json' -print 2>/dev/null | sed -E 's#^.*/([0-9]{8})\.json$#\1#' | awk '$1 > "20261102"' | sort | head -n 1)"
             date="$candidate"
           fi
           echo "target_date=$date" >> "$GITHUB_OUTPUT"
