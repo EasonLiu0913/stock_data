@@ -2692,3 +2692,24 @@ Next steps inside the registered Prompt A:
 4. Once all scenes validate, use the already-authorized Render-only path only if the unchanged MVP10-A gates and run authorization allow it; verify MP4, SRT, subtitles, visual QA, thumbnail, provenance and actual artifacts. Do not upload/publish.
 5. Prompt A is not complete yet. Prompt B remains ineligible until its preregistered A completion contract is met and the owner invokes it.
 
+
+
+## TTS persistence checkpoint update — 2026-11-08 17:09 UTC
+
+PR #55 remains open and Draft on `codex/mvp10-a-tts-persistence-r1`, head `62d6bf34912784d38f6d8b3dabbe4e1ce66ba18f`. Current remote main is `3ccde0a425f41def0817050b1eaa1eaa91088474`; its only change since the PR base is the unrelated MOPS monthly-revenue update, and the PR remains mergeable.
+
+This update records the latest contract and persistence plumbing now present on the PR branch:
+
+- Successful-scene manifests retain WordBoundary data with audio identity and hashes.
+- The recovery workflow synchronizes a text-only date manifest to `research_pending/daily-gainers-tts/YYYYMMDD.json`, including after partial synthesis failure when preparation succeeded; MP3 and WordBoundary files remain on the date checkpoint branch.
+- Scheduled workflow output registration includes the TTS date manifest and the two already-existing schedules; no workflow trigger behavior for those legacy schedules was changed.
+- New/modified action references use the repository's current action major versions.
+
+Remote PR evidence for head `62d6bf3`:
+- TTS checkpoint contract tests, run `42502285359`: PASS.
+- Scheduled workflow registry contract, run `42502285205`: PASS.
+- Public Page Registry CI, run `42502285223`: PASS; no Pages deployment was invoked.
+- Node Regression Suite, run `42502285273`: FAIL.
+- Node 24 workflow audit, run `42502286623`: FAIL on repository-wide action references. These failures are recorded as failures; focused TTS/registry PASS does not make the full CI suite green.
+
+Prompt A remains INCOMPLETE. No TTS recovery run, scene audio checkpoint, Render-only run, MP4/SRT/QA artifact, or publication action is claimed. Next: merge only under the owner's explicit PR #55 merge authorization after confirming the current head and changed-file trigger safety; then verify main and wait for the actual scheduled recovery run. A still requires separate successful recovery runs proving remote reuse, the deterministic partial-failure regression, and all frozen Render-only acceptance evidence. YouTube upload, schedule, publication, and release-lock changes remain forbidden.
