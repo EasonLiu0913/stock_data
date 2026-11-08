@@ -4,7 +4,7 @@ Canonical handoff: `docs/handoffs/daily-gainers-market-opening-end-to-end.md`
 Task id: `daily-gainers-market-opening-end-to-end`
 Project routing status: **ACTIVE** (owner-authorized v3 activation 2026-10-09); previous `institutional-accumulation` preserved as pending. Activation does NOT execute Prompt A.
 Plan version: `goal-v3` with owner-approved, prospectively registered `MVP10-A-INCLUSIVE-ELIGIBILITY-v1` and `MVP10-A-TTS-PERSISTENCE-R1` amendments (2026-11-08); the original MVP10-A/B v1 pair and all prior results remain immutable.
-Ultimate goal status: **NOT COMPLETE**. MVP10-OPENING-PIPELINE-REPAIR-R2 A/B closeout is complete; v2 R1 Prompt B remains permanently FAILED. MVP10-A-R1 remains preserved as WAITING_SOURCE / SUPERSEDED_OWNER_APPROVED, not PASS. MVP10-A-R2 remains preserved as incomplete / WAITING_TTS / SUPERSEDED_OWNER_APPROVED for execution, not PASS; its frozen acceptance and evidence are unchanged. The owner-authorized TTS transport and request-shape diagnostic subrounds closed with Prompt B PASS. Current registered phase: MVP10-A-TTS-PERSISTENCE-R1; Prompt A is eligible and has not started. MVP10-B remains ineligible. See the appended owner decision and registered pair.
+Ultimate goal status: **NOT COMPLETE**. MVP10-OPENING-PIPELINE-REPAIR-R2 A/B closeout is complete; v2 R1 Prompt B remains permanently FAILED. MVP10-A-R1 remains preserved as WAITING_SOURCE / SUPERSEDED_OWNER_APPROVED, not PASS. MVP10-A-R2 remains preserved as incomplete / WAITING_TTS / SUPERSEDED_OWNER_APPROVED for execution, not PASS; its frozen acceptance and evidence are unchanged. The owner-authorized TTS transport and request-shape diagnostic subrounds closed with Prompt B PASS. Current registered phase: MVP10-A-TTS-PERSISTENCE-R1; Prompt A is in progress on a narrow FIFO candidate-resolver repair. Prompt B remains ineligible. MVP10-B remains ineligible. See the appended owner decision and registered pair.
 
 ## A. Immutable Project Charter — WHY
 
@@ -2713,3 +2713,14 @@ Remote PR evidence for head `62d6bf3`:
 - Node 24 workflow audit, run `42502286623`: FAIL on repository-wide action references. These failures are recorded as failures; focused TTS/registry PASS does not make the full CI suite green.
 
 Prompt A remains INCOMPLETE. No TTS recovery run, scene audio checkpoint, Render-only run, MP4/SRT/QA artifact, or publication action is claimed. Next: merge only under the owner's explicit PR #55 merge authorization after confirming the current head and changed-file trigger safety; then verify main and wait for the actual scheduled recovery run. A still requires separate successful recovery runs proving remote reuse, the deterministic partial-failure regression, and all frozen Render-only acceptance evidence. YouTube upload, schedule, publication, and release-lock changes remain forbidden.
+
+
+## MVP10-A-TTS-PERSISTENCE-R1 Prompt A — scheduled FIFO candidate resolver diagnosis (2026-11-08 21:19 UTC)
+
+**Prompt A remains INCOMPLETE; Prompt B is not eligible.** Remote main at diagnosis: `c700e78fc34fbbe5ae8036862738ea4fd8e87179`. TTS schedule run [42524638661](https://github.com/EasonLiu0913/stock_data/actions/runs/42524638661) completed successfully, but its prepare job found no candidate and made no TTS requests. Job `128865427759` log confirms the resolver searched with `20????????.json`, which requires ten filename positions, while the tracked date candidates use eight-digit `YYYYMMDD.json` names. Current main contains 20261103, 20261104 candidates; the schedule incorrectly skipped them.
+
+The implementation branch corrects the glob to `20??????.json`. This is a narrow repair within the registered TTS FIFO resolver. No tests were added or manually run in this checkpoint. PR checks may run after the reviewable PR is opened; no automatic merge is authorized.
+
+**Remaining gates:** the corrected FIFO resolver will select 20261103 first. That date still lacks a PASS official numeric Receipt, and its opening uses the older `breadth` field rather than the current materializer contract. Do not skip to 20261104 or rerun unchanged failures. Fix the registered official-input path only after the necessary scope decision, then resume formal gates. Preserve MVP10-A-R2 WAITING_TTS, all earlier FAILED history, and the frozen pair.
+
+**Safety:** the schedule run made no TTS requests; no Render, Pages or YouTube workflow ran. YouTube upload, scheduling, publication and release-lock changes remain prohibited.
