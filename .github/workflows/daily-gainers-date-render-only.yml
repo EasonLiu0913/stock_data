@@ -123,14 +123,17 @@ jobs:
             --manifest "$checkpoint/manifest.json" --checkpoint-dir "$checkpoint"
           mkdir -p "$date_dir/audio"
           cp "$checkpoint"/audio/*.mp3 "$date_dir/audio/"
-          python - "$checkpoint/manifest.json" "$date_dir/tts-manifest.json" <<'PY'
+          python - "$checkpoint/manifest.json" "$date_dir/tts-manifest.json" "$frozen" <<'PY'
           import json, pathlib, sys
+          from daily_gainers_spoken_text import normalize_spoken_text
           source=json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+          plan=json.loads(pathlib.Path(sys.argv[3]).read_text(encoding="utf-8"))
+          plan_scenes={int(item["id"]):item for item in plan["scenes"]}
           scenes=[]
           for item in source["scenes"]:
               boundary_file=pathlib.Path(sys.argv[1]).parent/item["wordboundaries_file"]
               boundaries=json.loads(boundary_file.read_text(encoding="utf-8"))
-              scenes.append({"id":item["scene_id"],"engine":"edge-tts","file":item["audio_file"],"spoken_text":"","word_boundaries":boundaries,"sha256":item["audio_sha256"]})
+              scenes.append({"id":item["scene_id"],"engine":"edge-tts","file":item["audio_file"],"spoken_text":normalize_spoken_text(plan_scenes[int(item["scene_id"])]["narration"]),"word_boundaries":boundaries,"sha256":item["audio_sha256"]})
           result={"voice":source["voice"],"rate":source["rate"],"engine":"edge-tts","target_date":source["target_date"],"source_script_sha256":source["script_sha256"],"scenes":scenes}
           pathlib.Path(sys.argv[2]).write_text(json.dumps(result,ensure_ascii=False,indent=2)+"\\n",encoding="utf-8")
           PY
