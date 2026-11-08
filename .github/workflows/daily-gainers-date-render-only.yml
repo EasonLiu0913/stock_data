@@ -43,6 +43,7 @@ jobs:
             tests/test_daily_gainers_spoken_text.py
             tests/test_daily_gainers_subtitle_alignment.py
             tests/test_daily_gainers_caption_segments.py
+            tests/test_daily_gainers_tts_transport_diagnostics.py
             tests/daily_gainers_video_timestamps.test.js
             tests/daily_gainers_video_date_gate.test.js
             tests/daily_gainers_dual_track.test.js
@@ -92,8 +93,11 @@ jobs:
           python -m unittest discover -s tests -p 'test_daily_gainers_spoken_text.py'
           python -m unittest discover -s tests -p 'test_daily_gainers_subtitle_alignment.py'
           python -m unittest discover -s tests -p 'test_daily_gainers_caption_segments.py'
+          python -m unittest discover -s tests -p 'test_daily_gainers_tts_transport_diagnostics.py'
       - name: Real YunJhe +15% TTS and cue timings
         shell: bash
+        env:
+          TAIWAN_STOCK_TTS_TRANSPORT_DIAGNOSTICS: '1'
         run: |
           set -euo pipefail
           plan="output/daily-gainers-video/$DATE/plan.json"
@@ -191,6 +195,7 @@ jobs:
             output/daily-gainers-video/${{ inputs.date }}/qa.json
             output/daily-gainers-video/${{ inputs.date }}/news-narration-qa.json
             output/daily-gainers-video/${{ inputs.date }}/tts-manifest.json
+            output/daily-gainers-video/${{ inputs.date }}/tts-transport-diagnostics.json
             output/daily-gainers-video/${{ inputs.date }}/subtitle-manifest.json
             output/daily-gainers-video/${{ inputs.date }}/render-timings.json
             output/daily-gainers-video/${{ inputs.date }}/list-dashboard-manifest.json
