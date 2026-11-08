@@ -15,11 +15,11 @@
   "paired_prompt": "data_research/m5/change-proposals/MVP10-A-INCLUSIVE-ELIGIBILITY-PAIR-R2-v1.md",
   "predecessor_phase": "MVP10-A-R1",
   "next_phase_id": null,
-  "mvp10_a_status": "R2_promptA_WAITING_WORKFLOW",
+  "mvp10_a_status": "R2_promptA_WAITING_TTS",
   "mvp10_a_acceptance_changed": false,
   "mvp10_b_status": "frozen_not_eligible",
   "mvp10_b_acceptance_changed": false,
-  "research_progress_status": "PROGRESS",
+  "research_progress_status": "PROGRESS_BLOCKED_EXTERNAL_TTS",
   "research_progress_evidence": [
     "https://github.com/EasonLiu0913/stock_data/actions/runs/41799842426",
     "https://github.com/EasonLiu0913/stock_data/actions/runs/41799842426/artifacts/13308740997",
@@ -33,8 +33,8 @@
     "News-narration validator remains FAIL: candidate missing editorial_quality.version=news-to-narration-v1; no false PASS metadata or materialized production script committed.",
     "Manual date-only opening workflow committed and YAML parsed; not dispatched as v2 Prompt A forbids; no Render/YouTube actions."
   ],
-  "research_progress_reason": "Fixed the Render-only Dashboard consumer to read the registered same-date MI_INDEX breadth contract; regression test and local 44-stock dashboard generation pass. Current native dispatch is unavailable in this session.",
-  "next_action": "Owner must open https://github.com/EasonLiu0913/stock_data/actions/workflows/daily-gainers-date-render-only.yml in an authenticated GitHub session, select branch main and required date 20261104, and trigger the native workflow. Then rerun bare promptA to inspect the new run/jobs/logs/artifacts; do not rerun failed run 42445765453.",
+  "research_progress_reason": "Native Render-only run 42446775140 on main 0004f5477ca0c530c588399367d27d890711be8f: opening/materialization, formal script, News Narration and subtitle-rule checks PASS; real YunJhe +15% TTS failed with Edge TTS NoAudioReceived after 3 bounded passes. Failures shifted across scenes 4, 6 and 9 while other scenes recovered, suggesting but not proving transient Edge TTS/network instability. VTuber render, SRT, MP4 QA, thumbnail-after-render and visual QA were skipped; artifact is diagnostic only.",
+  "next_action": "Do not rerun failed run 42446775140/job 128627241230 or start an unchanged-input retry while TTS recovery is unverified. Wait for an observable Edge TTS recovery signal; then use the native date-scoped Render-only workflow for 20261104 in a new workflow_dispatch run and verify all jobs/logs/artifacts. If no provider health signal is available, a new owner promptA may recheck current Actions/source evidence; it must not claim background continuation.",
   "automatic_continuation_permitted": false,
   "plan_changed": true,
   "publication_authorized": false,
@@ -356,5 +356,22 @@
     "workflow_blob": "83c0fc06a6d789f54d89333b06bc3d2de4a2b461",
     "local_test": "2 passed; materializer PASS; package 17 scenes/3451 chars; dashboard 44/44",
     "current_main_before_state_write": "2596993a8ac44b8d647330e51d35ec84d288a293"
+  },
+  "latest_render_attempt": {
+    "workflow": ".github/workflows/daily-gainers-date-render-only.yml",
+    "event": "workflow_dispatch",
+    "date": "20261104",
+    "run_id": 42446775140,
+    "job_id": 128627241230,
+    "head_sha": "0004f5477ca0c530c588399367d27d890711be8f",
+    "conclusion": "failure",
+    "failed_step": "Real YunJhe +15% TTS and cue timings",
+    "error": "edge_tts.exceptions.NoAudioReceived after bounded attempts",
+    "artifact_id": 13604590727,
+    "artifact_name": "daily-gainers-20261104-render-only",
+    "artifact_size_bytes": 22225,
+    "artifact_digest": "sha256:d61882786bc4734775d8fe22660511836bbfe7fbb5a2cb8eef477997739a5f77",
+    "media_verified": false,
+    "mp4_srt_visual_qa": "not produced; downstream steps skipped"
   }
 }
