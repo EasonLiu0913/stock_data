@@ -4,7 +4,7 @@ Canonical handoff: `docs/handoffs/daily-gainers-market-opening-end-to-end.md`
 Task id: `daily-gainers-market-opening-end-to-end`
 Project routing status: **ACTIVE** (owner-authorized v3 activation 2026-10-09); previous `institutional-accumulation` preserved as pending. Activation does NOT execute Prompt A.
 Plan version: `goal-v3` with owner-approved, prospectively registered `MVP10-A-INCLUSIVE-ELIGIBILITY-v1` amendment (2026-11-08); the original MVP10-A/B v1 pair and all prior results remain immutable.
-Ultimate goal status: **NOT COMPLETE**. MVP10-OPENING-PIPELINE-REPAIR-R2 A/B closeout is complete; v2 R1 Prompt B remains permanently FAILED. MVP10-A-R1 is preserved as WAITING_SOURCE and closed for future execution as SUPERSEDED_OWNER_APPROVED, not PASS. The active phase is the registered inclusive-eligibility MVP10-A-R2; Prompt A is eligible but has NOT started, and Prompt B is not eligible. See the 2026-11-08 registration checkpoint at the end of this handoff.
+Ultimate goal status: **NOT COMPLETE**. MVP10-OPENING-PIPELINE-REPAIR-R2 A/B closeout is complete; v2 R1 Prompt B remains permanently FAILED. MVP10-A-R1 is preserved as WAITING_SOURCE and closed for future execution as SUPERSEDED_OWNER_APPROVED, not PASS. The parent phase is the registered inclusive-eligibility MVP10-A-R2 and remains incomplete/WAITING_TTS. Its owner-authorized child subround MVP10-A-R2-TTS-TRANSPORT-DIAGNOSTICS-v1 is currently active; child Prompt A is in progress and child Prompt B is not eligible. Parent acceptance is unchanged. See the latest child checkpoint at the end of this handoff.
 
 ## A. Immutable Project Charter — WHY
 
