@@ -3,8 +3,8 @@
 Canonical handoff: `docs/handoffs/daily-gainers-market-opening-end-to-end.md`
 Task id: `daily-gainers-market-opening-end-to-end`
 Project routing status: **ACTIVE** (owner-authorized v3 activation 2026-10-09); previous `institutional-accumulation` preserved as pending. Activation does NOT execute Prompt A.
-Plan version: `goal-v3`, owner-approved M2-v2 candidate-coverage amendment 2026-10-10; see sections DJ/DK. Earlier goal-v2 M1 completion remains valid, and original goal-v2 M2 A/B are superseded without PASS.
-Ultimate goal status: **NOT COMPLETE**. R2 opening-pipeline repair A/B closeout is complete (R2 Prompt B PASS); v2 R1 Prompt B remains permanently FAILED. The originally frozen MVP10-A is now formally promoted and active, but Prompt A has NOT started. MVP10-B remains frozen and ineligible. See the latest dated promotion checkpoint at the end of this handoff.
+Plan version: `goal-v3` with owner-approved, prospectively registered `MVP10-A-INCLUSIVE-ELIGIBILITY-v1` amendment (2026-11-08); the original MVP10-A/B v1 pair and all prior results remain immutable.
+Ultimate goal status: **NOT COMPLETE**. MVP10-OPENING-PIPELINE-REPAIR-R2 A/B closeout is complete; v2 R1 Prompt B remains permanently FAILED. MVP10-A-R1 is preserved as WAITING_SOURCE and closed for future execution as SUPERSEDED_OWNER_APPROVED, not PASS. The active phase is the registered inclusive-eligibility MVP10-A-R2; Prompt A is eligible but has NOT started, and Prompt B is not eligible. See the 2026-11-08 registration checkpoint at the end of this handoff.
 
 ## A. Immutable Project Charter — WHY
 
@@ -2380,3 +2380,16 @@ The owner formally promoted the project from completed `MVP10-OPENING-PIPELINE-R
 4. Stop before any YouTube action. A private pilot requires explicit owner authorization; none is present.
 
 **No implementation or production workflow was changed. Plan changed: NO.**
+## Owner-approved inclusive eligibility registration — MVP10-A-R2 (2026-11-08)
+
+The owner approved formal registration of the inclusive-eligibility change proposal. Proposal: data_research/m5/change-proposals/MVP10-A-INCLUSIVE-ELIGIBILITY-CHANGE-PROPOSAL-v1.md. Frozen pair: data_research/m5/change-proposals/MVP10-A-INCLUSIVE-ELIGIBILITY-PAIR-R2-v1.md. Registration commits: proposal 55c95fba5d4ff71e851a24ba4a9ba2bccfea5db5; paired contract 532ac34b5a01e7ca3db1f259b5e4b57ee0cc6c83.
+
+**Prospective scope change:** retain TWSE-only universe but permit date-matched TWSE >=5% instruments covered by owner-approved editorial policy v1.1, with accurate category labels. The 20261104 official opening uses the separate `TWSE_MI_INDEX_OFFICIAL_STOCK_COLUMN` scope. A full historical common-stock master and a `TWSE_COMMON_STOCK` breadth are not required for this successor video path. This does not expand to TPEx or change any unrelated workflow.
+
+**Historic contract preservation:** original pair data_research/m5/change-proposals/DAILY-VIDEO-MVP-10DAY-PAIR-v1.md remains unchanged at blob 8cebf1a8e50f9d044e777419f7f120b4afa699a0. MVP10-A-R1 remains recorded as WAITING_SOURCE and is now superseded prospectively by owner approval; it is not PASS. Original MVP10-B v1, v2 R1 failure, and R2 repair PASS evidence remain unchanged.
+
+**Current active state:** project daily-gainers-market-opening-end-to-end; goal goal-v3/MVP-10DAY-v1; phase/round MVP10-A-R2; Prompt A eligible but not started; Prompt B not eligible. The registered pair was committed before Prompt A. No Prompt A/B, Render, YouTube, Pages or release-lock action was performed as part of registration.
+
+**Reused 20261104 identities:** official Opening 3578047ff03548e2bcb65d908228e9753deb434b; numeric Receipt run 42231051247; Facts 75e0573aa2fb394712f40cb9b115096b3e136c07; News c31055e4c0f3e60899be5e8e4fe9358c923190a6; AI v3 24cf09ade6b98488b792aebc5036db9240c58a30; final Market Summary 5560810319b843c1b5e57c3ddbf009ff51946bc4; R2-passed private candidate f690c703058a4367ac1f619dd786d61f9d55eab0. The 20261104 SEO input remains absent and must be generated from verified same-date sources during A2.
+
+**Safety/next step:** Render-only remains manual-dispatch and read-only; current connector has no dispatch tool. Upload orchestrator still listens to video_scripts/daily-gainers/*.json, so the successor contract prohibits committing a formal script there. All YouTube upload, schedule, public release and release-lock actions remain forbidden unless separately authorized. The next permitted action is a fresh owner-issued `promptA`; registration does not execute it. Plan changed: YES, prospectively under this approved versioned proposal.
