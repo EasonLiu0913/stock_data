@@ -29,7 +29,7 @@ jobs:
           [[ "$DATE" =~ ^20[0-9]{6}$ ]] || { echo "Explicit YYYYMMDD date required" >&2; exit 1; }
           [[ "$DATE" > "20261102" ]] || { echo "Queue starts at 20261103" >&2; exit 1; }
       - name: Checkout read-only media inputs (no YouTube actions)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 1
@@ -51,10 +51,10 @@ jobs:
             tests/daily_gainers_news_narration.test.js
             tests/daily_gainers_list_dashboard_slides.test.js
           sparse-checkout-cone-mode: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
       - name: Install media dependencies
@@ -96,7 +96,7 @@ jobs:
           python -m unittest discover -s tests -p 'test_daily_gainers_caption_segments.py'
           python -m unittest discover -s tests -p 'test_daily_gainers_tts_transport_diagnostics.py'
       - name: Restore and validate durable cross-run TTS checkpoint (no TTS requests)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: tts-audio-pending-${{ inputs.date }}
           path: .tts-checkpoint
@@ -216,7 +216,7 @@ jobs:
           test -s "output/daily-gainers-video/$DATE/thumbnail.jpg"
       - name: Keep MP4 evidence even on partial failures
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: daily-gainers-${{ inputs.date }}-render-only
           path: |
