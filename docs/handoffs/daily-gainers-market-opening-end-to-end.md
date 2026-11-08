@@ -4,7 +4,7 @@ Canonical handoff: `docs/handoffs/daily-gainers-market-opening-end-to-end.md`
 Task id: `daily-gainers-market-opening-end-to-end`
 Project routing status: **ACTIVE** (owner-authorized v3 activation 2026-10-09); previous `institutional-accumulation` preserved as pending. Activation does NOT execute Prompt A.
 Plan version: `goal-v3` with owner-approved, prospectively registered `MVP10-A-INCLUSIVE-ELIGIBILITY-v1` amendment (2026-11-08); the original MVP10-A/B v1 pair and all prior results remain immutable.
-Ultimate goal status: **NOT COMPLETE**. MVP10-OPENING-PIPELINE-REPAIR-R2 A/B closeout is complete; v2 R1 Prompt B remains permanently FAILED. MVP10-A-R1 is preserved as WAITING_SOURCE and closed for future execution as SUPERSEDED_OWNER_APPROVED, not PASS. The parent phase is the registered inclusive-eligibility MVP10-A-R2 and remains incomplete/WAITING_TTS. Its owner-authorized child subround MVP10-A-R2-TTS-TRANSPORT-DIAGNOSTICS-v1 is currently active; child Prompt A is in progress and child Prompt B is not eligible. Parent acceptance is unchanged. See the latest child checkpoint at the end of this handoff.
+Ultimate goal status: **NOT COMPLETE**. MVP10-OPENING-PIPELINE-REPAIR-R2 A/B closeout is complete; v2 R1 Prompt B remains permanently FAILED. MVP10-A-R1 is preserved as WAITING_SOURCE and closed for future execution as SUPERSEDED_OWNER_APPROVED, not PASS. The parent phase is the registered inclusive-eligibility MVP10-A-R2 and remains incomplete/WAITING_TTS. Its owner-authorized child subround MVP10-A-R2-TTS-TRANSPORT-DIAGNOSTICS-v1 is currently active; child Prompt A is complete and its preregistered Prompt B is pending the owner's explicit command. Parent acceptance is unchanged. See the latest child checkpoint at the end of this handoff.
 
 ## A. Immutable Project Charter — WHY
 
@@ -2477,3 +2477,21 @@ The child subround is active for this bounded implementation/test. Parent phase 
 This child may add redacted per-attempt elapsed time, WebSocket handshake status, message-type/byte counts, close code/error class, audio byte count and WordBoundary count to an opt-in diagnostic record; wire it into the existing Render-only failure artifact; add deterministic mocked tests; and perform at most three serial, low-volume synthetic tests with the same voice/rate and at least 15 seconds between requests. It does not authorize full Render, Render dispatch/rerun, Pages, YouTube actions, TTS voice/rate/pacing/retry/fallback changes, parent acceptance changes, or publication-lock changes.
 
 Prompt A completion requires targeted tests, remote-verified bounded code/docs changes, and either a completed bounded smoke or a precisely verified external/tool blocker. Prompt B must be invoked explicitly and independently verify redaction, no behavior change, remote durable state, test/smoke evidence, and absence of prohibited side effects. A diagnostic child closeout does not complete parent MVP10-A.
+
+
+## TTS transport diagnostics v1 — Prompt A completion (2026-11-08 06:54 UTC / 14:54 Asia/Taipei)
+
+**Child Prompt A complete; Prompt B is now eligible.** Parent `MVP10-A-R2-INCLUSIVE-ELIGIBILITY` remains incomplete and `WAITING_TTS`. No full render, dispatch, rerun, Pages action, or YouTube action occurred.
+
+- Implementation commit: `422e09ad0d0ba3684a4aa329791b3b9b9d3d2b20`.
+- Remote readback at that commit verified:
+  - `.github/workflows/daily-gainers-date-render-only.yml` blob `ff11a64973d5d7c746e909db9166d97ccebe79e3`
+  - `scripts/synthesize_daily_gainers_tts.py` blob `8e7cac34e05e699b0bae4c5e6f33ba4d41f20c62`
+  - `scripts/daily_gainers_tts_transport_diagnostics.py` blob `a7031b60c872c4fcc0615e2c1478dbbe57a5d259`
+  - `tests/test_daily_gainers_tts_transport_diagnostics.py` blob `bae17cf2e7afd516a88dba8e929372cbd40c9095`
+- Targeted mocked tests: 3/3 PASS. Python byte-compilation and `git diff --check` passed.
+- Live diagnostic-only smoke: 3 serial requests, at least 15 seconds apart, with Edge TTS 7.3.1 / aiohttp 3.14.5, YunJhe +15%, WordBoundary enabled and generic synthetic text. All three returned handshake HTTP 101, WebSocket close code 1000, 23 binary plus 8 text messages, 15,840 audio bytes and 5 WordBoundary events. Durations were 4,300 ms, 1,313 ms and 899 ms. Telemetry stored counts/byte lengths only; no transcript, audio payload, URL, headers or secrets were retained. This proves the diagnostic path works for successful requests; it does not establish reliability on GitHub runners or explain the prior intermittent `NoAudioReceived`.
+- The unprivileged network attempt was blocked at DNS resolution before reaching the provider; the owner-authorized bounded probe was then run through the approved escalated network path. No additional probes were sent.
+- No production voice, rate, inter-request delay, concurrency, retry/backoff, fallback, output, or gate behavior was changed. Diagnostic persistence is best-effort and does not turn TTS failure into success.
+- Current remote main: `422e09ad0d0ba3684a4aa329791b3b9b9d3d2b20`. The pair was preregistered before implementation. The next valid operation is explicit `promptB` for independent closeout of this diagnostic subround; do not dispatch Render-only as part of this closeout.
+- YouTube upload, scheduling, public release and release locks remain prohibited. Plan changed: YES, only by the owner-authorized diagnostic child subround.
