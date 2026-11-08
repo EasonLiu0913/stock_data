@@ -1,0 +1,288 @@
+name: "[08 TTS] Daily Gainers Cross-Run Scene Recovery"
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      target_date:
+        description: "Optional YYYYMMDD; blank resolves the earliest pending candidate"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-gainers-tts-recovery
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      target_date: ${{ steps.resolve.outputs.target_date }}
+      has_work: ${{ steps.queue.outputs.has_work }}
+      matrix: ${{ steps.queue.outputs.matrix }}
+    env:
+      REQUESTED_DATE: ${{ inputs.target_date || '' }}
+      YOUTUBE_TTS_VOICE: zh-TW-YunJheNeural
+      YOUTUBE_TTS_RATE: '+15%'
+    steps:
+      - name: Checkout validated script inputs
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          sparse-checkout: |
+            scripts
+            config
+            data_daily_gain_over_5
+            research_pending/daily-gainers-video-scripts
+            research_pending/daily-gainers-render-scripts
+            video_scripts
+            tests
+          sparse-checkout-cone-mode: false
+
+      - name: Resolve FIFO target date
+        id: resolve
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "$REQUESTED_DATE" ]; then
+            [[ "$REQUESTED_DATE" =~ ^20[0-9]{6}$ ]] || { echo "Invalid target_date" >&2; exit 1; }
+            date="$REQUESTED_DATE"
+          else
+            candidate="$(find research_pending/daily-gainers-video-scripts -maxdepth 1 -type f -name '20????????.json' -print 2>/dev/null | sed -E 's#^.*/([0-9]{8})\.json$#\1#' | sort | head -n 1)"
+            date="$candidate"
+          fi
+          echo "target_date=$date" >> "$GITHUB_OUTPUT"
+          if [ -z "$date" ]; then
+            echo "No pending script candidate; no date is inferred or skipped."
+            exit 0
+          fi
+          echo "FIFO TTS recovery candidate: $date"
+
+      - name: Stop cleanly when no candidate exists
+        if: steps.resolve.outputs.target_date == ''
+        run: echo "No candidate; no TTS request was made."
+
+      - uses: actions/setup-node@v4
+        if: steps.resolve.outputs.target_date != ''
+        with:
+          node-version: '24'
+
+      - uses: actions/setup-python@v5
+        if: steps.resolve.outputs.target_date != ''
+        with:
+          python-version: '3.12'
+
+      - name: Install pinned TTS client
+        if: steps.resolve.outputs.target_date != ''
+        run: python -m pip install --disable-pip-version-check --no-cache-dir edge-tts==7.3.1
+
+      - name: Re-run formal script and news gates
+        if: steps.resolve.outputs.target_date != ''
+        shell: bash
+        env:
+          DATE: ${{ steps.resolve.outputs.target_date }}
+        run: |
+          set -euo pipefail
+          node --test tests/daily_gainers_dual_track.test.js
+          node --test tests/daily_gainers_list_dashboard_slides.test.js
+          node scripts/materialize_daily_gainers_dual_track.js "$DATE"
+          node scripts/validate_daily_gainers_video_script.js "$DATE"
+          node --test tests/daily_gainers_news_narration.test.js
+          node scripts/build_daily_gainers_video_package.js "$DATE"
+          node scripts/validate_daily_gainers_news_narration.js "$DATE" | tee "output/daily-gainers-video/$DATE/news-narration-qa.json"
+          python -m unittest discover -s tests -p 'test_daily_gainers_spoken_text.py'
+          python -m unittest discover -s tests -p 'test_daily_gainers_tts_checkpoint.py'
+
+      - name: Freeze validated final narration plan on a non-upload path
+        if: steps.resolve.outputs.target_date != ''
+        shell: bash
+        env:
+          DATE: ${{ steps.resolve.outputs.target_date }}
+        run: |
+          set -euo pipefail
+          source="output/daily-gainers-video/$DATE/plan.json"
+          destination="research_pending/daily-gainers-render-scripts/$DATE.json"
+          mkdir -p "$(dirname "$destination")"
+          node - "$source" "$destination" <<'NODE'
+          const fs = require('node:fs');
+          const [source, destination] = process.argv.slice(2);
+          const plan = JSON.parse(fs.readFileSync(source, 'utf8'));
+          delete plan.generated_at;
+          fs.writeFileSync(destination, JSON.stringify(plan, null, 2) + '\n');
+          NODE
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$destination"
+          if ! git diff --cached --quiet; then
+            git commit -m "data: freeze validated TTS script $DATE"
+            git fetch origin main
+            git rebase origin/main
+            git push origin HEAD:main
+          fi
+
+      - name: Initialize durable date checkpoint and build bounded queue
+        if: steps.resolve.outputs.target_date != ''
+        id: queue
+        shell: bash
+        env:
+          DATE: ${{ steps.resolve.outputs.target_date }}
+          YOUTUBE_TTS_VOICE: zh-TW-YunJheNeural
+          YOUTUBE_TTS_RATE: '+15%'
+        run: |
+          set -euo pipefail
+          script="research_pending/daily-gainers-render-scripts/$DATE.json"
+          test -s "$script"
+          cp "$script" "$RUNNER_TEMP/frozen-plan.json"
+          branch="tts-audio-pending-$DATE"
+          checkpoint="$RUNNER_TEMP/checkpoint"
+          if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+            git fetch origin "refs/heads/$branch:refs/remotes/origin/$branch"
+            git worktree add -b "$branch" "$checkpoint" "refs/remotes/origin/$branch"
+          else
+            git worktree add -b "$branch" "$checkpoint" HEAD
+          fi
+          mkdir -p "$checkpoint/tts-audio/$DATE"
+          python scripts/daily_gainers_tts_checkpoint.py init \
+            --script "$RUNNER_TEMP/frozen-plan.json" \
+            --date "$DATE" \
+            --manifest "$checkpoint/tts-audio/$DATE/manifest.json" \
+            --checkpoint-dir "$checkpoint/tts-audio/$DATE" \
+            --voice "$YOUTUBE_TTS_VOICE" \
+            --rate "$YOUTUBE_TTS_RATE" \
+            --engine-version "7.3.1"
+          git -C "$checkpoint" add "tts-audio/$DATE/manifest.json"
+          if ! git -C "$checkpoint" diff --cached --quiet; then
+            git -C "$checkpoint" config user.name "github-actions[bot]"
+            git -C "$checkpoint" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git -C "$checkpoint" commit -m "tts: initialize checkpoint $DATE"
+            git -C "$checkpoint" push origin "HEAD:refs/heads/$branch"
+          fi
+          python scripts/daily_gainers_tts_checkpoint.py plan \
+            --manifest "$checkpoint/tts-audio/$DATE/manifest.json" \
+            --checkpoint-dir "$checkpoint/tts-audio/$DATE" --limit 3 > "$RUNNER_TEMP/queue.json"
+          python - "$RUNNER_TEMP/queue.json" "$GITHUB_OUTPUT" <<'PY'
+          import json, sys
+          queue = json.load(open(sys.argv[1], encoding="utf-8"))["scene_ids"]
+          matrix = {"include": [{"scene_id": sid} for sid in queue] or [{"scene_id": 0}]}
+          with open(sys.argv[2], "a", encoding="utf-8") as output:
+              output.write(f"has_work={'true' if queue else 'false'}\n")
+              output.write("matrix=" + json.dumps(matrix, separators=(",", ":")) + "\n")
+          print(json.dumps({"scene_ids": queue}))
+          PY
+          mkdir -p "$RUNNER_TEMP/tts-plan"
+          cp "$RUNNER_TEMP/frozen-plan.json" "$RUNNER_TEMP/tts-plan/plan.json"
+
+      - name: Upload immutable plan for fresh scene runners
+        if: steps.queue.outputs.has_work == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tts-recovery-plan-${{ steps.resolve.outputs.target_date }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/tts-plan/plan.json
+          retention-days: 1
+
+  synthesize:
+    needs: prepare
+    if: needs.prepare.outputs.has_work == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    env:
+      DATE: ${{ needs.prepare.outputs.target_date }}
+      SCENE_ID: ${{ matrix.scene_id }}
+      YOUTUBE_TTS_VOICE: zh-TW-YunJheNeural
+      YOUTUBE_TTS_RATE: '+15%'
+      TAIWAN_STOCK_TTS_MAX_ATTEMPTS: '1'
+    steps:
+      - name: Checkout latest workflow code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          sparse-checkout: |
+            scripts
+          sparse-checkout-cone-mode: false
+
+      - name: Download frozen plan
+        uses: actions/download-artifact@v4
+        with:
+          name: tts-recovery-plan-${{ needs.prepare.outputs.target_date }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/tts-plan
+
+      - name: Restore current checkpoint branch
+        if: env.SCENE_ID != '0'
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch="tts-audio-pending-$DATE"
+          if ! git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+            echo "Checkpoint branch disappeared before scene run" >&2
+            exit 1
+          fi
+          git fetch origin "refs/heads/$branch:refs/remotes/origin/$branch"
+          git worktree add -b "$branch" "$RUNNER_TEMP/checkpoint" "refs/remotes/origin/$branch"
+
+      - name: Apply randomized physical-runner cooldown
+        if: env.SCENE_ID != '0'
+        run: python -c "import random,time; delay=random.uniform(15,35); print(f'cooldown={delay:.1f}s'); time.sleep(delay)"
+
+      - name: Create one-scene plan and synthesize once
+        if: env.SCENE_ID != '0'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/scene"
+          python scripts/daily_gainers_tts_checkpoint.py make-scene-plan \
+            --script "$RUNNER_TEMP/tts-plan/plan.json" --date "$DATE" \
+            --scene-id "$SCENE_ID" --output "$RUNNER_TEMP/scene/plan.json"
+          python scripts/synthesize_daily_gainers_tts.py "$RUNNER_TEMP/scene/plan.json"
+
+      - name: Validate and checkpoint scene to date branch
+        if: env.SCENE_ID != '0'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - "$RUNNER_TEMP/scene/tts-manifest.json" "$SCENE_ID" "$RUNNER_TEMP/scene/boundaries.json" <<'PY'
+          import json, pathlib, sys
+          doc=json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+          scene=next(item for item in doc["scenes"] if int(item["id"]) == int(sys.argv[2]))
+          pathlib.Path(sys.argv[3]).write_text(json.dumps(scene["word_boundaries"], ensure_ascii=False, indent=2)+"\n", encoding="utf-8")
+          PY
+          python scripts/daily_gainers_tts_checkpoint.py record-success \
+            --manifest "$RUNNER_TEMP/checkpoint/tts-audio/$DATE/manifest.json" \
+            --checkpoint-dir "$RUNNER_TEMP/checkpoint/tts-audio/$DATE" \
+            --scene-id "$SCENE_ID" \
+            --audio "$RUNNER_TEMP/scene/audio/$(printf '%02d' "$SCENE_ID").mp3" \
+            --boundaries "$RUNNER_TEMP/scene/boundaries.json" \
+            --run-id "$GITHUB_RUN_ID" \
+            --generated-manifest "$RUNNER_TEMP/scene/tts-manifest.json"
+          git -C "$RUNNER_TEMP/checkpoint" add "tts-audio/$DATE"
+          git -C "$RUNNER_TEMP/checkpoint" config user.name "github-actions[bot]"
+          git -C "$RUNNER_TEMP/checkpoint" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C "$RUNNER_TEMP/checkpoint" commit -m "tts: checkpoint $DATE scene $SCENE_ID"
+          git -C "$RUNNER_TEMP/checkpoint" push origin "HEAD:refs/heads/tts-audio-pending-$DATE"
+
+  schedule-timing-summary:
+    # schedule-timing-summary:v1
+    name: 排程時間摘要
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository for schedule summary
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Write schedule timing summary
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/write_workflow_schedule_summary.js
