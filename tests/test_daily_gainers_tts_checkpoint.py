@@ -101,6 +101,7 @@ class TtsCheckpointTests(unittest.TestCase):
 
     def test_cleanup_requires_receipt_bound_to_manifest(self):
         self.record_scene(1)
+        self.record_scene(2)
         current = json.loads(self.manifest.read_text(encoding="utf-8"))
         receipt = {
             "status": "uploaded",
