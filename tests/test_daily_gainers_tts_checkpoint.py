@@ -129,7 +129,7 @@ class TtsRecoveryWorkflowContractTests(unittest.TestCase):
         workflow_path = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "daily-gainers-tts-scene-recovery.yml"
         workflow = workflow_path.read_text(encoding="utf-8")
         self.assertIn("  synthesize:\n", workflow)
-        synthesize = workflow.split("  synthesize:\\n", 1)[1].split("\n  sync-status:\n", 1)[0]
+        synthesize = workflow.split("  synthesize:\n", 1)[1].split("\n  sync-status:\n", 1)[0]
 
         setup_step = synthesize.find("uses: actions/setup-python@v6")
         install_step = synthesize.find("name: Install pinned Edge TTS client")
