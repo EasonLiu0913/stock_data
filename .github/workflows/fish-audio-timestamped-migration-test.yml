@@ -101,10 +101,20 @@ jobs:
           print(f"Fish Audio migration checks PASS: duration={duration:.3f}s (minimum 50s; no upper cap), words={len(alignment['timeline'])}")
           PY
 
-      - name: Upload bounded test evidence
+      - name: Upload successful bounded test evidence
+        if: success()
         uses: actions/upload-artifact@v7
         with:
           name: fish-audio-timestamped-migration-${{ github.run_id }}
           path: ${{ runner.temp }}/fish-audio-migration-test/
           if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload payload-free failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: fish-audio-timestamped-diagnostics-${{ github.run_id }}
+          path: ${{ runner.temp }}/fish-audio-migration-test/tts-transport-diagnostics.json
+          if-no-files-found: ignore
           retention-days: 7
