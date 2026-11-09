@@ -2736,3 +2736,17 @@ The owner authorized merging passing repair PRs without a separate review reques
 - A separate current-main schedule-summary audit (run `42559783527`, job `128973448030`) found 68 of 247 workflow files still need the repository-pinned summary normalization. This is a distinct baseline failure to diagnose and repair through its own bounded migration; it does not authorize folding unrelated workflow changes into the TTS PR.
 
 Prompt A remains incomplete; Prompt B remains ineligible. Next: revalidate the synchronized #57 head, merge after its relevant checks pass, then continue the first FIFO date `20261103` by resolving its official numeric receipt and current-schema opening prerequisites. Preserve all historical failures and frozen acceptance.
+
+
+
+## MVP10-A-TTS-PERSISTENCE-R1 — 20261103 official numeric root-cause repair (2026-11-09 04:33 UTC)
+
+Prompt A remains incomplete; Prompt B remains ineligible. The prior official numeric verification for FIFO date 20261103 is run [42506095698](https://github.com/EasonLiu0913/stock_data/actions/runs/42506095698), job 128808956836, on old main SHA `c700e78fc34fbbe5ae8036862738ea4fd8e87179`. It failed closed because stored Facts did not match the dated official dealer source for `1802` and `00686R` (`dealer.net_shares` and derived `dealer.net_lots`). The run log is durable; this is a data-generation defect, not a reason to mark the receipt PASS.
+
+PR #59 already repaired `scripts/build_daily_gainers_ai_facts.js` to select the published dealer total only after checking component A + component B equals that total across official rows. However, `data_daily_gain_over_5/analysis-facts/20261103.json` still has the old generated values; rerunning the verifier alone would replay the same mismatch. No official PASS receipt exists for 20261103.
+
+Bounded repair in progress: extend `.github/workflows/daily-gainers-official-numeric-verification.yml` with an explicit `refresh_facts` boolean (default false). When explicitly true for one target date, the workflow rebuilds only that date's Facts using the merged current-main builder and committed dated source snapshots, validates the Facts contract, then runs the existing official numeric verifier. It commits refreshed Facts only together with a genuine verifier PASS receipt. Failed audit output remains an artifact; no failed Facts or PASS receipt is committed. The workflow has no Pages, Render, or YouTube job. The existing verifier behavior remains unchanged when `refresh_facts=false`.
+
+Repair branch: `codex/repair-20261103-official-facts`; workflow implementation commit: `27da72652f42da9795959d74daf7f298eeee8782`. Do not rerun the old failed run because it checks old SHA. Next: open a PR, require its relevant checks to pass, merge under the owner's standing authorization, then dispatch the latest-main workflow once with `target_date=20261103` and `refresh_facts=true`. Verify the actual run/job log, PASS receipt, facts/receipt blobs on main, and run identity before TTS preflight. The first run after repair, rather than the historical failure, is the only candidate for new evidence.
+
+PR #57 is merged as `2d4e7b67c31eecc53e9ec71fd91763dafdd2357b`; the prior handoff paragraph saying it remains active is stale and should be corrected in the next durable checkpoint. Preserve the frozen Prompt A/B, all historic FAIL/R1/R2 conclusions, and the YouTube release lock.
