@@ -2750,3 +2750,17 @@ Bounded repair in progress: extend `.github/workflows/daily-gainers-official-num
 Repair branch: `codex/repair-20261103-official-facts`; initial workflow implementation commit `27da72652f42da9795959d74daf7f298eeee8782`, hardened for post-rebase revalidation in `ab09e23e14672af78d7754158b3a9b3086f133a9`. Do not rerun the old failed run because it checks old SHA. Next: open a PR, require its relevant checks to pass, merge under the owner's standing authorization, then dispatch the latest-main workflow once with `target_date=20261103` and `refresh_facts=true`. Verify the actual run/job log, PASS receipt, facts/receipt blobs on main, and run identity before TTS preflight. The first run after repair, rather than the historical failure, is the only candidate for new evidence.
 
 PR #57 is merged as `2d4e7b67c31eecc53e9ec71fd91763dafdd2357b`; the prior handoff paragraph saying it remains active is stale and should be corrected in the next durable checkpoint. Preserve the frozen Prompt A/B, all historic FAIL/R1/R2 conclusions, and the YouTube release lock.
+
+
+## MVP10-A-TTS-PERSISTENCE-R1 — 20261103 official numeric gate closed (2026-11-09 05:18 UTC)
+
+Prompt A remains INCOMPLETE; Prompt B remains ineligible. The root cause recorded above is now repaired and the date-specific official numeric gate has durable PASS evidence:
+
+- PR #61, `fix: rebuild dated Facts before official numeric verification`, merged to main as `4de4246dc0150592597ef708be8d41820c12412e` after the required checks passed.
+- Main workflow run [42565299967](https://github.com/EasonLiu0913/stock_data/actions/runs/42565299967), job `128990405335`, dispatched with `target_date=20261103` and `refresh_facts=true`, completed successfully. The rebuild step and original official numeric reconciliation both passed; the fail-closed step was correctly skipped.
+- The run committed refreshed `data_daily_gain_over_5/analysis-facts/20261103.json` and `data_daily_gain_over_5/verification/official-numeric/20261103.json` to main in commit `d797f4560846b29ceb7a8a74e4413c50ec27d81c`. Facts SHA-256: `b89bbaf21a6a78bf70e079cb7179abec7547b5162d9894b5ffec2787aa5e600b`.
+- Remote receipt says `status=PASS`, `check_count=117`, `failed_count=0`, target date `20261103`, and binds run `42565299967` to source/main SHA `4de4246dc0150592597ef708be8d41820c12412e`. Audit artifact `official-numeric-20261103-42565299967` is retained (artifact id `13650663775`, SHA-256 `f7cb2f1559fab8873bf6be803253f25af4879f210e1921aa2f6ebfc0eea7629c`).
+
+The next FIFO blocker remains the same-date opening input: the prior checkpoint reports its legacy `breadth` field does not match the current opening materializer contract. Do not proceed to 20261104 or TTS recovery yet. Next, identify the exact 20261103 opening blob, current contract/validator and first mismatched field; repair the input producer or mapping within owner-authorized baseline repair scope, preserve any historical failure, then run the relevant date-scoped gate once against the changed input and verify the resulting remote blob/receipt. Do not infer PASS from the numeric receipt.
+
+No A/B acceptance or history changed. No TTS recovery, Render, Pages or YouTube workflow was run. YouTube upload/schedule/publication and release-lock changes remain prohibited.
