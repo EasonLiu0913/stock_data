@@ -66,17 +66,33 @@ jobs:
         if: steps.verify.outcome == 'success'
         env:
           TARGET_DATE: ${{ inputs.target_date }}
+          REFRESH_FACTS: ${{ inputs.refresh_facts }}
         run: |
           set -euo pipefail
           FILE="data_daily_gain_over_5/verification/official-numeric/$TARGET_DATE.json"
           FACTS="data_daily_gain_over_5/analysis-facts/$TARGET_DATE.json"
-          node -e "const r=require('./'+process.argv[1]);if(r.status!=='PASS'||r.target_date!==process.argv[2])process.exit(1)" "$FILE" "$TARGET_DATE"
+          validate_receipt() {
+            node -e "const r=require('./'+process.argv[1]);if(r.status!=='PASS'||r.target_date!==process.argv[2])process.exit(1)" "$FILE" "$TARGET_DATE"
+          }
+          validate_receipt
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -- "$FACTS" "$FILE"
-          git diff --cached --quiet && exit 0
+          if git diff --cached --quiet; then exit 0; fi
           git commit -m "verification: official numeric PASS $TARGET_DATE [run ${{ github.run_id }}]"
-          git pull --rebase origin main
+          before_rebase="$(git rev-parse HEAD)"
+          git fetch origin main
+          git rebase origin/main
+          if [ "$(git rev-parse HEAD)" != "$before_rebase" ]; then
+            if [ "$REFRESH_FACTS" = "true" ]; then
+              node scripts/build_daily_gainers_ai_facts.js "$TARGET_DATE"
+              node scripts/daily_gainers_ai_contract_cli.js assert-facts "$FACTS"
+            fi
+            node scripts/verify_daily_gainers_official_numeric.js "$TARGET_DATE"
+            validate_receipt
+            git add -- "$FACTS" "$FILE"
+            git commit --amend --no-edit
+          fi
           git push origin HEAD:main
       - name: Fail closed when source numeric reconciliation fails
         if: steps.verify.outcome != 'success'
