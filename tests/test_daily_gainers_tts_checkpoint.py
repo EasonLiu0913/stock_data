@@ -143,7 +143,9 @@ class TtsCheckpointTests(unittest.TestCase):
             "parser_version": "fish-timestamp-parser-v1",
             "pipeline_version": "fish-audio-timestamp-parser-v1",
         }
-        self.initialize(voice=f"fish:{fish['reference_id']}", rate="speed=1.15", provider_identity=fish)
+        initialized = self.initialize(voice=f"fish:{fish['reference_id']}", rate="speed=1.15", provider_identity=fish)
+        self.assertEqual(initialized["pipeline_version"], checkpoint.PIPELINE_VERSION)
+        self.assertEqual(initialized["provider_identity"]["pipeline_version"], fish["pipeline_version"])
         self.record_scene(1, provider_identity=fish)
         self.record_scene(2, provider_identity=fish)
         current = self.initialize(voice=f"fish:{fish['reference_id']}", rate="speed=1.15", provider_identity=fish)
