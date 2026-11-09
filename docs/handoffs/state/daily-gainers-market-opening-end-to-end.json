@@ -6,7 +6,7 @@
   "goal_id": "goal-v3/MVP-10DAY-v1",
   "ultimate_goal_status": "not_complete",
   "current_phase_id": "MVP10-A-FISH-AUDIO-TIMESTAMP-MIGRATION-R1",
-  "phase_status": "active",
+  "phase_status": "blocked",
   "round_id": "MVP10-A-FISH-AUDIO-TIMESTAMP-MIGRATION-R1",
   "prompt_a_status": "in_progress",
   "prompt_b_status": "not_eligible",
@@ -19,7 +19,7 @@
   "mvp10_a_acceptance_changed": false,
   "mvp10_b_status": "frozen_not_eligible",
   "mvp10_b_acceptance_changed": false,
-  "research_progress_status": "TTS_REQUEST_SHAPE_EXPERIMENT_PROMPT_B_PASS",
+  "research_progress_status": "PROGRESS",
   "research_progress_evidence": [
     "https://github.com/EasonLiu0913/stock_data/actions/runs/41799842426",
     "https://github.com/EasonLiu0913/stock_data/actions/runs/41799842426/artifacts/13308740997",
@@ -45,10 +45,14 @@
     "Run 42481331662/job 128735340850 success; artifact 13618111782 sha256 6df300973424c6967973eb5f3bc72b4e4befe759d3663b65cfae05075ec5d911; user-provided diagnostic sha256 7767f9d375a6166869e4c7f0574e9bbec69a137b1a4dbf2dc271d9ae3a580e02; 11 connections, combined failed first, ten outputs 6/10.",
     "Run 42488724106/job 128756179710 success; artifact 13621267399 sha256 015dd18e83fdd8b28210e57c8a484ce3d1ca611718d25cc2edd7bc4eb0404cb8; user-provided diagnostic sha256 baae4efb36218db307bc7a3f494bb50e83cb0564f02fa351328fc78eadbbd9a6; 13 connections, combined success with 3, ten outputs 7/10.",
     "Independent source audit recomputed all combined and ten-segment SHA-256 inputs from source blob f690c703058a4367ac1f619dd786d61f9d55eab0 and normalizer blob 447ad17343e7bbb333130832342b6af2831441a9; every hash and byte count matched both diagnostics.",
-    "Child Prompt B PASS; no provider quota inferred and no production TTS, Render, Pages or YouTube changes. Parent remains MVP10-A-R2 WAITING_TTS."
+    "Child Prompt B PASS; no provider quota inferred and no production TTS, Render, Pages or YouTube changes. Parent remains MVP10-A-R2 WAITING_TTS.",
+    "PR #77 merged as main 90c7646eec9dfeed9d5eac8894dd6cc1707dfab2; Fish timeline diagnostic parser and failure artifact plumbing are durable.",
+    "Focused Fish timing tests 11/11 PASS; py_compile PASS; PR check runs 42635239190, 42635238974, 42635238967 PASS.",
+    "Single bounded post-merge recovery run 42637145283 on main 90c7646eec9dfeed9d5eac8894dd6cc1707dfab2; prepare PASS, synthesize scenes 1/2/3 failed with non_positive_duration (jobs 129228545447, 129228545641, 129228545637); diagnostic artifacts 13684156882, 13683087469, 13684002692.",
+    "Main pending manifest research_pending/daily-gainers-tts/20261103.json blob 8a9d7e7382ef49866337c440966b61aa54b5d01a has scenes 1–5 pending with no audio/WordBoundary hashes; failed scenes were not checkpointed as success."
   ],
-  "research_progress_reason": "The TTS request-shape diagnostic child passed its frozen A/B verification. Across two automatic PR runs, the combined variant failed once then succeeded using three actual connections; the ten-output variant remained partial (6/10 then 7/10). This is limited feasibility evidence, not a provider quota or full-production recovery signal. Parent MVP10-A remains WAITING_TTS and its acceptance is unchanged.",
-  "next_action": "Resume parent MVP10-A Prompt A within its frozen acceptance; evaluate the TTS evidence without changing production behavior or triggering Render absent an authorized recovery step.",
+  "research_progress_reason": "The merged fix now normalizes only backward-start jitter within the existing tolerance and classifies distinct timing violations. The one authorized bounded live run exposed a different remaining provider-output condition: Fish timestamp segment(s) have non-positive duration (end_ms <= start_ms), which the frozen contract requires to fail closed. No acceptance was weakened and no repeated run was started.",
+  "next_action": "Owner: inspect the three retained diagnostic artifacts and decide whether to keep the frozen fail-closed zero-duration rule or authorize a versioned change proposal. Do not manually dispatch/rerun date 20261103 with unchanged script/provider input. The existing workflow schedule is */15 and may naturally launch another run while scenes remain pending.",
   "automatic_continuation_permitted": false,
   "plan_changed": true,
   "publication_authorized": false,
@@ -56,7 +60,7 @@
   "youtube_scheduling_authorized": false,
   "public_release_authorized": false,
   "render_authorized_in_repair_phase": false,
-  "updated_at": "2026-11-08T11:07:28Z",
+  "updated_at": "2026-11-09T14:55:00Z",
   "prompt_b_failure_evidence": [
     "R1 frozen Prompt B criterion 5 required verifying no prohibited workflow was triggered.",
     "Render-only push-trigger runs: 42401534137 (20261102), 42401534168 (20261103); both failed before render and produced no artifacts.",
@@ -584,10 +588,63 @@
     "reference_id": "e7af89da8abc4fbdacd9a10ab9881933",
     "prosody_speed": 1.15,
     "parent_phase_status": "incomplete_superseded_owner_approved_for_provider_selection_only",
-    "live_timestamp_test_status": "not_run",
-    "parser_tests": "4/4 PASS locally",
+    "live_timestamp_test_status": "bounded_post_fix_recovery_failed_non_positive_duration",
+    "parser_tests": "11/11 PASS",
     "youtube_upload_authorized": false,
     "youtube_scheduling_authorized": false,
-    "public_release_authorized": false
+    "public_release_authorized": false,
+    "latest_live_validation_run": 42637145283,
+    "diagnostic_classification": "non_positive_duration (scene ids 1,2,3)",
+    "implementation_commit": "90c7646eec9dfeed9d5eac8894dd6cc1707dfab2",
+    "checkpoint_status": "all five scenes pending; no audio or WordBoundary hashes",
+    "acceptance_changed": false
+  },
+  "current_blocker": "Fish timestamped response for target date 20261103 contains non-positive-duration timeline segment(s); exact numeric boundaries are only in run diagnostic artifacts. Frozen acceptance rejects these values. The existing */15 schedule may naturally select the still-pending unchanged date again; no manual dispatch/rerun should be made without changed inputs or an owner-approved schedule/acceptance decision.",
+  "planned_research": {
+    "question": "Do the retained scene diagnostic artifacts show Fish emitting zero-duration events for spoken text, or does adapter conversion collapse a positive provider interval?",
+    "method": "Read artifacts 13684156882, 13683087469, and 13684002692 through authenticated GitHub UI; compare raw start/end fields with the Fish-to-WordBoundary conversion in main.",
+    "expected_evidence": "Per-scene offending timestamp values plus provider/adapter boundary mapping, without audio payload or secret.",
+    "success_criterion": "Identify whether the first invalid interval originates in the Fish response or in conversion; retain fail-closed behavior until the frozen contract permits a correction.",
+    "fallback": "If artifacts cannot be downloaded, preserve current failure, do not rerun unchanged input, and request owner decision through the versioned proposal process."
+  },
+  "anti_loop": {
+    "repeats_previous_method": false,
+    "prior_attempt": "Run 42637145283 is the single post-fix bounded live validation; all three queued scenes failed non_positive_duration.",
+    "distinct_next_step": "Inspect retained numeric diagnostics and compare provider intervals against adapter conversion; only change code if that proves an in-scope adapter defect. Otherwise ask owner for a versioned acceptance decision.",
+    "stop_condition": "No retry on the same date/script/provider fingerprint; stop until a different input, demonstrated adapter defect, or owner-approved versioned change exists."
+  },
+  "fish_timestamp_migration_r1_checkpoint": {
+    "status": "BOUNDED_VALIDATION_FAILED_PROVIDER_TIMING",
+    "main_before": "74603427f00610eb46c82c52d8e9bdc1660d3b36",
+    "implementation_commit": "90c7646eec9dfeed9d5eac8894dd6cc1707dfab2",
+    "prompt_a_complete": false,
+    "prompt_b_eligible": false,
+    "run_id": 42637145283,
+    "date": "20261103",
+    "result": "prepare_pass; scenes_1_3_failed_non_positive_duration; sync_status_pass; checkpoint_all_pending",
+    "jobs": [
+      129228545447,
+      129228545641,
+      129228545637,
+      129231763563
+    ],
+    "artifacts": [
+      {
+        "id": 13684156882,
+        "sha256": "13281899b583e43c0e0f01c93f143a490933e303384729ed80f7e4f9bc887fcf"
+      },
+      {
+        "id": 13683087469,
+        "sha256": "8eeaafe02aefa0a97a6f11a48c5985971dd9fac28ff51c0129c69494cbc18672"
+      },
+      {
+        "id": 13684002692,
+        "sha256": "147491d358c58dda4e523fc8b994048e60a916865f6660d71393b285f4bff6e2"
+      }
+    ],
+    "pending_manifest_blob": "8a9d7e7382ef49866337c440966b61aa54b5d01a",
+    "parser_tests": "11/11 PASS",
+    "pr_checks": "42635239190,42635238974,42635238967 PASS",
+    "follow_up": "Inspect diagnostic artifacts before any changed-input verification; zero-duration acceptance remains frozen."
   }
 }
