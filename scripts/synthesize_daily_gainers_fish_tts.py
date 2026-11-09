@@ -173,6 +173,20 @@ def run(plan_path: Path, scene_id: int) -> dict:
     (plan_path.parent / "tts-manifest.json").write_text(
         json.dumps(generated, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
+    (plan_path.parent / "tts-transport-diagnostics.json").write_text(
+        json.dumps({
+            "provider": "fish.audio",
+            "model": MODEL,
+            "target_date": plan["target_date"],
+            "scene_id": scene_id,
+            "status": "success",
+            "http_content_type": content_type,
+            "audio_bytes": len(audio),
+            "audio_sha256": scene_doc["sha256"],
+            "alignment_chunks": len(alignments),
+            "alignment_coverage": round(coverage, 6),
+        }, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8"
+    )
     (plan_path.parent / "fish-alignment.json").write_text(
         json.dumps({
             "provider": "fish.audio",
