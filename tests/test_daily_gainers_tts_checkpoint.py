@@ -90,6 +90,7 @@ class TtsCheckpointTests(unittest.TestCase):
             "normalize": False,
             "language": "zh-TW",
             "parser_version": "fish-timestamp-parser-v1",
+            "pipeline_version": "fish-audio-timestamp-parser-v1",
         }
         self.record_scene(1)
         current = self.initialize(voice="fish:e7af89da8abc4fbdacd9a10ab9881933", rate="speed=1.15", provider_identity=fish)
@@ -110,6 +111,7 @@ class TtsCheckpointTests(unittest.TestCase):
             "normalize": False,
             "language": "zh-TW",
             "parser_version": "fish-timestamp-parser-v1",
+            "pipeline_version": "fish-audio-timestamp-parser-v1",
         }
         voice = f"fish:{fish['reference_id']}"
         self.initialize(voice=voice, rate="speed=1.15", provider_identity=fish)
@@ -138,6 +140,7 @@ class TtsCheckpointTests(unittest.TestCase):
             "normalize": False,
             "language": "zh-TW",
             "parser_version": "fish-timestamp-parser-v1",
+            "pipeline_version": "fish-audio-timestamp-parser-v1",
         }
         self.initialize(voice=f"fish:{fish['reference_id']}", rate="speed=1.15", provider_identity=fish)
         self.record_scene(1, provider_identity=fish)
@@ -159,6 +162,7 @@ class TtsCheckpointTests(unittest.TestCase):
             "normalize": False,
             "language": "zh-TW",
             "parser_version": "fish-timestamp-parser-v1",
+            "pipeline_version": "fish-audio-timestamp-parser-v1",
         }
         self.initialize(voice="fish:e7af89da8abc4fbdacd9a10ab9881933", rate="speed=1.15", provider_identity=fish)
         self.record_scene(1, provider_identity=fish)
@@ -179,6 +183,7 @@ class TtsCheckpointTests(unittest.TestCase):
             "normalize": False,
             "language": "zh-TW",
             "parser_version": "fish-timestamp-parser-v1",
+            "pipeline_version": "fish-audio-timestamp-parser-v1",
         }
         self.initialize(voice="fish:e7af89da8abc4fbdacd9a10ab9881933", rate="speed=1.15", provider_identity=fish)
         with self.assertRaisesRegex(ValueError, "GENERATED_PROVIDER_IDENTITY_MISMATCH"):
