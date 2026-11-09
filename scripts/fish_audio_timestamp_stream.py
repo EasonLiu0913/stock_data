@@ -1,3 +1,4 @@
+/Users/eason/.zlogin:7: nice(5) failed: operation not permitted
 #!/usr/bin/env python3
 """Fish Audio timestamped TTS transport and deterministic alignment adapter."""
 
@@ -30,7 +31,28 @@ SPEED = 1.15
 
 
 class FishStreamError(RuntimeError):
-    pass
+    def __init__(self, message: str, *, code: str = "fish_stream_error", details: dict | None = None):
+        super().__init__(message)
+        self.code = code
+        self.details = details or {}
+
+
+TIMESTAMP_JITTER_TOLERANCE_SECONDS = Decimal("0.25")
+
+
+def write_failure_diagnostic(output_dir: Path, *, scene_id: int, error: FishStreamError) -> Path:
+    """Persist payload-free failure context so Actions artifacts explain the failed gate."""
+    output_dir.mkdir(parents=True, exist_ok=True)
+    path = output_dir / "tts-transport-diagnostics.json"
+    path.write_text(json.dumps({
+        "provider": "fish.audio",
+        "status": "failure",
+        "scene_id": scene_id,
+        "error_code": error.code,
+        "error": str(error),
+        "details": error.details,
+    }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return path
 
 
 def _parse_event(data_lines: list[str]) -> dict | None:
@@ -119,8 +141,24 @@ def build_global_timeline(alignment_by_chunk: dict[int, dict]) -> list[dict]:
                 local_end = float(segment["end"])
             except (KeyError, TypeError, ValueError) as error:
                 raise FishStreamError("Fish Audio alignment segment has invalid times") from error
-            if local_start < previous_start or local_start < 0 or local_end < local_start:
-                raise FishStreamError("Fish Audio alignment times are not ordered")
+            if local_start < 0:
+                raise FishStreamError(
+                    "Fish Audio alignment has a negative start",
+                    code="negative_start",
+                    details={"chunk_seq": seq, "start_seconds": local_start},
+                )
+            if local_start < previous_start:
+                raise FishStreamError(
+                    "Fish Audio alignment starts are not ordered within a chunk",
+                    code="chunk_start_order_violation",
+                    details={"chunk_seq": seq, "start_seconds": local_start, "previous_start_seconds": previous_start},
+                )
+            if local_end < local_start:
+                raise FishStreamError(
+                    "Fish Audio alignment segment has a negative duration",
+                    code="negative_duration",
+                    details={"chunk_seq": seq, "start_seconds": local_start, "end_seconds": local_end},
+                )
             if local_end > item["audio_duration"] + 0.25:
                 raise FishStreamError("Fish Audio alignment exceeds its chunk duration")
             previous_start = local_start
@@ -138,35 +176,86 @@ def timeline_to_word_boundaries(timeline: list[dict], media_duration_seconds: fl
     try:
         media_duration = Decimal(str(media_duration_seconds))
     except (InvalidOperation, ValueError) as error:
-        raise FishStreamError("Fish Audio media duration is invalid") from error
+        raise FishStreamError("Fish Audio media duration is invalid", code="invalid_media_duration") from error
     if not media_duration.is_finite() or media_duration <= 0:
-        raise FishStreamError("Fish Audio media duration is invalid")
+        raise FishStreamError("Fish Audio media duration is invalid", code="invalid_media_duration")
 
     boundaries = []
     previous_start = Decimal("-1")
     for item in timeline:
         if not isinstance(item, dict) or not isinstance(item.get("text"), str) or not item["text"]:
-            raise FishStreamError("Fish Audio timeline segment has invalid text")
+            raise FishStreamError("Fish Audio timeline segment has invalid text", code="invalid_segment_text")
         try:
             start = Decimal(str(item["start"]))
             end = Decimal(str(item["end"]))
         except (KeyError, InvalidOperation, TypeError, ValueError) as error:
-            raise FishStreamError("Fish Audio timeline segment has invalid times") from error
-        if (not start.is_finite() or not end.is_finite() or start < 0
-                or end <= start or start < previous_start):
-            raise FishStreamError("Fish Audio timeline is not valid for WordBoundary conversion")
+            raise FishStreamError("Fish Audio timeline segment has invalid times", code="invalid_segment_times") from error
+        if not start.is_finite() or not end.is_finite():
+            raise FishStreamError(
+                "Fish Audio timeline contains a non-finite timestamp",
+                code="non_finite_timestamp",
+                details={"start_seconds": str(start), "end_seconds": str(end)},
+            )
+        if start < 0:
+            raise FishStreamError(
+                "Fish Audio timeline has a negative start",
+                code="negative_start",
+                details={"start_seconds": str(start)},
+            )
+        if end <= start:
+            raise FishStreamError(
+                "Fish Audio timeline segment has a non-positive duration",
+                code="non_positive_duration",
+                details={"start_seconds": str(start), "end_seconds": str(end)},
+            )
+        if start < previous_start:
+            backward_jitter = previous_start - start
+            if backward_jitter <= TIMESTAMP_JITTER_TOLERANCE_SECONDS:
+                original_start = start
+                start = previous_start
+                if end <= start:
+                    raise FishStreamError(
+                        "Fish Audio backward timestamp jitter collapses the segment duration",
+                        code="jitter_collapses_duration",
+                        details={
+                            "start_seconds": str(original_start),
+                            "normalized_start_seconds": str(start),
+                            "end_seconds": str(end),
+                            "backward_jitter_seconds": str(backward_jitter),
+                            "tolerance_seconds": str(TIMESTAMP_JITTER_TOLERANCE_SECONDS),
+                        },
+                    )
+            else:
+                raise FishStreamError(
+                    "Fish Audio timeline start moves backwards beyond the accepted jitter tolerance",
+                    code="start_order_violation",
+                    details={
+                        "start_seconds": str(start),
+                        "previous_start_seconds": str(previous_start),
+                        "backward_jitter_seconds": str(backward_jitter),
+                        "tolerance_seconds": str(TIMESTAMP_JITTER_TOLERANCE_SECONDS),
+                    },
+                )
         if end > media_duration:
-            raise FishStreamError("Fish Audio timeline exceeds MP3 duration")
+            raise FishStreamError(
+                "Fish Audio timeline exceeds MP3 duration",
+                code="end_after_media_duration",
+                details={"end_seconds": str(end), "media_duration_seconds": str(media_duration)},
+            )
 
         offset = int((start * Decimal(10_000_000)).to_integral_value(rounding=ROUND_HALF_UP))
         duration = int(((end - start) * Decimal(10_000_000)).to_integral_value(rounding=ROUND_HALF_UP))
         if duration <= 0:
-            raise FishStreamError("Fish Audio timeline segment rounds to zero duration")
+            raise FishStreamError(
+                "Fish Audio timeline segment rounds to zero duration",
+                code="duration_rounds_to_zero",
+                details={"start_seconds": str(start), "end_seconds": str(end)},
+            )
         boundaries.append({"text": item["text"], "offset": offset, "duration": duration})
         previous_start = start
 
     if not boundaries:
-        raise FishStreamError("Fish Audio timeline is empty")
+        raise FishStreamError("Fish Audio timeline is empty", code="empty_timeline")
     return boundaries
 
 
@@ -186,7 +275,15 @@ def validate_alignment(source_text: str, timeline: list[dict], alignment_by_chun
     previous_end = 0.0
     for item in timeline:
         if item["start"] + 0.25 < previous_end:
-            raise FishStreamError("Fish Audio global timeline is not monotonic")
+            raise FishStreamError(
+                "Fish Audio global timeline overlap exceeds the accepted tolerance",
+                code="alignment_overlap_exceeds_tolerance",
+                details={
+                    "start_seconds": item["start"],
+                    "previous_end_seconds": previous_end,
+                    "tolerance_seconds": float(TIMESTAMP_JITTER_TOLERANCE_SECONDS),
+                },
+            )
         previous_end = max(previous_end, item["end"])
     return coverage
 
@@ -242,7 +339,7 @@ def request_tts(text: str, api_key: str) -> tuple[bytes, dict[int, dict], str]:
         raise FishStreamError(f"Fish Audio transport failed ({type(error.reason).__name__})") from error
 
 
-def run(plan_path: Path, scene_id: int, output_dir: Path) -> dict:
+def _run(plan_path: Path, scene_id: int, output_dir: Path) -> dict:
     api_key = os.environ.get("FISH_API_KEY", "")
     if not api_key:
         raise FishStreamError("FISH_API_KEY is not configured")
@@ -301,6 +398,21 @@ def run(plan_path: Path, scene_id: int, output_dir: Path) -> dict:
         "audio_bytes", "audio_sha256", "alignment_coverage",
     )}, ensure_ascii=False))
     return manifest
+
+
+def run(plan_path: Path, scene_id: int, output_dir: Path) -> dict:
+    try:
+        return _run(plan_path, scene_id, output_dir)
+    except FishStreamError as error:
+        diagnostic_path = write_failure_diagnostic(output_dir, scene_id=scene_id, error=error)
+        print(json.dumps({
+            "provider": "fish.audio",
+            "status": "failure",
+            "scene_id": scene_id,
+            "error_code": error.code,
+            "diagnostic_path": str(diagnostic_path),
+        }, ensure_ascii=False), file=sys.stderr)
+        raise
 
 
 def main() -> None:
