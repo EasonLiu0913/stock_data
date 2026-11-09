@@ -284,6 +284,12 @@ class TtsRecoveryWorkflowContractTests(unittest.TestCase):
         self.assertNotIn("synthesize_daily_gainers_fish_tts.py --plan", render)
         self.assertIn('"engine":source["engine"]', render)
 
+    def test_srt_builder_accepts_only_explicit_fish_provider_manifest(self):
+        srt = self.read_head("scripts/build_daily_gainers_srt.py")
+        self.assertIn('tts_engine not in ("edge-tts", "fish.audio")', srt)
+        self.assertIn('tts_manifest["provider_identity"].get("provider") != "fish.audio"', srt)
+        self.assertIn('tts_scene.get("engine") != tts_engine', srt)
+
 
 if __name__ == "__main__":
     unittest.main()
