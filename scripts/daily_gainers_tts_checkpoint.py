@@ -77,7 +77,7 @@ def scene_fingerprint(scene_id, text, voice, rate, engine_version, provider_iden
         if provider_identity.get("provider") != "fish.audio":
             raise ValueError("FISH_PROVIDER_IDENTITY_INVALID")
         if any(not isinstance(provider_identity[key], str) or not provider_identity[key] for key in (
-            "endpoint", "model", "reference_id", "format", "language", "parser_version"
+            "endpoint", "model", "reference_id", "format", "language", "parser_version", "pipeline_version"
         )):
             raise ValueError("FISH_PROVIDER_IDENTITY_INVALID")
         if (not isinstance(provider_identity["prosody_speed"], (int, float))
