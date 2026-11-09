@@ -1,4 +1,3 @@
-/Users/eason/.zlogin:7: nice(5) failed: operation not permitted
 #!/usr/bin/env python3
 """Production Fish Audio timestamped synthesizer for one frozen narration scene.
 
