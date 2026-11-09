@@ -197,7 +197,7 @@ def initialize(script_path, target_date, manifest_path, checkpoint_dir, voice, r
         })
     manifest = {
         "schema_version": SCHEMA_VERSION,
-        "pipeline_version": PIPELINE_VERSION,
+        "pipeline_version": provider_identity["pipeline_version"] if provider_identity else PIPELINE_VERSION,
         "target_date": target_date,
         "script_sha256": script_sha,
         "voice": voice,
