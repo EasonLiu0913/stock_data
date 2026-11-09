@@ -78,7 +78,7 @@ jobs:
           test -s "$audio"
           test "$(file --brief --mime-type "$audio")" = "audio/mpeg"
           probe="$(ffprobe -v error -select_streams a:0 -show_entries stream=codec_name,sample_rate,channels,bit_rate -show_entries format=duration -of json "$audio")"
-          printf '%s\\n' "$probe" > "$RUNNER_TEMP/fish-audio-migration-test/ffprobe.json"
+          printf '%s\n' "$probe" > "$RUNNER_TEMP/fish-audio-migration-test/ffprobe.json"
           python - "$manifest" "$alignment" "$RUNNER_TEMP/fish-audio-migration-test/ffprobe.json" <<'PY'
           import json, sys
           manifest = json.load(open(sys.argv[1], encoding="utf-8"))
