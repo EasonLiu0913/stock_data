@@ -2,11 +2,14 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const {readFrozenArtifact}=require('./helpers/frozen_institutional_audit_artifact');
 const {
   ALLOWED_DECISIONS,
   evaluateReadiness,
   buildAudit,
 } = require('../scripts/audit_institutional_accumulation_catalyst_schedule_enablement_readiness');
+const ARTIFACT='data_research/institutional-flow/institutional-accumulation-catalyst-schedule-enablement-readiness-v1.json';
+const ARTIFACT_SHA256='8e24203d232194ff4046370625f369e9920fd23325163403e71836c740799fce';
 
 function evidence(overrides={}) {
   return {
@@ -35,8 +38,8 @@ test('upstream/protected/trigger defect fails closed', () => {
   assert.equal(evaluateReadiness(evidence({trigger:false})), 'insufficient_or_conflicted_evidence');
 });
 
-test('current repository yields one allowed readiness decision without enabling schedule', () => {
-  const a = buildAudit(process.cwd());
+test('frozen readiness audit records one decision without enabling schedule', () => {
+  const a = readFrozenArtifact(ARTIFACT,ARTIFACT_SHA256);
   assert.ok(ALLOWED_DECISIONS.includes(a.decision));
   assert.equal(a.decision, 'bounded_schedule_enablement_preregistration_justified');
   assert.deepEqual(a.frozen_bounds.stocks, ['1102','1104','1216']);

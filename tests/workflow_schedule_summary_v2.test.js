@@ -52,7 +52,12 @@ test('daily-gainers sparse checkout materializes schedule-summary renderer befor
 
 test('schedule-summary v2 contract stays independent of global scheduled-workflow registry', () => {
   const source = fs.readFileSync(__filename, 'utf8');
-  assert.doesNotMatch(source, /audit_scheduled_workflow_outputs/);
-  assert.doesNotMatch(source, /scheduledWorkflowFiles/);
-  assert.doesNotMatch(source, /buildRules/);
+  const forbiddenTokens = [
+    ['audit', 'scheduled', 'workflow', 'outputs'].join('_'),
+    ['scheduled', 'Workflow', 'Files'].join(''),
+    ['build', 'Rules'].join(''),
+  ];
+  for (const token of forbiddenTokens) {
+    assert.doesNotMatch(source, new RegExp(token));
+  }
 });

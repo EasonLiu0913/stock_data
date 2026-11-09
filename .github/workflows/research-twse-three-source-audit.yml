@@ -8,8 +8,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: "24"
       - name: Install RTF converter for offline owner-file audits
@@ -41,7 +41,7 @@ jobs:
           echo "Unit tests validate parsing and fail-closed logic using synthetic samples." >> "$GITHUB_STEP_SUMMARY"
           echo "Artifact includes the 20 previously owner-audited exceptions; it was NOT recomputed from three full originals in this run." >> "$GITHUB_STEP_SUMMARY"
           echo "M1 original acceptance remains BLOCKED; no publication or cron." >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: twse-three-source-audit-research-only

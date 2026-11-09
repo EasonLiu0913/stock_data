@@ -8,11 +8,14 @@ const {buildFourthWindowLongitudinalAudit}=require('../scripts/audit_institution
 const {buildFifthWindowLongitudinalAudit}=require('../scripts/audit_institutional_accumulation_catalyst_prospective_fifth_window_longitudinal');
 const ROOT='data_research/institutional-flow/official-disclosure-raw/prospective-catalyst-pit';
 const read=p=>JSON.parse(fs.readFileSync(p,'utf8'));
-test('sixth window preserves all previously closed deterministic artifacts',()=>{
-  const delta=buildWindowDeltaAudit(process.cwd(),{rootRelative:ROOT,skipCommittedAuditCheck:true});
-  const cross=buildCrossDayAudit(process.cwd(),{rootRelative:ROOT});
-  const fourth=buildFourthWindowLongitudinalAudit(process.cwd(),{rootRelative:ROOT});
-  const fifth=buildFifthWindowLongitudinalAudit(process.cwd(),{rootRelative:ROOT});
+const {materializeProtectedObservationSet}=require('./helpers/frozen_institutional_audit_artifact');
+test('sixth-window historical artifacts reproduce from the frozen 36-observation PIT sample',t=>{
+  const fixture=materializeProtectedObservationSet();
+  t.after(fixture.cleanup);
+  const delta=buildWindowDeltaAudit(fixture.repoRoot,{rootRelative:ROOT,skipCommittedAuditCheck:true});
+  const cross=buildCrossDayAudit(fixture.repoRoot,{rootRelative:ROOT});
+  const fourth=buildFourthWindowLongitudinalAudit(fixture.repoRoot,{rootRelative:ROOT});
+  const fifth=buildFifthWindowLongitudinalAudit(fixture.repoRoot,{rootRelative:ROOT});
   assert.deepEqual(delta,read('data_research/institutional-flow/institutional-accumulation-catalyst-prospective-window-delta-audit-v1.json'));
   assert.deepEqual(cross,read('data_research/institutional-flow/institutional-accumulation-catalyst-prospective-cross-day-audit-v1.json'));
   assert.deepEqual(fourth,read('data_research/institutional-flow/institutional-accumulation-catalyst-prospective-fourth-window-longitudinal-audit-v1.json'));

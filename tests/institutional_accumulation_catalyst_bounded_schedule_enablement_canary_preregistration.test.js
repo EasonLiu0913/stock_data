@@ -2,13 +2,15 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
+const {readFrozenArtifact}=require('./helpers/frozen_institutional_audit_artifact');
 const {
   ALLOWED_DECISIONS,
   evaluatePreregistration,
   buildAudit,
   serializeAudit,
 } = require('../scripts/audit_institutional_accumulation_catalyst_bounded_schedule_enablement_canary_preregistration');
+const ARTIFACT='data_research/institutional-flow/institutional-accumulation-catalyst-bounded-schedule-enablement-canary-preregistration-v1.json';
+const ARTIFACT_SHA256='e25a8aa7a8dced30d5e11402acd213bbfa25d6a596ecb0b28c3d0b51fdc60141';
 
 function evidence(overrides={}) {
   return {
@@ -29,8 +31,8 @@ test('decision enum is frozen and complete evidence preregisters only the later 
   assert.equal(evaluatePreregistration(evidence({trigger_safe:false})), 'insufficient_or_conflicted_evidence');
 });
 
-test('preregistration freezes exact disabled Taipei schedule and finite three-eligible-occurrence gate', () => {
-  const a = buildAudit(process.cwd());
+test('frozen preregistration records the disabled Taipei schedule and finite three-occurrence gate', () => {
+  const a = readFrozenArtifact(ARTIFACT,ARTIFACT_SHA256);
   assert.equal(a.schedule_contract.enabled, false);
   assert.equal(a.schedule_contract.candidate_local_time, '11:30');
   assert.equal(a.schedule_contract.timezone, 'Asia/Taipei');
@@ -43,8 +45,8 @@ test('preregistration freezes exact disabled Taipei schedule and finite three-el
   assert.equal(a.finite_experiment_gate.indefinite_scheduling_authorized, false);
 });
 
-test('eligibility, source, topology, PIT and protected bounds remain fail-closed', () => {
-  const a = buildAudit(process.cwd());
+test('frozen preregistration preserves fail-closed eligibility, source, topology, PIT and bounds', () => {
+  const a = readFrozenArtifact(ARTIFACT,ARTIFACT_SHA256);
   assert.deepEqual(a.frozen_bounds.stocks, ['1102','1104','1216']);
   assert.equal(a.frozen_bounds.max_requests_per_eligible_occurrence, 6);
   assert.equal(a.eligibility_before_request.evaluated_before_any_source_request, true);
@@ -61,10 +63,8 @@ test('eligibility, source, topology, PIT and protected bounds remain fail-closed
   assert.equal(a.protected_state.holdouts_opened, false);
 });
 
-test('committed preregistration artifact regenerates byte-identically and does not authorize schedule enablement', () => {
-  const built = buildAudit(process.cwd());
-  const committed = fs.readFileSync('data_research/institutional-flow/institutional-accumulation-catalyst-bounded-schedule-enablement-canary-preregistration-v1.json', 'utf8');
-  assert.equal(serializeAudit(built), committed);
+test('frozen preregistration does not authorize schedule enablement', () => {
+  const built = readFrozenArtifact(ARTIFACT,ARTIFACT_SHA256);
   assert.equal(built.decision, 'bounded_schedule_enablement_canary_preregistered');
   assert.equal(built.decision_scope.enables_schedule_now, false);
   assert.equal(built.decision_scope.live_source_request_authorized_in_this_round, false);

@@ -15,7 +15,7 @@ jobs:
     timeout-minutes: 12
     steps:
       - name: Checkout only owner-approved assets and branding script
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: main
           sparse-checkout: |
@@ -25,7 +25,7 @@ jobs:
             docs/strategies/taiwan-stock-channel-apply-once.json
           sparse-checkout-cone-mode: false
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '24'
       - name: Fail closed on unapproved branding binary drift
@@ -38,7 +38,7 @@ jobs:
         run: node scripts/apply_taiwan_stock_youtube_branding.js
       - name: Retain sanitized official API readback
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: taiwan-stock-channel-branding-approval-proof
           path: output/taiwan-stock-branding-update-receipt.json

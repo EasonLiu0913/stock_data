@@ -37,8 +37,8 @@ jobs:
     env:
       TARGET_DATE: ${{ github.event.inputs.target_date || '20261008' }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: "24"
       - name: Run focused MI_INDEX + market opening tests
@@ -95,7 +95,7 @@ jobs:
           echo "This workflow only inspects MI_INDEX. Historical security-classification evidence is still required for full breadth PASS." >> "$GITHUB_STEP_SUMMARY"
       - name: Upload inspection evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: twse-market-opening-evidence-${{ env.TARGET_DATE }}
           path: output/twse-market-opening-inspection/

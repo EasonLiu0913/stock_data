@@ -2724,3 +2724,15 @@ The implementation branch corrects the glob to `20??????.json`. This is a narrow
 **Remaining gates:** the corrected FIFO resolver will select 20261103 first. That date still lacks a PASS official numeric Receipt, and its opening uses the older `breadth` field rather than the current materializer contract. Do not skip to 20261104 or rerun unchanged failures. Fix the registered official-input path only after the necessary scope decision, then resume formal gates. Preserve MVP10-A-R2 WAITING_TTS, all earlier FAILED history, and the frozen pair.
 
 **Safety:** the schedule run made no TTS requests; no Render, Pages or YouTube workflow ran. YouTube upload, scheduling, publication and release-lock changes remain prohibited.
+
+
+## Owner merge authorization and PR continuation update — 2026-11-09 04:10 UTC
+
+The owner authorized merging passing repair PRs without a separate review request, then continuing toward the registered ultimate goal. This authorization does not change frozen A/B criteria or authorize YouTube upload, scheduling, publication, Render, Pages, or release-lock changes.
+
+- PR #60 (Node 24 baseline action migration) merged to main as `9b03fc3d94c48d2c1ce15463577b0d1605c09deb`.
+- PR #59 (TWSE dealer aggregate Facts repair) merged to main as `1eabd67d9d363a182bc85b1c70742fc84b0299ac`. The component A+B=published total check remains fail-closed; the five-day mean validator accepts finite positive fractional averages because an arithmetic mean need not be an integer.
+- PR #57 remains the active narrow repair for eight-digit FIFO candidate discovery. Its prior Node24 audit failure (run `42527883965`) was on the old base and reported remaining action pins in `.github/workflows/research-m5-failed-chunks-repeat.yml`, now updated by PR #60. The PR branch is being synchronized with current main so its checks can be re-evaluated against the repaired base.
+- A separate current-main schedule-summary audit (run `42559783527`, job `128973448030`) found 68 of 247 workflow files still need the repository-pinned summary normalization. This is a distinct baseline failure to diagnose and repair through its own bounded migration; it does not authorize folding unrelated workflow changes into the TTS PR.
+
+Prompt A remains incomplete; Prompt B remains ineligible. Next: revalidate the synchronized #57 head, merge after its relevant checks pass, then continue the first FIFO date `20261103` by resolving its official numeric receipt and current-schema opening prerequisites. Preserve all historical failures and frozen acceptance.

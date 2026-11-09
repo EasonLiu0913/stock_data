@@ -17,7 +17,7 @@ jobs:
       YOUTUBE_TTS_RATE: '+15%'
     steps:
       - name: Checkout read-only media inputs (no YouTube actions)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 1
@@ -35,10 +35,10 @@ jobs:
             tests/daily_gainers_dual_track.test.js
             tests/daily_gainers_news_narration.test.js
           sparse-checkout-cone-mode: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
       - name: Install media dependencies
@@ -152,7 +152,7 @@ jobs:
           echo "Render-only QA pass: no YouTube action, no upload credential used" >> "$GITHUB_STEP_SUMMARY"
       - name: Keep MP4 evidence even on partial failures
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: daily-gainers-20261102-render-only
           path: |

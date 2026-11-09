@@ -8,10 +8,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
       - name: Source parity and media negative tests
@@ -21,7 +21,7 @@ jobs:
           node scripts/preflight_daily_gainers_m5_private_preview.js > "${RUNNER_TEMP}/m5-preflight.json"
           node scripts/build_daily_gainers_m5_private_plan.js > "${RUNNER_TEMP}/m5-source-plan.json"
       - name: Keep private preflight evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: m5-preflight-${{ github.run_id }}
           path: |

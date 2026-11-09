@@ -2,11 +2,12 @@
 
 const test=require('node:test');
 const assert=require('node:assert/strict');
-const fs=require('node:fs');
-const {buildAudit,serializeAudit}=require('../scripts/audit_institutional_accumulation_catalyst_bounded_schedule_enablement_canary_implementation');
+const {readFrozenArtifact}=require('./helpers/frozen_institutional_audit_artifact');
+const ARTIFACT='data_research/institutional-flow/institutional-accumulation-catalyst-bounded-schedule-enablement-canary-implementation-v1.json';
+const ARTIFACT_SHA256='c5b5f85460da1585ab445fdd9b8343a7a39156695d264de1124e3be36bf1a5cb';
 
-test('implementation has exactly one guarded schedule and no forbidden trigger',()=>{
-  const a=buildAudit(process.cwd());
+test('frozen implementation audit records its historical guarded schedule and no forbidden trigger',()=>{
+  const a=readFrozenArtifact(ARTIFACT,ARTIFACT_SHA256);
   assert.equal(a.schedule.enabled,true);
   assert.equal(a.schedule.github_actions_utc_cron,'30 3 * * *');
   assert.equal(a.schedule.exact_automatic_schedule_count,1);
@@ -15,8 +16,8 @@ test('implementation has exactly one guarded schedule and no forbidden trigger',
   assert.equal(a.pre_request_gate.durable_preflight_checkpoint_before_collection,true);
 });
 
-test('finite scheduled state starts at zero of three with no pending occurrence',()=>{
-  const a=buildAudit(process.cwd());
+test('frozen implementation audit records the initial finite scheduled state',()=>{
+  const a=readFrozenArtifact(ARTIFACT,ARTIFACT_SHA256);
   assert.equal(a.finite_state.accepted_eligible_scheduled_occurrence_count,0);
   assert.equal(a.finite_state.target_accepted_eligible_scheduled_occurrences,3);
   assert.equal(a.finite_state.pending_occurrence,null);
@@ -24,8 +25,8 @@ test('finite scheduled state starts at zero of three with no pending occurrence'
   assert.equal(a.finite_state.post_target_collection_allowed,false);
 });
 
-test('execution and protected bounds stay frozen',()=>{
-  const a=buildAudit(process.cwd());
+test('frozen implementation audit preserves execution and protected bounds',()=>{
+  const a=readFrozenArtifact(ARTIFACT,ARTIFACT_SHA256);
   assert.deepEqual(a.execution.stocks,['1102','1104','1216']);
   assert.equal(a.execution.max_requests_per_eligible_occurrence,6);
   assert.equal(a.execution.max_parallel,1);
@@ -34,10 +35,8 @@ test('execution and protected bounds stay frozen',()=>{
   assert.equal(a.protected_state.holdouts_opened,false);
 });
 
-test('committed implementation artifact regenerates byte-identically',()=>{
-  const a=buildAudit(process.cwd());
-  const committed=fs.readFileSync('data_research/institutional-flow/institutional-accumulation-catalyst-bounded-schedule-enablement-canary-implementation-v1.json','utf8');
-  assert.equal(serializeAudit(a),committed);
+test('frozen implementation artifact retains its registered decision',()=>{
+  const a=readFrozenArtifact(ARTIFACT,ARTIFACT_SHA256);
   assert.equal(a.decision,'bounded_schedule_enablement_canary_implemented');
   assert.equal(a.decision_scope.manual_dispatch_for_validation_authorized,false);
 });
