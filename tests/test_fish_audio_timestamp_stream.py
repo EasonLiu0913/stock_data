@@ -61,6 +61,26 @@ class FishTimestampStreamTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "not ordered"):
             build_global_timeline(by_chunk)
 
+    def test_reports_provider_zero_duration_with_raw_interval_details(self):
+        by_chunk = {2: {"content": "零", "offset": 23.371701, "audio_duration": 3, "segments": [
+            {"text": "零", "start": 0.5, "end": 0.5},
+        ]}}
+        with self.assertRaises(FishStreamError) as context:
+            build_global_timeline(by_chunk)
+        self.assertEqual(context.exception.code, "provider_zero_duration")
+        self.assertEqual(context.exception.details["local_start_seconds"], "0.5")
+        self.assertEqual(context.exception.details["local_end_seconds"], "0.5")
+        self.assertEqual(context.exception.details["time_condition"], "provider_interval_non_positive")
+
+    def test_preserves_positive_submicrosecond_interval_through_chunk_offset(self):
+        by_chunk = {0: {"content": "甲", "offset": 23.371701, "audio_duration": 3, "segments": [
+            {"text": "甲", "start": 2.0, "end": 2.0000001},
+        ]}}
+        timeline = build_global_timeline(by_chunk)
+        self.assertLess(timeline[0]["start"], timeline[0]["end"])
+        boundaries = timeline_to_word_boundaries(timeline, 30.0)
+        self.assertEqual(boundaries[0]["duration"], 1)
+
     def test_converts_seconds_to_consumer_wordboundary_ticks_and_aligns_cues(self):
         timeline = [
             {"text": "大家好", "start": 0.25, "end": 0.75},
