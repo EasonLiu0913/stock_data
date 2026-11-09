@@ -1,0 +1,101 @@
+name: Fish Audio timestamped TTS migration test
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/fish-audio-timestamped-migration-test.yml'
+      - 'scripts/fish_audio_timestamp_stream.py'
+      - 'tests/test_fish_audio_timestamp_stream.py'
+
+# Isolated API experiment only. This workflow cannot commit, render, deploy, or publish.
+permissions:
+  contents: read
+
+concurrency:
+  group: fish-audio-timestamped-migration-test
+  cancel-in-progress: false
+
+jobs:
+  parser-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout parser and tests
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+            scripts/daily_gainers_spoken_text.py
+            scripts/fish_audio_timestamp_stream.py
+            tests/test_fish_audio_timestamp_stream.py
+          sparse-checkout-cone-mode: false
+      - name: Run parser regression tests (no API credentials)
+        run: python -m unittest discover -s tests -p 'test_fish_audio_timestamp_stream.py' -v
+
+  synthesize:
+    if: github.event_name == 'workflow_dispatch'
+    needs: parser-regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout the frozen test plan
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          sparse-checkout: |
+            scripts/daily_gainers_spoken_text.py
+            scripts/fish_audio_timestamp_stream.py
+            research_pending/daily-gainers-render-scripts/20261103.json
+            tests/test_fish_audio_timestamp_stream.py
+          sparse-checkout-cone-mode: false
+
+      - name: Synthesize exact frozen market-opening scene
+        env:
+          FISH_API_KEY: ${{ secrets.FISH_API_KEY }}
+        run: |
+          set -euo pipefail
+          python scripts/fish_audio_timestamp_stream.py \
+            --plan research_pending/daily-gainers-render-scripts/20261103.json \
+            --scene-id 1 \
+            --output-dir "$RUNNER_TEMP/fish-audio-migration-test"
+
+      - name: Verify playable MP3 and market-opening duration
+        shell: bash
+        run: |
+          set -euo pipefail
+          audio="$RUNNER_TEMP/fish-audio-migration-test/scene-01.mp3"
+          manifest="$RUNNER_TEMP/fish-audio-migration-test/request-manifest.json"
+          alignment="$RUNNER_TEMP/fish-audio-migration-test/scene-01-alignment.json"
+          test -s "$audio"
+          test "$(file --brief --mime-type "$audio")" = "audio/mpeg"
+          probe="$(ffprobe -v error -select_streams a:0 -show_entries stream=codec_name,sample_rate,channels,bit_rate -show_entries format=duration -of json "$audio")"
+          printf '%s\n' "$probe" > "$RUNNER_TEMP/fish-audio-migration-test/ffprobe.json"
+          python - "$manifest" "$alignment" "$RUNNER_TEMP/fish-audio-migration-test/ffprobe.json" <<'PY'
+          import json, sys
+          manifest = json.load(open(sys.argv[1], encoding="utf-8"))
+          alignment = json.load(open(sys.argv[2], encoding="utf-8"))
+          probe = json.load(open(sys.argv[3], encoding="utf-8"))
+          duration = float(probe["format"]["duration"])
+          stream = probe["streams"][0]
+          assert manifest["provider"] == "fish.audio"
+          assert manifest["model"] == "s2.1-pro-free"
+          assert manifest["reference_id"] == "e7af89da8abc4fbdacd9a10ab9881933"
+          assert manifest["prosody_speed"] == 1.15
+          assert stream["codec_name"] == "mp3"
+          assert stream["sample_rate"] == "44100"
+          assert int(stream["channels"]) == 1
+          assert int(stream["bit_rate"]) == 128000
+          assert 60 <= duration <= 90, f"market-opening duration outside 60-90s: {duration:.3f}s"
+          assert alignment["alignment_coverage"] >= 0.95
+          assert alignment["timeline"]
+          assert alignment["timeline"][-1]["end"] <= duration + 0.5
+          print(f"Fish Audio migration checks PASS: duration={duration:.3f}s, words={len(alignment['timeline'])}")
+          PY
+
+      - name: Upload bounded test evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: fish-audio-timestamped-migration-${{ github.run_id }}
+          path: ${{ runner.temp }}/fish-audio-migration-test/
+          if-no-files-found: error
+          retention-days: 7
