@@ -5,6 +5,12 @@ import re
 def chars(text):
     return re.sub(r"[\s，。！？、；：,.!?;:（）()「」『』【】\[\]—-]", "", str(text)).lower()
 
+class SubtitleAlignmentError(ValueError):
+    def __init__(self, code, message):
+        self.code = code
+        super().__init__(f"{code}: {message}")
+
+
 def align_cues(cues, normalize, boundaries, duration, tolerance=0.10):
     """Return per-cue (start,end), seconds relative to a single audio scene.
 
@@ -48,5 +54,5 @@ def align_cues(cues, normalize, boundaries, duration, tolerance=0.10):
         # This prevents a spoken sentence starting before its caption.
         output[i][1] = output[i+1][0] if i+1 < len(output) else duration
         if output[i][1] <= output[i][0]:
-            raise ValueError(f"Non-monotonic subtitle alignment at cue {i+1}")
+            raise SubtitleAlignmentError("cue_transition_non_positive", f"cue {i+1} ends at {output[i][1]} <= start {output[i][0]}")
     return output

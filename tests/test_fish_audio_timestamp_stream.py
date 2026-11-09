@@ -2,6 +2,7 @@ import base64
 import json
 import tempfile
 import unittest
+from decimal import Decimal
 from pathlib import Path
 from unittest.mock import patch
 
@@ -61,16 +62,23 @@ class FishTimestampStreamTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "not ordered"):
             build_global_timeline(by_chunk)
 
-    def test_reports_provider_zero_duration_with_raw_interval_details(self):
-        by_chunk = {2: {"content": "零", "offset": 23.371701, "audio_duration": 3, "segments": [
-            {"text": "零", "start": 0.5, "end": 0.5},
+    def test_preserves_fish_documented_zero_duration_word_and_exact_offset(self):
+        by_chunk = {0: {"content": "to", "offset": 0, "audio_duration": 20, "segments": [
+            {"text": "to", "start": 15.6, "end": 15.6},
         ]}}
-        with self.assertRaises(FishStreamError) as context:
-            build_global_timeline(by_chunk)
-        self.assertEqual(context.exception.code, "provider_zero_duration")
-        self.assertEqual(context.exception.details["local_start_seconds"], "0.5")
-        self.assertEqual(context.exception.details["local_end_seconds"], "0.5")
-        self.assertEqual(context.exception.details["time_condition"], "provider_interval_non_positive")
+        timeline = build_global_timeline(by_chunk)
+        self.assertEqual(timeline[0]["text"], "to")
+        self.assertEqual(timeline[0]["start_seconds_exact"], "15.6")
+        self.assertEqual(timeline[0]["end_seconds_exact"], "15.6")
+        boundaries = timeline_to_word_boundaries(timeline, 20)
+        self.assertEqual(boundaries, [{"text": "to", "offset": 156_000_000, "duration": 0}])
+        self.assertEqual(validate_alignment("to", timeline, by_chunk), 1.0)
+
+    def test_sse_preserves_decimal_timestamp_values(self):
+        lines = [event(b"a", 0, 15.6, [{"text": "to", "start": 0.0, "end": 0.0}], 20.0, "to")]
+        _, by_chunk = parse_sse_events("".join(lines).splitlines())
+        self.assertEqual(str(by_chunk[0]["offset"]), "15.6")
+        self.assertEqual(str(by_chunk[0]["segments"][0]["start"]), "0.0")
 
     def test_preserves_positive_submicrosecond_interval_through_chunk_offset(self):
         by_chunk = {0: {"content": "甲", "offset": 23.371701, "audio_duration": 3, "segments": [
@@ -122,10 +130,58 @@ class FishTimestampStreamTests(unittest.TestCase):
         self.assertEqual(context.exception.code, "start_order_violation")
         self.assertEqual(context.exception.details["backward_jitter_seconds"], "0.3")
 
-    def test_reports_non_positive_segment_duration_separately(self):
+    def test_reports_positive_interval_rounded_to_zero_ticks(self):
         with self.assertRaises(FishStreamError) as context:
-            timeline_to_word_boundaries([{"text": "零", "start": 0.5, "end": 0.5}], 1.0)
-        self.assertEqual(context.exception.code, "non_positive_duration")
+            timeline_to_word_boundaries([{"text": "微小", "start": 0.1, "end": 0.10000001}], 1.0)
+        self.assertEqual(context.exception.code, "duration_rounds_to_zero")
+        self.assertEqual(context.exception.details["time_condition"], "positive_provider_interval_rounded_to_zero_ticks")
+
+    def test_reports_non_finite_chunk_offset_separately(self):
+        line = event(b"a", 0, float("nan"), [{"text": "甲", "start": 0.0, "end": 0.1}], 1.0, "甲")
+        with self.assertRaises(FishStreamError) as context:
+            parse_sse_events(line.splitlines())
+        self.assertEqual(context.exception.code, "non_finite_timestamp")
+        self.assertEqual(context.exception.details["time_condition"], "non_finite_chunk_metadata")
+
+    def test_reports_negative_chunk_offset_separately(self):
+        line = event(b"a", 0, -0.1, [{"text": "甲", "start": 0.0, "end": 0.1}], 1.0, "甲")
+        with self.assertRaises(FishStreamError) as context:
+            parse_sse_events(line.splitlines())
+        self.assertEqual(context.exception.code, "negative_chunk_offset")
+
+    def test_reports_negative_chunk_duration_separately(self):
+        line = event(b"a", 0, 0.0, [{"text": "甲", "start": 0.0, "end": 0.1}], -1.0, "甲")
+        with self.assertRaises(FishStreamError) as context:
+            parse_sse_events(line.splitlines())
+        self.assertEqual(context.exception.code, "negative_chunk_duration")
+
+    def test_reports_negative_duration_separately(self):
+        with self.assertRaises(FishStreamError) as context:
+            build_global_timeline({0: {"content": "錯", "offset": 0, "audio_duration": 1, "segments": [
+                {"text": "錯", "start": 0.5, "end": 0.4},
+            ]}})
+        self.assertEqual(context.exception.code, "provider_negative_duration")
+
+    def test_reports_non_finite_timestamp_separately(self):
+        with self.assertRaises(FishStreamError) as context:
+            build_global_timeline({0: {"content": "錯", "offset": 0, "audio_duration": 1, "segments": [
+                {"text": "錯", "start": float("nan"), "end": 0.5},
+            ]}})
+        self.assertEqual(context.exception.code, "non_finite_timestamp")
+
+    def test_reports_out_of_chunk_end_separately(self):
+        with self.assertRaises(FishStreamError) as context:
+            build_global_timeline({0: {"content": "超", "offset": 0, "audio_duration": 1, "segments": [
+                {"text": "超", "start": 0.5, "end": 1.5},
+            ]}})
+        self.assertEqual(context.exception.code, "end_after_chunk_duration")
+
+    def test_reports_positive_interval_float_collapse_separately(self):
+        with self.assertRaises(FishStreamError) as context:
+            build_global_timeline({0: {"content": "微", "offset": 0, "audio_duration": 100000001, "segments": [
+                {"text": "微", "start": Decimal("100000000"), "end": Decimal("100000000.000000001")},
+            ]}})
+        self.assertEqual(context.exception.code, "adapter_precision_collapse")
 
     def test_failure_diagnostic_is_payload_free_and_names_time_condition(self):
         error = FishStreamError(

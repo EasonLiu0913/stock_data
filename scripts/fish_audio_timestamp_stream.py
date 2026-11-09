@@ -61,7 +61,7 @@ def _parse_event(data_lines: list[str]) -> dict | None:
     if payload.strip() == "[DONE]":
         return None
     try:
-        event = json.loads(payload)
+        event = json.loads(payload, parse_float=Decimal)
     except json.JSONDecodeError as error:
         raise FishStreamError("Fish Audio returned malformed SSE JSON") from error
     if not isinstance(event, dict):
@@ -92,13 +92,40 @@ def parse_sse_events(lines) -> tuple[bytes, dict[int, dict]]:
             return
         try:
             seq = int(event["chunk_seq"])
-            offset = float(event["chunk_audio_offset_sec"])
+            offset = Decimal(str(event["chunk_audio_offset_sec"]))
             segments = alignment["segments"]
-            duration = float(alignment["audio_duration"])
+            duration = Decimal(str(alignment["audio_duration"]))
         except (KeyError, TypeError, ValueError) as error:
             raise FishStreamError("Fish Audio alignment snapshot has an invalid shape") from error
-        if seq < 0 or offset < 0 or duration < 0 or not isinstance(segments, list):
-            raise FishStreamError("Fish Audio alignment values are outside their valid range")
+        if not offset.is_finite() or not duration.is_finite():
+            raise FishStreamError(
+                "Fish Audio alignment chunk has a non-finite timestamp",
+                code="non_finite_timestamp",
+                details={
+                    "chunk_seq": seq,
+                    "chunk_offset_seconds": str(offset),
+                    "chunk_duration_seconds": str(duration),
+                    "time_condition": "non_finite_chunk_metadata",
+                },
+            )
+        if offset < 0:
+            raise FishStreamError(
+                "Fish Audio alignment chunk has a negative offset",
+                code="negative_chunk_offset",
+                details={"chunk_seq": seq, "chunk_offset_seconds": str(offset)},
+            )
+        if duration < 0:
+            raise FishStreamError(
+                "Fish Audio alignment chunk has a negative duration",
+                code="negative_chunk_duration",
+                details={"chunk_seq": seq, "chunk_duration_seconds": str(duration)},
+            )
+        if seq < 0 or not isinstance(segments, list):
+            raise FishStreamError(
+                "Fish Audio alignment values are outside their valid range",
+                code="invalid_chunk_metadata",
+                details={"chunk_seq": seq},
+            )
         if not isinstance(event.get("content"), str):
             raise FishStreamError("Fish Audio alignment event omitted text content")
         # API contract: snapshots are cumulative and latest-wins for each chunk_seq.
@@ -187,18 +214,6 @@ def build_global_timeline(alignment_by_chunk: dict[int, dict]) -> list[dict]:
                         "chunk_offset_seconds": str(offset),
                     },
                 )
-            if local_end == local_start:
-                raise FishStreamError(
-                    "Fish Audio provider alignment segment has zero duration",
-                    code="provider_zero_duration",
-                    details={
-                        "chunk_seq": seq,
-                        "local_start_seconds": str(local_start),
-                        "local_end_seconds": str(local_end),
-                        "chunk_offset_seconds": str(offset),
-                        "time_condition": "provider_interval_non_positive",
-                    },
-                )
             if local_end > chunk_duration + Decimal("0.25"):
                 raise FishStreamError(
                     "Fish Audio alignment exceeds its chunk duration",
@@ -213,7 +228,7 @@ def build_global_timeline(alignment_by_chunk: dict[int, dict]) -> list[dict]:
             global_end = local_end + offset
             mapped_start = float(global_start)
             mapped_end = float(global_end)
-            if mapped_end <= mapped_start:
+            if local_end > local_start and mapped_end <= mapped_start:
                 raise FishStreamError(
                     "Positive Fish Audio interval collapsed during numeric mapping",
                     code="adapter_precision_collapse",
@@ -232,6 +247,8 @@ def build_global_timeline(alignment_by_chunk: dict[int, dict]) -> list[dict]:
                 "text": segment["text"],
                 "start": mapped_start,
                 "end": mapped_end,
+                "start_seconds_exact": str(global_start),
+                "end_seconds_exact": str(global_end),
                 "chunk_seq": seq,
             })
     return timeline
@@ -252,8 +269,8 @@ def timeline_to_word_boundaries(timeline: list[dict], media_duration_seconds: fl
         if not isinstance(item, dict) or not isinstance(item.get("text"), str) or not item["text"]:
             raise FishStreamError("Fish Audio timeline segment has invalid text", code="invalid_segment_text")
         try:
-            start = Decimal(str(item["start"]))
-            end = Decimal(str(item["end"]))
+            start = Decimal(str(item.get("start_seconds_exact", item["start"])))
+            end = Decimal(str(item.get("end_seconds_exact", item["end"])))
         except (KeyError, InvalidOperation, TypeError, ValueError) as error:
             raise FishStreamError("Fish Audio timeline segment has invalid times", code="invalid_segment_times") from error
         if not start.is_finite() or not end.is_finite():
@@ -268,10 +285,10 @@ def timeline_to_word_boundaries(timeline: list[dict], media_duration_seconds: fl
                 code="negative_start",
                 details={"start_seconds": str(start)},
             )
-        if end <= start:
+        if end < start:
             raise FishStreamError(
-                "Fish Audio timeline segment has a non-positive duration",
-                code="non_positive_duration",
+                "Fish Audio timeline segment has a negative duration",
+                code="negative_duration",
                 details={"start_seconds": str(start), "end_seconds": str(end)},
             )
         if start < previous_start:
@@ -311,11 +328,16 @@ def timeline_to_word_boundaries(timeline: list[dict], media_duration_seconds: fl
 
         offset = int((start * Decimal(10_000_000)).to_integral_value(rounding=ROUND_HALF_UP))
         duration = int(((end - start) * Decimal(10_000_000)).to_integral_value(rounding=ROUND_HALF_UP))
-        if duration <= 0:
+        if end > start and duration <= 0:
             raise FishStreamError(
-                "Fish Audio timeline segment rounds to zero duration",
+                "Positive Fish Audio interval rounds to zero 100ns ticks",
                 code="duration_rounds_to_zero",
-                details={"start_seconds": str(start), "end_seconds": str(end)},
+                details={
+                    "start_seconds": str(start),
+                    "end_seconds": str(end),
+                    "duration_seconds": str(end - start),
+                    "time_condition": "positive_provider_interval_rounded_to_zero_ticks",
+                },
             )
         boundaries.append({"text": item["text"], "offset": offset, "duration": duration})
         previous_start = start

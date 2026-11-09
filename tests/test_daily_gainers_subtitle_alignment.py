@@ -32,5 +32,23 @@ class CaptionTimingTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"coverage insufficient"):
             align_cues(["大量重要內容無法對齊"],normalize_spoken_text,boundaries([("大量",1)]),6.0)
 
+    def test_zero_duration_word_counts_toward_coverage_and_keeps_valid_cues(self):
+        words = [
+            {"text": "甲", "offset": 0, "duration": 0},
+            {"text": "乙", "offset": 10_000_000, "duration": 10_000_000},
+        ]
+        spans = align_cues(["甲", "乙"], normalize_spoken_text, words, 3.0)
+        self.assertEqual(spans, [[0.0, 1.0], [1.0, 3.0]])
+
+    def test_equal_offset_cue_transition_has_distinct_diagnostic(self):
+        words = [
+            {"text": "甲", "offset": 0, "duration": 0},
+            {"text": "乙", "offset": 0, "duration": 1_000_000},
+        ]
+        with self.assertRaises(ValueError) as context:
+            align_cues(["甲", "乙"], normalize_spoken_text, words, 1.0)
+        self.assertEqual(context.exception.code, "cue_transition_non_positive")
+        self.assertIn("cue_transition_non_positive", str(context.exception))
+
 if __name__ == "__main__":
     unittest.main()
