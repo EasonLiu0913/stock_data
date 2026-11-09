@@ -229,7 +229,7 @@ def validate_checkpoint_identity(manifest, script_path, target_date, voice, rate
     else:
         if manifest.get("engine") != provider_identity.get("provider"):
             failures.append("CHECKPOINT_PROVIDER_MISMATCH")
-        if manifest.get("pipeline_version") != provider_identity.get("pipeline_version"):
+        if manifest.get("pipeline_version") != PIPELINE_VERSION:
             failures.append("CHECKPOINT_PIPELINE_VERSION_MISMATCH")
         if manifest.get("provider_identity") != provider_identity:
             failures.append("CHECKPOINT_PROVIDER_IDENTITY_MISMATCH")
