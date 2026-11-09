@@ -70,7 +70,7 @@ def scene_fingerprint(scene_id, text, voice, rate, engine_version, provider_iden
         required = {
             "provider", "endpoint", "model", "reference_id", "prosody_speed",
             "format", "sample_rate", "mp3_bitrate", "normalize", "language",
-            "parser_version",
+            "parser_version", "pipeline_version",
         }
         if not isinstance(provider_identity, dict) or set(provider_identity) != required:
             raise ValueError("FISH_PROVIDER_IDENTITY_INCOMPLETE")
