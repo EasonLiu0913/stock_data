@@ -120,11 +120,11 @@ jobs:
           const normalize=(p)=>{const v=JSON.parse(fs.readFileSync(p,'utf8'));delete v.generated_at;return JSON.stringify(v)};
           if(normalize(process.argv[2])!==normalize(process.argv[3]))throw Error('FROZEN_TTS_PLAN_MISMATCH');
           NODE
-          python scripts/daily_gainers_tts_checkpoint.py validate \\
-            --manifest "$checkpoint/manifest.json" --checkpoint-dir "$checkpoint" \\
-            --script "$frozen" --date "$DATE" \\
-            --voice "$FISH_TTS_VOICE" --rate "$FISH_TTS_RATE" \\
-            --engine-version "fish-timestamped-stream-v1" \\
+          python scripts/daily_gainers_tts_checkpoint.py validate \
+            --manifest "$checkpoint/manifest.json" --checkpoint-dir "$checkpoint" \
+            --script "$frozen" --date "$DATE" \
+            --voice "$FISH_TTS_VOICE" --rate "$FISH_TTS_RATE" \
+            --engine-version "fish-timestamped-stream-v1" \
             --provider-identity "$RUNNER_TEMP/fish-provider-identity.json"
           mkdir -p "$date_dir/audio"
           cp "$checkpoint"/audio/*.mp3 "$date_dir/audio/"
