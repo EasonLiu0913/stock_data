@@ -1,3 +1,4 @@
+/Users/eason/.zlogin:7: nice(5) failed: operation not permitted
 #!/usr/bin/env python3
 """Production Fish Audio timestamped synthesizer for one frozen narration scene.
 
@@ -31,6 +32,7 @@ from fish_audio_timestamp_stream import (
     parse_sse_events,
     timeline_to_word_boundaries,
     validate_alignment,
+    write_failure_diagnostic,
 )
 
 PARSER_VERSION = "fish-audio-timestamp-stream-v1"
@@ -149,7 +151,7 @@ def probe_mp3(audio_path: Path) -> dict:
     }
 
 
-def run(plan_path: Path, scene_id: int) -> dict:
+def _run(plan_path: Path, scene_id: int) -> dict:
     api_key = os.environ.get("FISH_API_KEY", "")
     if not api_key:
         raise FishStreamError("FISH_API_KEY is not configured")
@@ -237,6 +239,25 @@ def run(plan_path: Path, scene_id: int) -> dict:
         "content_type": content_type,
     }, ensure_ascii=False))
     return generated
+
+
+def run(plan_path: Path, scene_id: int) -> dict:
+    try:
+        return _run(plan_path, scene_id)
+    except FishStreamError as error:
+        diagnostic_path = write_failure_diagnostic(
+            plan_path.parent,
+            scene_id=scene_id,
+            error=error,
+        )
+        print(json.dumps({
+            "provider": "fish.audio",
+            "status": "failure",
+            "scene_id": scene_id,
+            "error_code": error.code,
+            "diagnostic_path": str(diagnostic_path),
+        }, ensure_ascii=False), file=sys.stderr)
+        raise
 
 
 def main() -> None:
