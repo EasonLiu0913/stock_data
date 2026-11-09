@@ -72,18 +72,18 @@ function institutionalNetIndex(fields, rows, key, cfg) {
     const [componentA, componentB, publishedTotal] = genericNetIndexes;
     for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
       const row = rows[rowIndex];
-      if (!Array.isArray(row)) throw new Error(\`Invalid dealer source row \${rowIndex}: expected an array\`);
+      if (!Array.isArray(row)) throw new Error('Invalid dealer source row ' + rowIndex + ': expected an array');
       const a = numeric(row[componentA]);
       const b = numeric(row[componentB]);
       const total = numeric(row[publishedTotal]);
       if (a === null || b === null || total === null || a + b !== total) {
-        throw new Error(\`Dealer net-share reconciliation failed at row \${rowIndex}: components do not equal published total\`);
+        throw new Error('Dealer net-share reconciliation failed at row ' + rowIndex + ': components do not equal published total');
       }
     }
     return publishedTotal;
   }
   if (genericNetIndexes.length > 1) {
-    throw new Error(\`Ambiguous dealer net-share columns: expected 1 or 3 generic columns, found \${genericNetIndexes.length}\`);
+    throw new Error('Ambiguous dealer net-share columns: expected 1 or 3 generic columns, found ' + genericNetIndexes.length);
   }
   return findFieldIndex(fields, cfg.netNames, cfg.fallbackNet);
 }
