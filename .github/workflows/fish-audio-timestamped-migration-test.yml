@@ -49,6 +49,14 @@ jobs:
             tests/test_fish_audio_timestamp_stream.py
           sparse-checkout-cone-mode: false
 
+      - name: Install and verify ffprobe
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
+          command -v ffprobe
+          ffprobe -version | head -n 1
+
       - name: Synthesize exact frozen market-opening scene
         env:
           FISH_API_KEY: ${{ secrets.FISH_API_KEY }}
