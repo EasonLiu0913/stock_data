@@ -61,6 +61,32 @@ function findFieldIndex(fields, candidates, fallback = -1) {
   }
   return fallback;
 }
+function institutionalNetIndex(fields, rows, key, cfg) {
+  if (key !== 'dealer') return findFieldIndex(fields, cfg.netNames, cfg.fallbackNet);
+  const normalized = (fields || []).map((v) => String(v ?? '').replace(/\s+/g, '').trim());
+  const genericNetIndexes = [];
+  normalized.forEach((name, index) => {
+    if (name === '買賣超股數') genericNetIndexes.push(index);
+  });
+  if (genericNetIndexes.length === 3) {
+    const [componentA, componentB, publishedTotal] = genericNetIndexes;
+    for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
+      const row = rows[rowIndex];
+      if (!Array.isArray(row)) throw new Error(\`Invalid dealer source row \${rowIndex}: expected an array\`);
+      const a = numeric(row[componentA]);
+      const b = numeric(row[componentB]);
+      const total = numeric(row[publishedTotal]);
+      if (a === null || b === null || total === null || a + b !== total) {
+        throw new Error(\`Dealer net-share reconciliation failed at row \${rowIndex}: components do not equal published total\`);
+      }
+    }
+    return publishedTotal;
+  }
+  if (genericNetIndexes.length > 1) {
+    throw new Error(\`Ambiguous dealer net-share columns: expected 1 or 3 generic columns, found \${genericNetIndexes.length}\`);
+  }
+  return findFieldIndex(fields, cfg.netNames, cfg.fallbackNet);
+}
 const INSTITUTIONAL_SOURCES = {
   foreign: { dir: 'data_twse_foreign_investors', suffix: '_twse_foreign_investors.json', fallbackCode: 1, fallbackNet: 11, netNames: ['買賣超股數', '買賣超股數(不含外資自營商)', '外陸資買賣超股數'] },
   trust: { dir: 'data_twse_investment_trust', suffix: '_twse_investment_trust.json', fallbackCode: 1, fallbackNet: 5, netNames: ['買賣超股數', '投信買賣超股數'] },
@@ -76,7 +102,7 @@ function loadInstitutionalSource(date, key) {
   if (payload.stat && payload.stat !== 'OK') return result;
   const fields = Array.isArray(payload.fields) ? payload.fields : [];
   const codeIndex = findFieldIndex(fields, ['證券代號', '股票代號', '證券代碼', '股票代碼'], cfg.fallbackCode);
-  const netIndex = findFieldIndex(fields, cfg.netNames, cfg.fallbackNet);
+  const netIndex = institutionalNetIndex(fields, payload.data, key, cfg);
   result.status = 'available'; result.row_count = payload.data.length;
   for (const row of payload.data) {
     if (!Array.isArray(row)) continue;
