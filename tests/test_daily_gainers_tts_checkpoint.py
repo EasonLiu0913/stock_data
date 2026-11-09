@@ -52,6 +52,8 @@ class TtsCheckpointTests(unittest.TestCase):
             "voice": f"fish:{provider_identity['reference_id']}" if provider_identity else "zh-TW-YunJheNeural",
             "rate": f"speed={provider_identity['prosody_speed']}" if provider_identity else "+15%",
             "engine": "fish.audio" if provider_identity else "edge-tts",
+            "target_date": "20261104",
+            "plan_sha256": checkpoint.sha256_file(self.script),
             "scenes": [scene],
         }
         if provider_identity:
@@ -94,6 +96,32 @@ class TtsCheckpointTests(unittest.TestCase):
         self.assertEqual(checkpoint.missing_scenes(current), [1, 2])
         self.assertEqual(current["engine"], "fish.audio")
         self.assertEqual(current["scenes"][0]["status"], "pending")
+
+    def test_fish_fingerprint_binds_frozen_script_sha(self):
+        fish = {
+            "provider": "fish.audio",
+            "endpoint": "https://api.fish.audio/v1/tts/stream/with-timestamp",
+            "model": "s2.1-pro-free",
+            "reference_id": "e7af89da8abc4fbdacd9a10ab9881933",
+            "prosody_speed": 1.15,
+            "format": "mp3",
+            "sample_rate": 44100,
+            "mp3_bitrate": 128,
+            "normalize": False,
+            "language": "zh-TW",
+            "parser_version": "fish-timestamp-parser-v1",
+        }
+        voice = f"fish:{fish['reference_id']}"
+        self.initialize(voice=voice, rate="speed=1.15", provider_identity=fish)
+        self.record_scene(1, provider_identity=fish)
+        self.write_script([
+            {"id": 1, "scene_type": "stock_list_revised", "narration": "第一段內容。"},
+            {"id": 2, "scene_type": "closing_summary", "narration": "第二段內容。"},
+        ])
+        current = self.initialize(voice=voice, rate="speed=1.15", provider_identity=fish)
+        self.assertEqual(current["scenes"][0]["identity"]["normalized_text_sha256"],
+                         checkpoint.sha256_bytes("第一段內容。".encode("utf-8")))
+        self.assertEqual(checkpoint.missing_scenes(current), [1, 2])
 
     def test_matching_fish_provider_checkpoint_is_reusable_and_validates(self):
         fish = {
