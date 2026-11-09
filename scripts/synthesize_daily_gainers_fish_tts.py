@@ -187,6 +187,7 @@ def run(plan_path: Path, scene_id: int) -> dict:
         "plan_sha256": plan["script_sha256"],
         "voice": VOICE,
         "rate": RATE,
+        "audio_probe": audio_probe,
         "scenes": [scene_doc],
     }
     (plan_path.parent / "boundaries.json").write_text(
