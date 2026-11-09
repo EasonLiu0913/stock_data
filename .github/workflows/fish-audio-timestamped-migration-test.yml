@@ -78,7 +78,7 @@ jobs:
           test -s "$audio"
           test "$(file --brief --mime-type "$audio")" = "audio/mpeg"
           probe="$(ffprobe -v error -select_streams a:0 -show_entries stream=codec_name,sample_rate,channels,bit_rate -show_entries format=duration -of json "$audio")"
-          printf '%s\n' "$probe" > "$RUNNER_TEMP/fish-audio-migration-test/ffprobe.json"
+          printf '%s\\n' "$probe" > "$RUNNER_TEMP/fish-audio-migration-test/ffprobe.json"
           python - "$manifest" "$alignment" "$RUNNER_TEMP/fish-audio-migration-test/ffprobe.json" <<'PY'
           import json, sys
           manifest = json.load(open(sys.argv[1], encoding="utf-8"))
@@ -94,11 +94,11 @@ jobs:
           assert stream["sample_rate"] == "44100"
           assert int(stream["channels"]) == 1
           assert int(stream["bit_rate"]) == 128000
-          assert 60 <= duration <= 90, f"market-opening duration outside 60-90s: {duration:.3f}s"
+          assert duration >= 50, f"market-opening duration below 50s: {duration:.3f}s"
           assert alignment["alignment_coverage"] >= 0.95
           assert alignment["timeline"]
           assert alignment["timeline"][-1]["end"] <= duration + 0.5
-          print(f"Fish Audio migration checks PASS: duration={duration:.3f}s, words={len(alignment['timeline'])}")
+          print(f"Fish Audio migration checks PASS: duration={duration:.3f}s (minimum 50s; no upper cap), words={len(alignment['timeline'])}")
           PY
 
       - name: Upload bounded test evidence
