@@ -7,8 +7,8 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
       - name: Generate private genuine-archive V3 owner-review text
@@ -22,7 +22,7 @@ jobs:
         run: node --test tests/build_daily_gainers_m5_v3_private_media_input.test.js tests/build_daily_gainers_m5_v3_real_archive_review.test.js tests/inspect_daily_gainers_editorial_real_archive.test.js tests/build_daily_gainers_editorial_v1_research.test.js tests/build_daily_gainers_m4_spoken_draft.test.js tests/build_daily_gainers_m5_private_plan.test.js
       - name: Upload private owner-review evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: m5-v3-real-archive-private-review-${{ github.run_id }}
           path: /tmp/m5-v3-owner-review/

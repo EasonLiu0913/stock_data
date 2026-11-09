@@ -9,13 +9,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
       - name: Create immutable source-derived plan
@@ -39,7 +39,7 @@ jobs:
           command -v ffprobe
           ffprobe -version | head -1
       - name: Restore one identified partial Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: m5-private-tts-20261008-38062405623
           run-id: 38062405623
@@ -59,7 +59,7 @@ jobs:
         run: node scripts/measure_daily_gainers_m5_tts.js output/m5-private-preview/20261008
       - name: Keep audio proof without uploading or publishing
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: m5-private-tts-20261008-${{ github.run_id }}
           path: |

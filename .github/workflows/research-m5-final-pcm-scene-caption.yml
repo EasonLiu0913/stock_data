@@ -9,10 +9,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
       - name: Frozen source and FFmpeg preflight
@@ -21,13 +21,13 @@ jobs:
           node scripts/build_daily_gainers_m5_private_plan.js >/dev/null
           python -m py_compile scripts/audit_daily_gainers_m5_pcm_scene_srt.py
           if ! command -v ffmpeg >/dev/null 2>&1 || ! command -v ffprobe >/dev/null 2>&1; then sudo apt-get update -qq && sudo apt-get install -y ffmpeg; fi
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: m5-seven-scene-private-review-38079932428
           run-id: 38079932428
           github-token: ${{ github.token }}
           path: ${{ runner.temp }}/source
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: m5-seven-scene-private-1080p-38080522689
           run-id: 38080522689
@@ -39,7 +39,7 @@ jobs:
           node scripts/verify_daily_gainers_m5_timed_srt.js "${RUNNER_TEMP}/pcm-caption/seven-scenes-pcm-boundary-review.zh-TW.srt"
       - name: Retain private timing research
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: m5-final-pcm-scene-caption-${{ github.run_id }}
           path: ${{ runner.temp }}/pcm-caption/

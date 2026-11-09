@@ -9,10 +9,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
       - name: Frozen source and audio preflight
@@ -24,7 +24,7 @@ jobs:
             sudo apt-get update -qq
             sudo apt-get install -y ffmpeg
           fi
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: m5-scene06-stitch-research-38076491234
           run-id: 38076491234
@@ -36,7 +36,7 @@ jobs:
         run: python scripts/build_daily_gainers_m5_scene06_review_package.py output/m5-private-preview/20261008/plan.json "${RUNNER_TEMP}/scene06-origin" "${RUNNER_TEMP}/scene06-review"
       - name: Retain private review files
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: m5-scene06-playable-review-${{ github.run_id }}
           path: ${{ runner.temp }}/scene06-review/

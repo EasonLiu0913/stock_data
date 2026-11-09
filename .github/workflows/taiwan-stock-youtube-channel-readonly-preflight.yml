@@ -12,7 +12,7 @@ jobs:
     timeout-minutes: 7
     steps:
       - name: Checkout verified preflight probe
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: main
           sparse-checkout: |
@@ -27,7 +27,7 @@ jobs:
         run: node scripts/youtube_channel_readonly_preflight.js
       - name: Upload redacted channel snapshot
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: taiwan-stock-channel-current-settings
           path: output/channel-readonly-snapshot.json

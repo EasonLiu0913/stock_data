@@ -12,7 +12,7 @@ jobs:
     env:
       MFA_ROOT_DIR: /tmp/m5-mfa-root
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Initialize locked evidence
         run: |
           mkdir -p "$RUNNER_TEMP/m5-oov-evidence" "$MFA_ROOT_DIR" "$RUNNER_TEMP/m5-authentic"
@@ -84,7 +84,7 @@ jobs:
           python scripts/research_m5_independent_audio_review_packet.py --audio-zip "$RUNNER_TEMP/m5-authentic/audio.zip" --dictionary "$MFA_ROOT_DIR/pretrained_models/dictionary/mandarin_china_mfa.dict" --draft "$RUNNER_TEMP/m5-oov-evidence/transcript-draft.json" --phone-proof "$RUNNER_TEMP/m5-oov-evidence/phone-schema-proof.json" --output "$RUNNER_TEMP/m5-oov-evidence"
       - name: Upload private research report only
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: m5-mfa-dictionary-oov-research-${{ github.run_id }}
           path: ${{ runner.temp }}/m5-oov-evidence/
