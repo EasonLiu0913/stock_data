@@ -1,5 +1,6 @@
 import json
 import sys
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -126,8 +127,11 @@ class TtsCheckpointTests(unittest.TestCase):
 
 class TtsRecoveryWorkflowContractTests(unittest.TestCase):
     def test_each_fresh_scene_runner_installs_the_pinned_edge_tts_client(self):
-        workflow_path = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "daily-gainers-tts-scene-recovery.yml"
-        workflow = workflow_path.read_text(encoding="utf-8")
+        workflow_path = ".github/workflows/daily-gainers-tts-scene-recovery.yml"
+        workflow = subprocess.run(
+            ["git", "show", f"HEAD:{workflow_path}"],
+            check=True, capture_output=True, text=True
+        ).stdout
         self.assertIn("  synthesize:\n", workflow)
         synthesize = workflow.split("  synthesize:\n", 1)[1].split("\n  sync-status:\n", 1)[0]
 
