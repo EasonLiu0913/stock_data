@@ -1,6 +1,6 @@
 # Proposed paired prompts — Fish zero-duration compatibility R2
 
-Status: **DRAFT ONLY — not eligible to run until Proposal v2 is owner-approved and this pair is committed to main**
+Status: **PRE-REGISTERED PROPOSED R2 — implementation is eligible only after this pair is merged to main and a new Prompt A turn starts**
 Proposal: `data_research/m5/change-proposals/MVP10-A-FISH-AUDIO-MIGRATION-CHANGE-PROPOSAL-v2.md`
 Current frozen pair: `data_research/m5/change-proposals/MVP10-A-FISH-AUDIO-MIGRATION-PAIR-R1-v1.md` (immutable)
 Project: `daily-gainers-market-opening-end-to-end`
@@ -9,7 +9,7 @@ Base main when drafted: `9ddd3838a33571fd2d65cee923a99bf40f1cfd10`
 
 ## Prompt A — implementation, only after explicit owner approval
 
-Continue only if Proposal v2 is owner-approved, this exact paired prompt is on current main, and the owner explicitly starts Prompt A. First read repository `AGENTS.md`, the canonical handoff, task routing, Proposal v2 and this pair; verify current remote main. Do not edit or reinterpret R1's frozen pair, test thresholds, or failed runs.
+Continue only after this exact pair and Proposal v2 are on current main and a new Prompt A turn starts. First read repository `AGENTS.md`, the canonical handoff, task routing, Proposal v2 and this pair; verify current remote main. Do not edit or reinterpret R1's frozen pair, test thresholds, or failed runs.
 
 1. Implement only the approved zero-duration mapping in `scripts/fish_audio_timestamp_stream.py`. Preserve provider text and exact offsets; emit a zero-tick WordBoundary for an exactly equal provider interval. Do not synthesize duration or move neighbors.
 2. Keep separate failure classes for negative/non-finite/out-of-range intervals, backward ordering beyond existing tolerance, positive intervals collapsed by numeric conversion, and positive intervals rounded to zero 100 ns ticks.
