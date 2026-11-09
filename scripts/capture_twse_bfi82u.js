@@ -8,12 +8,25 @@ function parseAmount(value){
   if(!Number.isSafeInteger(n)) throw new Error('INVALID_BFI82U_AMOUNT:'+value);
   return n;
 }
+const SUMMARY_FIELDS=['單位名稱','買進金額','賣出金額','買賣差額'];
+function summaryTable(payload,date){
+  const candidates=[];
+  if(Array.isArray(payload?.fields)&&Array.isArray(payload?.data)) candidates.push({fields:payload.fields,data:payload.data});
+  if(Array.isArray(payload?.tables)) candidates.push(...payload.tables);
+  const table=candidates.find(x=>Array.isArray(x?.fields)&&Array.isArray(x?.data)&&SUMMARY_FIELDS.every(field=>x.fields.includes(field)));
+  if(!table){
+    const diagnostic={target_date:date,response_date:payload?.date??null,status:payload?.stat??null,top_level_keys:Object.keys(payload||{}).sort(),fields:Array.isArray(payload?.fields)?payload.fields:[],table_count:Array.isArray(payload?.tables)?payload.tables.length:0,table_fields:Array.isArray(payload?.tables)?payload.tables.map(x=>Array.isArray(x?.fields)?x.fields:[]):[]};
+    throw new Error(`BFI82U_SUMMARY_TABLE_MISSING:${JSON.stringify(diagnostic)}`);
+  }
+  const indexes=Object.fromEntries(SUMMARY_FIELDS.map(field=>[field,table.fields.indexOf(field)]));
+  return {data:table.data,indexes};
+}
 function normalizeBfi82u(payload,date,rawText,sourceUrl){
   if(payload?.date!==date) throw new Error('BFI82U_DATE_MISMATCH');
-  const table=(payload.tables||[]).find(x=>Array.isArray(x.fields)&&x.fields.includes('單位名稱')&&x.fields.includes('買進金額')&&x.fields.includes('賣出金額')&&x.fields.includes('買賣差額'));
-  if(!table) throw new Error('BFI82U_SUMMARY_TABLE_MISSING');
-  const rows=new Map(table.data.map(row=>[String(row[0]).trim(),row]));
-  const item=(name)=>{const row=rows.get(name);if(!row)throw new Error('BFI82U_ROW_MISSING:'+name);const buy=parseAmount(row[1]),sell=parseAmount(row[2]),net=parseAmount(row[3]);if(buy-sell!==net)throw new Error('BFI82U_ROW_ARITHMETIC:'+name);return {buy_twd:buy,sell_twd:sell,net_twd:net};};
+  const table=summaryTable(payload,date);
+  const {indexes}=table;
+  const rows=new Map(table.data.map(row=>[String(row[indexes['單位名稱']]).trim(),row]));
+  const item=(name)=>{const row=rows.get(name);if(!row)throw new Error('BFI82U_ROW_MISSING:'+name);const buy=parseAmount(row[indexes['買進金額']]),sell=parseAmount(row[indexes['賣出金額']]),net=parseAmount(row[indexes['買賣差額']]);if(buy-sell!==net)throw new Error('BFI82U_ROW_ARITHMETIC:'+name);return {buy_twd:buy,sell_twd:sell,net_twd:net};};
   const proprietary=item('自營商(自行買賣)'),hedging=item('自營商(避險)'),trust=item('投信'),foreign=item('外資及陸資(不含外資自營商)'),foreignDealer=item('外資自營商'),total=item('合計');
   const dealers={buy_twd:proprietary.buy_twd+hedging.buy_twd,sell_twd:proprietary.sell_twd+hedging.sell_twd,net_twd:proprietary.net_twd+hedging.net_twd};
   if(foreignDealer.net_twd!==0) throw new Error('FOREIGN_DEALER_DOUBLE_COUNT_POLICY_CHANGED');
@@ -34,4 +47,4 @@ async function capture(date,root=path.resolve(__dirname,'..')){
   return {date,output:path.relative(root,output),raw_response_sha256:normalized.raw_response_sha256,total_net_twd:normalized.total.net_twd};
 }
 if(require.main===module) capture(process.argv[2]).then(x=>console.log(JSON.stringify(x,null,2))).catch(e=>{console.error('BFI82U_CAPTURE_FAILED:'+e.message);process.exitCode=1;});
-module.exports={parseAmount,normalizeBfi82u,capture};
+module.exports={parseAmount,normalizeBfi82u,summaryTable,capture};
