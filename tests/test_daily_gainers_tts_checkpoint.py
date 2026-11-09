@@ -254,14 +254,14 @@ class TtsRecoveryWorkflowContractTests(unittest.TestCase):
     def test_fresh_scene_runner_uses_fish_once_without_edge_fallback(self):
         workflow = self.read_head(".github/workflows/daily-gainers-tts-scene-recovery.yml")
         synth = self.read_head("scripts/synthesize_daily_gainers_fish_tts.py")
-        self.assertIn("  synthesize:\\n", workflow)
+        self.assertIn("  synthesize:\n", workflow)
         self.assertIn("max-parallel: 1", workflow)
         self.assertIn("--limit 3", workflow)
         self.assertIn("synthesize_daily_gainers_fish_tts.py --plan", workflow)
         self.assertNotIn("edge-tts==", workflow)
         self.assertNotIn("synthesize_daily_gainers_tts.py", workflow)
         self.assertEqual(workflow.count("FISH_API_KEY: ${{ secrets.FISH_API_KEY }}"), 1)
-        synthesize = workflow.split("  synthesize:\\n", 1)[1].split("\\n  sync-status:\\n", 1)[0]
+        synthesize = workflow.split("  synthesize:\n", 1)[1].split("\n  sync-status:\n", 1)[0]
         self.assertIn("FISH_API_KEY: ${{ secrets.FISH_API_KEY }}", synthesize)
         self.assertEqual(synth.count("request_tts(spoken_text, api_key)"), 1)
         self.assertNotIn("edge-tts", synth)
