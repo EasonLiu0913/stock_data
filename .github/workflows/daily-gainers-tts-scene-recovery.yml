@@ -203,6 +203,7 @@ jobs:
       YOUTUBE_TTS_VOICE: zh-TW-YunJheNeural
       YOUTUBE_TTS_RATE: '+15%'
       TAIWAN_STOCK_TTS_MAX_ATTEMPTS: '1'
+      TAIWAN_STOCK_TTS_TRANSPORT_DIAGNOSTICS: '1'
     steps:
       - name: Checkout latest workflow code
         uses: actions/checkout@v7
@@ -255,6 +256,15 @@ jobs:
             --script "$RUNNER_TEMP/tts-plan/plan.json" --date "$DATE" \
             --scene-id "$SCENE_ID" --output "$RUNNER_TEMP/scene/plan.json"
           python scripts/synthesize_daily_gainers_tts.py "$RUNNER_TEMP/scene/plan.json"
+
+      - name: Upload payload-free TTS transport diagnostics
+        if: always() && env.SCENE_ID != '0'
+        uses: actions/upload-artifact@v7
+        with:
+          name: tts-transport-${{ env.DATE }}-${{ env.SCENE_ID }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/scene/tts-transport-diagnostics.json
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Validate and checkpoint scene to date branch
         if: env.SCENE_ID != '0'
