@@ -5,6 +5,11 @@ on:
     paths:
       - ".github/workflows/daily-gainers-tts-checkpoint-tests.yml"
       - ".github/workflows/daily-gainers-tts-scene-recovery.yml"
+      - ".github/workflows/daily-gainers-date-render-only.yml"
+      - "scripts/synthesize_daily_gainers_fish_tts.py"
+      - "scripts/fish_audio_timestamp_stream.py"
+      - "scripts/build_daily_gainers_srt.py"
+      - "tests/test_daily_gainers_fish_tts_production.py"
       - "scripts/daily_gainers_tts_checkpoint.py"
       - "scripts/synthesize_daily_gainers_tts.py"
       - "scripts/daily_gainers_spoken_text.py"
@@ -27,6 +32,8 @@ jobs:
       - name: Install spoken-text test dependency
         run: python -m pip install --disable-pip-version-check --no-cache-dir pypinyin
       - name: Compile checkpoint and synthesis scripts
-        run: python -m py_compile scripts/daily_gainers_tts_checkpoint.py scripts/synthesize_daily_gainers_tts.py
+        run: python -m py_compile scripts/daily_gainers_tts_checkpoint.py scripts/synthesize_daily_gainers_tts.py scripts/synthesize_daily_gainers_fish_tts.py scripts/fish_audio_timestamp_stream.py scripts/build_daily_gainers_srt.py
       - name: Run checkpoint recovery contract tests
         run: python -m unittest discover -s tests -p "test_daily_gainers_tts_*.py" -v
+      - name: Run Fish production synthesis integration tests
+        run: python -m unittest discover -s tests -p "test_daily_gainers_fish_tts_production.py" -v
