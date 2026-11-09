@@ -50,7 +50,7 @@ jobs:
             exit 1
           fi
           audio="$RUNNER_TEMP/fish-audio-test.mp3"
-          body="$(jq -n --arg text "$TEST_TEXT" '{text: $text, format: "mp3"}')"
+          body="$(jq -n --arg text "$TEST_TEXT" '{text: $text, reference_id: "e7af89da8abc4fbdacd9a10ab9881933", format: "mp3"}')"
           response="$(curl --silent --show-error --connect-timeout 15 --max-time 180 \
             --output "$audio" --write-out $'%{http_code}\t%{content_type}' \
             --request POST https://api.fish.audio/v1/tts \
