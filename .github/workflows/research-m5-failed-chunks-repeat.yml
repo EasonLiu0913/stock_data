@@ -8,13 +8,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
       - name: Validate frozen plan and diagnostic
@@ -30,7 +30,7 @@ jobs:
           python scripts/diagnose_daily_gainers_m5_failed_chunks_repeat.py output/m5-private-preview/20261008/plan.json | tee "${RUNNER_TEMP}/m5-failed-chunks-repeat.json"
       - name: Preserve JSON diagnostics only
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: m5-failed-chunks-repeat-${{ github.run_id }}
           path: ${{ runner.temp }}/m5-failed-chunks-repeat.json

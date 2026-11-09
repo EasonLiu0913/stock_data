@@ -9,10 +9,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
       - name: Frozen plan and FFmpeg preflight
@@ -21,7 +21,7 @@ jobs:
           node scripts/build_daily_gainers_m5_private_plan.js >/dev/null
           python -m py_compile scripts/render_daily_gainers_m5_private_seven_scene.py
           if ! command -v ffmpeg >/dev/null 2>&1 || ! command -v ffprobe >/dev/null 2>&1; then sudo apt-get update -qq && sudo apt-get install -y ffmpeg; fi
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: m5-seven-scene-private-review-38079932428
           run-id: 38079932428
@@ -34,7 +34,7 @@ jobs:
         run: python scripts/render_daily_gainers_m5_private_seven_scene.py "${RUNNER_TEMP}/seven-review" "${RUNNER_TEMP}/private-render"
       - name: Preserve 1080p private video and proof only
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: m5-seven-scene-private-1080p-${{ github.run_id }}
           path: ${{ runner.temp }}/private-render/

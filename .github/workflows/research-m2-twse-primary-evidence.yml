@@ -16,11 +16,11 @@ jobs:
     timeout-minutes: 12
     steps:
       - name: Checkout exact remote main snapshot
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
       - name: Use Node.js 24
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '24'
       - name: Verify research-only suite against complete repository fixtures
@@ -59,7 +59,7 @@ jobs:
           node scripts/capture_daily_gainers_m2v2_risk_sources.js "${RUNNER_TEMP}/m2-risk-raw"
       - name: Upload private research proof artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: twse-m2-raw-research-${{ github.run_id }}
           path: |

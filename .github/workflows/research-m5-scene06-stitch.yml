@@ -8,13 +8,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
       - name: Freeze source and validate research script
@@ -38,7 +38,7 @@ jobs:
         run: python scripts/research_daily_gainers_m5_scene06_stitch.py output/m5-private-preview/20261008/plan.json "${RUNNER_TEMP}/m5-scene06-research"
       - name: Preserve private research proof, even on failure
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: m5-scene06-stitch-research-${{ github.run_id }}
           path: ${{ runner.temp }}/m5-scene06-research/

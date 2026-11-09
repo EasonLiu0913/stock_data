@@ -8,11 +8,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
       - name: Dependencies
@@ -31,7 +31,7 @@ jobs:
           python scripts/research_m5_v3_private_tts_proof.py /tmp/m5-v3-audio/source.json /tmp/m5-v3-audio/audio
       - name: Retain private evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: m5-v3-audio-proof-${{ github.run_id }}
           path: /tmp/m5-v3-audio/
