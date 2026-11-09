@@ -114,13 +114,15 @@ class TtsCheckpointTests(unittest.TestCase):
         voice = f"fish:{fish['reference_id']}"
         self.initialize(voice=voice, rate="speed=1.15", provider_identity=fish)
         self.record_scene(1, provider_identity=fish)
+        previous = self.initialize(voice=voice, rate="speed=1.15", provider_identity=fish)
         self.write_script([
             {"id": 1, "scene_type": "stock_list_revised", "narration": "第一段內容。"},
             {"id": 2, "scene_type": "closing_summary", "narration": "第二段內容。"},
         ])
         current = self.initialize(voice=voice, rate="speed=1.15", provider_identity=fish)
         self.assertEqual(current["scenes"][0]["identity"]["normalized_text_sha256"],
-                         checkpoint.sha256_bytes("第一段內容。".encode("utf-8")))
+                         previous["scenes"][0]["identity"]["normalized_text_sha256"])
+        self.assertNotEqual(current["scenes"][0]["fingerprint"], previous["scenes"][0]["fingerprint"])
         self.assertEqual(checkpoint.missing_scenes(current), [1, 2])
 
     def test_matching_fish_provider_checkpoint_is_reusable_and_validates(self):
