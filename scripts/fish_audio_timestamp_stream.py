@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import base64
 import difflib
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 import hashlib
 import json
 import os
@@ -130,6 +131,43 @@ def build_global_timeline(alignment_by_chunk: dict[int, dict]) -> list[dict]:
                 "chunk_seq": seq,
             })
     return timeline
+
+
+def timeline_to_word_boundaries(timeline: list[dict], media_duration_seconds: float) -> list[dict]:
+    """Convert Fish second-based alignment to the 100ns WordBoundary contract."""
+    try:
+        media_duration = Decimal(str(media_duration_seconds))
+    except (InvalidOperation, ValueError) as error:
+        raise FishStreamError("Fish Audio media duration is invalid") from error
+    if not media_duration.is_finite() or media_duration <= 0:
+        raise FishStreamError("Fish Audio media duration is invalid")
+
+    boundaries = []
+    previous_start = Decimal("-1")
+    for item in timeline:
+        if not isinstance(item, dict) or not isinstance(item.get("text"), str) or not item["text"]:
+            raise FishStreamError("Fish Audio timeline segment has invalid text")
+        try:
+            start = Decimal(str(item["start"]))
+            end = Decimal(str(item["end"]))
+        except (KeyError, InvalidOperation, TypeError, ValueError) as error:
+            raise FishStreamError("Fish Audio timeline segment has invalid times") from error
+        if (not start.is_finite() or not end.is_finite() or start < 0
+                or end <= start or start < previous_start):
+            raise FishStreamError("Fish Audio timeline is not valid for WordBoundary conversion")
+        if end > media_duration:
+            raise FishStreamError("Fish Audio timeline exceeds MP3 duration")
+
+        offset = int((start * Decimal(10_000_000)).to_integral_value(rounding=ROUND_HALF_UP))
+        duration = int(((end - start) * Decimal(10_000_000)).to_integral_value(rounding=ROUND_HALF_UP))
+        if duration <= 0:
+            raise FishStreamError("Fish Audio timeline segment rounds to zero duration")
+        boundaries.append({"text": item["text"], "offset": offset, "duration": duration})
+        previous_start = start
+
+    if not boundaries:
+        raise FishStreamError("Fish Audio timeline is empty")
+    return boundaries
 
 
 def validate_alignment(source_text: str, timeline: list[dict], alignment_by_chunk: dict[int, dict]) -> float:
