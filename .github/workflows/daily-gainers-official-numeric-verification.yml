@@ -1,5 +1,6 @@
 name: "[07 驗證] Daily Gainers Official Numeric Verification"
 run-name: "Official numeric ${{ inputs.target_date }}"
+
 on:
   workflow_dispatch:
     inputs:
@@ -8,11 +9,19 @@ on:
         required: true
         type: string
         default: "20261104"
+      refresh_facts:
+        description: "Rebuild this date's deterministic Facts from its committed source snapshots before verification"
+        required: false
+        type: boolean
+        default: false
+
 permissions:
   contents: write
+
 concurrency:
   group: official-numeric-${{ inputs.target_date }}
   cancel-in-progress: false
+
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -20,6 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
+          ref: main
           persist-credentials: true
           fetch-depth: 1
       - name: Validate requested date
@@ -30,6 +40,15 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: Rebuild dated Facts from committed official source snapshots
+        if: inputs.refresh_facts
+        env:
+          TARGET_DATE: ${{ inputs.target_date }}
+        run: |
+          set -euo pipefail
+          node --check scripts/build_daily_gainers_ai_facts.js
+          node scripts/build_daily_gainers_ai_facts.js "$TARGET_DATE"
+          node scripts/daily_gainers_ai_contract_cli.js assert-facts "data_daily_gain_over_5/analysis-facts/$TARGET_DATE.json"
       - name: Reconcile original official numeric data against stored Facts
         id: verify
         continue-on-error: true
@@ -43,17 +62,18 @@ jobs:
           name: official-numeric-${{ inputs.target_date }}-${{ github.run_id }}
           path: data_daily_gain_over_5/verification/official-numeric/${{ inputs.target_date }}.json
           if-no-files-found: warn
-      - name: Commit PASS receipt only
+      - name: Commit refreshed Facts and PASS receipt only
         if: steps.verify.outcome == 'success'
         env:
           TARGET_DATE: ${{ inputs.target_date }}
         run: |
           set -euo pipefail
           FILE="data_daily_gain_over_5/verification/official-numeric/$TARGET_DATE.json"
+          FACTS="data_daily_gain_over_5/analysis-facts/$TARGET_DATE.json"
           node -e "const r=require('./'+process.argv[1]);if(r.status!=='PASS'||r.target_date!==process.argv[2])process.exit(1)" "$FILE" "$TARGET_DATE"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -- "$FILE"
+          git add -- "$FACTS" "$FILE"
           git diff --cached --quiet && exit 0
           git commit -m "verification: official numeric PASS $TARGET_DATE [run ${{ github.run_id }}]"
           git pull --rebase origin main
