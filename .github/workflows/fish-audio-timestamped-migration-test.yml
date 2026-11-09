@@ -2,6 +2,11 @@ name: Fish Audio timestamped TTS migration test
 
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/fish-audio-timestamped-migration-test.yml'
+      - 'scripts/fish_audio_timestamp_stream.py'
+      - 'tests/test_fish_audio_timestamp_stream.py'
 
 # Isolated API experiment only. This workflow cannot commit, render, deploy, or publish.
 permissions:
@@ -12,7 +17,24 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  parser-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout parser and tests
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+            scripts/daily_gainers_spoken_text.py
+            scripts/fish_audio_timestamp_stream.py
+            tests/test_fish_audio_timestamp_stream.py
+          sparse-checkout-cone-mode: false
+      - name: Run parser regression tests (no API credentials)
+        run: python -m unittest discover -s tests -p 'test_fish_audio_timestamp_stream.py' -v
+
   synthesize:
+    if: github.event_name == 'workflow_dispatch'
+    needs: parser-regression
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -26,9 +48,6 @@ jobs:
             research_pending/daily-gainers-render-scripts/20261103.json
             tests/test_fish_audio_timestamp_stream.py
           sparse-checkout-cone-mode: false
-
-      - name: Run timestamp parser regression tests
-        run: python -m unittest discover -s tests -p 'test_fish_audio_timestamp_stream.py' -v
 
       - name: Synthesize exact frozen market-opening scene
         env:
