@@ -9,6 +9,7 @@ on:
       - "scripts/synthesize_daily_gainers_tts.py"
       - "scripts/daily_gainers_spoken_text.py"
       - "tests/test_daily_gainers_tts_checkpoint.py"
+      - "tests/test_daily_gainers_tts_recovery_workflow.py"
   workflow_dispatch:
 
 permissions:
@@ -28,4 +29,4 @@ jobs:
       - name: Compile checkpoint and synthesis scripts
         run: python -m py_compile scripts/daily_gainers_tts_checkpoint.py scripts/synthesize_daily_gainers_tts.py
       - name: Run checkpoint recovery contract tests
-        run: python -m unittest discover -s tests -p "test_daily_gainers_tts_checkpoint.py" -v
+        run: python -m unittest discover -s tests -p "test_daily_gainers_tts_*.py" -v
