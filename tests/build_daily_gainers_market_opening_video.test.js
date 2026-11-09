@@ -43,3 +43,22 @@ test('normalizes official BFI82U rows and excludes the foreign-dealer row from t
  assert.equal(normalized.total.net_twd,-160160345734);
  assert.throws(()=>normalizeBfi82u({date:'20261103',tables:[]},date,'bad','https://www.twse.com.tw/'),/BFI82U_DATE_MISMATCH/);
 });
+test('normalizes the archived official BFI82U top-level fields/data response',()=>{
+ const raw=fs.readFileSync('data_research/twse-market-opening/primary-archive/20261008/20261008-bfi82u.json','utf8');
+ const payload=JSON.parse(raw);
+ const normalized=normalizeBfi82u(payload,payload.date,raw,'https://www.twse.com.tw/rwd/zh/fund/BFI82U?dayDate=20261008&response=json&type=day');
+ assert.equal(normalized.foreign.net_twd,-75852293490);
+ assert.equal(normalized.investment_trust.net_twd,3008930013);
+ assert.equal(normalized.dealers.net_twd,-18731261604);
+ assert.equal(normalized.total.net_twd,-91574625081);
+});
+test('reports safe response-shape diagnostics without logging source rows when the summary table is absent',()=>{
+ const error=()=>normalizeBfi82u({date,stat:'OK',fields:['unexpected'],data:[['DO_NOT_LOG','123456789']]},date,'bad','https://www.twse.com.tw/');
+ assert.throws(error,e=>{
+  assert.match(e.message,/BFI82U_SUMMARY_TABLE_MISSING:/);
+  assert.match(e.message,/"fields":\["unexpected"\]/);
+  assert.match(e.message,/"status":"OK"/);
+  assert.doesNotMatch(e.message,/123456789|DO_NOT_LOG/);
+  return true;
+ });
+});
