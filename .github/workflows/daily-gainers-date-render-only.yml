@@ -20,8 +20,8 @@ jobs:
     env:
       DATE: ${{ inputs.date }}
       YOUTUBE_VTUBER_ENABLED: '1'
-      YOUTUBE_TTS_VOICE: zh-TW-YunJheNeural
-      YOUTUBE_TTS_RATE: '+15%'
+      FISH_TTS_VOICE: fish:e7af89da8abc4fbdacd9a10ab9881933
+      FISH_TTS_RATE: '1.15'
     steps:
       - name: Validate requested trading date
         shell: bash
@@ -57,6 +57,8 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
+      - name: Materialize Fish provider identity for read-only validation
+        run: python scripts/synthesize_daily_gainers_fish_tts.py --write-provider-identity "$RUNNER_TEMP/fish-provider-identity.json"
       - name: Install media dependencies
         shell: bash
         run: |
@@ -118,12 +120,12 @@ jobs:
           const normalize=(p)=>{const v=JSON.parse(fs.readFileSync(p,'utf8'));delete v.generated_at;return JSON.stringify(v)};
           if(normalize(process.argv[2])!==normalize(process.argv[3]))throw Error('FROZEN_TTS_PLAN_MISMATCH');
           NODE
-          python scripts/daily_gainers_tts_checkpoint.py init \\
-            --script "$frozen" --date "$DATE" \\
-            --manifest "$checkpoint/manifest.json" --checkpoint-dir "$checkpoint" \\
-            --voice "$YOUTUBE_TTS_VOICE" --rate "$YOUTUBE_TTS_RATE" --engine-version "7.3.1"
           python scripts/daily_gainers_tts_checkpoint.py validate \\
-            --manifest "$checkpoint/manifest.json" --checkpoint-dir "$checkpoint"
+            --manifest "$checkpoint/manifest.json" --checkpoint-dir "$checkpoint" \\
+            --script "$frozen" --date "$DATE" \\
+            --voice "$FISH_TTS_VOICE" --rate "$FISH_TTS_RATE" \\
+            --engine-version "fish-timestamped-stream-v1" \\
+            --provider-identity "$RUNNER_TEMP/fish-provider-identity.json"
           mkdir -p "$date_dir/audio"
           cp "$checkpoint"/audio/*.mp3 "$date_dir/audio/"
           python - "$checkpoint/manifest.json" "$date_dir/tts-manifest.json" "$frozen" <<'PY'
@@ -136,8 +138,8 @@ jobs:
           for item in source["scenes"]:
               boundary_file=pathlib.Path(sys.argv[1]).parent/item["wordboundaries_file"]
               boundaries=json.loads(boundary_file.read_text(encoding="utf-8"))
-              scenes.append({"id":item["scene_id"],"engine":"edge-tts","file":item["audio_file"],"spoken_text":normalize_spoken_text(plan_scenes[int(item["scene_id"])]["narration"]),"word_boundaries":boundaries,"sha256":item["audio_sha256"]})
-          result={"voice":source["voice"],"rate":source["rate"],"engine":"edge-tts","target_date":source["target_date"],"source_script_sha256":source["script_sha256"],"scenes":scenes}
+              scenes.append({"id":item["scene_id"],"engine":source["engine"],"file":item["audio_file"],"spoken_text":normalize_spoken_text(plan_scenes[int(item["scene_id"])]["narration"]),"word_boundaries":boundaries,"sha256":item["audio_sha256"]})
+          result={"voice":source["voice"],"rate":source["rate"],"engine":source["engine"],"provider_identity":source["provider_identity"],"pipeline_version":source["pipeline_version"],"target_date":source["target_date"],"source_script_sha256":source["script_sha256"],"scenes":scenes}
           pathlib.Path(sys.argv[2]).write_text(json.dumps(result,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
           PY
           python - "$frozen" "$date_dir/tts-manifest.json" <<'PY'
