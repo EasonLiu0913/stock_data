@@ -1,64 +1,115 @@
 {
-  "schema_version": 1,
-  "methodology_version": "daily-gainers-video-market-opening-v1",
+  "schema_version": 3,
   "target_date": "20261103",
   "market": "TWSE",
   "status": "verified_official_market_aggregate",
-  "breadth": {
-    "scope": "TWSE_MI_INDEX_OFFICIAL_STOCK_COLUMN",
-    "advancers": 58,
-    "decliners": 1000,
-    "unchanged": 22,
-    "limit_up": 2,
-    "limit_down": 33,
-    "no_trade": 6,
-    "no_comparison": 2,
-    "source_date": "20261103"
-  },
+  "scope": "TWSE_OFFICIAL_MARKET_OPENING",
   "index": {
+    "source_date": "20261103",
     "close": 43307.54,
     "previous_close": 44920.14,
     "change_points": -1612.6,
-    "change_pct": -3.59,
-    "source_date": "20261103"
+    "change_pct": -3.5899
   },
   "trading": {
+    "source_date": "20261103",
     "scope": "TWSE_WHOLE_MARKET",
     "turnover_twd": 1002035660990,
+    "shares": 15218510001,
+    "transactions": 7682883,
     "turnover_ma5_twd": 869025919984,
-    "turnover_ratio_ma5": 1.15306,
-    "source_date": "20261103"
+    "turnover_ratio_ma5": 1.1530561263448262
+  },
+  "market_opening_breadth": {
+    "scope": "TWSE_MI_INDEX_OFFICIAL_STOCK_COLUMN",
+    "source_date": "20261103",
+    "advancers": 58,
+    "limit_up": 2,
+    "decliners": 1000,
+    "limit_down": 33,
+    "unchanged": 22,
+    "no_trade": 6,
+    "no_comparison": 2,
+    "eligible_count": 1088,
+    "source_manifest": [
+      {
+        "source_name": "TWSE MI_INDEX",
+        "source_date": "20261103",
+        "market_scope": "TWSE",
+        "unit": "official stock column counts and index",
+        "verified": true,
+        "sha256": "8da2be3d5f8f4d37a7318827fb55a92d89046158f659d2d0c8ddccd18781e50e",
+        "source_path_or_endpoint": "https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?date=20261103&type=ALL"
+      }
+    ]
   },
   "institutional": {
     "scope": "TWSE_BFI82U_TWD",
+    "source_date": "20261103",
+    "foreign": {
+      "buy_twd": 353895158410,
+      "sell_twd": 461201878767,
+      "net_twd": -107306720357,
+      "unit": "TWD",
+      "market_scope": "TWSE"
+    },
+    "investment_trust": {
+      "buy_twd": 28084455473,
+      "sell_twd": 9624296915,
+      "net_twd": 18460158558,
+      "unit": "TWD",
+      "market_scope": "TWSE"
+    },
+    "dealers": {
+      "buy_twd": 51179213238,
+      "sell_twd": 110233553793,
+      "net_twd": -59054340555,
+      "unit": "TWD",
+      "market_scope": "TWSE"
+    },
     "foreign_net_twd": -107306720357,
     "investment_trust_net_twd": 18460158558,
     "dealers_net_twd": -59054340555,
-    "total_net_twd": -147900902354,
-    "source_date": "20261103",
-    "definition": "dealers=proprietary+hedging; foreign excludes foreign dealers; total matches official TWSE BFI82U"
+    "total_net_twd": -147900902354
   },
   "source_manifest": [
     {
-      "field": "breadth",
-      "source": "TWSE MI_INDEX official stock column",
-      "url": "https://www.twse.com.tw/exchangeReport/MI_INDEX?response=html&type=ALLBUT0999",
-      "repo_path": "data_twse_mi_index/20261103_twse_mi_index.json",
-      "source_date": "20261103"
+      "source_name": "TWSE MI_INDEX",
+      "source_date": "20261103",
+      "market_scope": "TWSE",
+      "unit": "official stock column counts and index",
+      "verified": true,
+      "sha256": "8da2be3d5f8f4d37a7318827fb55a92d89046158f659d2d0c8ddccd18781e50e",
+      "source_path_or_endpoint": "https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?date=20261103&type=ALL"
     },
     {
-      "field": "index_and_turnover",
-      "source": "TWSE MI_INDEX / FMTQIK; repo market_chart same-date row and previous five trading sessions",
-      "url": "https://www.twse.com.tw/zh/trading/historical/mi-index.html",
-      "repo_path": "data_twse_market_chart/market_chart.json",
-      "source_date": "20261103"
+      "source_name": "TWSE FMTQIK / MI_5MINS_HIST",
+      "source_date": "20261103",
+      "market_scope": "TWSE",
+      "unit": "index points, turnover TWD, shares and transactions",
+      "verified": true,
+      "sha256": "5eb92df028b81b98fef1c2ae1ee02d9dd0ab412583127adf2ee7cd02eafbb93f",
+      "source_path_or_endpoint": "data_twse_market_chart/market_chart.json"
     },
     {
-      "field": "institutional",
-      "source": "TWSE BFI82U",
-      "url": "https://www.twse.com.tw/fund/BFI82U?response=html&type=day",
-      "source_date": "20261103"
+      "source_name": "TWSE BFI82U",
+      "source_date": "20261103",
+      "market_scope": "TWSE",
+      "unit": "TWD",
+      "verified": true,
+      "sha256": "66c2e5444ea9e3257db8be6e96ea282b147656ac1beed041fcb73af6c3e113e4",
+      "source_path_or_endpoint": "https://www.twse.com.tw/rwd/zh/fund/BFI82U?dayDate=20261103&response=json&type=day"
     }
   ],
-  "scope_note": "Official TWSE stock-column breadth differs in coverage from TWSE whole-market turnover and institutional totals. Separately reported 5% instruments may include inverse ETFs. Previous five trading sessions are 20261027,20261028,20261029,20261030,20261102."
+  "source_receipts": {
+    "official_numeric_receipt_path": "data_daily_gain_over_5/verification/official-numeric/20261103.json",
+    "official_numeric_receipt_run_id": "42565299967",
+    "bfi82u_capture_method": "official-json",
+    "bfi82u_raw_response_sha256": "e6e761b628a98fcee03e99d7f7ec9b7fa1439c9c2ad2641a9b7ec1c4079c96eb"
+  },
+  "generation": {
+    "builder": "scripts/build_daily_gainers_market_opening_video.js",
+    "version": 1,
+    "deterministic": true
+  }
 }
