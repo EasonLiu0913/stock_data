@@ -229,6 +229,8 @@ def validate_checkpoint_identity(manifest, script_path, target_date, voice, rate
     else:
         if manifest.get("engine") != provider_identity.get("provider"):
             failures.append("CHECKPOINT_PROVIDER_MISMATCH")
+        if manifest.get("pipeline_version") != provider_identity.get("pipeline_version"):
+            failures.append("CHECKPOINT_PIPELINE_VERSION_MISMATCH")
         if manifest.get("provider_identity") != provider_identity:
             failures.append("CHECKPOINT_PROVIDER_IDENTITY_MISMATCH")
     expected_records = {scene["id"]: scene for scene in scenes}
@@ -290,7 +292,9 @@ def record_success(manifest_path, checkpoint_dir, scene_id, audio_source, bounda
     else:
         if (source_scene is None or source_scene.get("engine") != "fish.audio"
                 or generated.get("engine") != "fish.audio"
-                or generated.get("provider_identity") != expected_provider_identity):
+                or generated.get("provider_identity") != expected_provider_identity
+                or generated.get("pipeline_version") != expected_provider_identity.get("pipeline_version")
+                or manifest.get("pipeline_version") != expected_provider_identity.get("pipeline_version")):
             raise ValueError("GENERATED_PROVIDER_IDENTITY_MISMATCH")
         if (generated.get("target_date") != manifest.get("target_date")
                 or generated.get("plan_sha256") != manifest.get("script_sha256")):
