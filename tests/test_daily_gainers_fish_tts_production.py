@@ -100,12 +100,17 @@ class FishProductionTtsTests(unittest.TestCase):
             }
             with mock.patch.dict(os.environ, {"FISH_API_KEY": "test-only-key"}), \
                  mock.patch.object(fish, "request_tts", return_value=(b"x" * 2048, alignments, "text/event-stream")), \
-                 mock.patch.object(fish, "media_duration", return_value=1.5) as duration_probe:
+                 mock.patch.object(fish, "probe_mp3", return_value={
+                    "codec": "mp3", "sample_rate": 44100, "channels": 1,
+                    "bitrate": 128000, "duration_seconds": 1.5,
+                }) as media_probe:
                 generated = fish.run(scene_plan, 1)
 
-            duration_probe.assert_called_once()
+            media_probe.assert_called_once()
             self.assertEqual(generated["engine"], "fish.audio")
             self.assertEqual(generated["provider_identity"], identity)
+            self.assertEqual(generated["audio_probe"]["sample_rate"], 44100)
+            self.assertEqual(generated["audio_probe"]["bitrate"], 128000)
             self.assertEqual(generated["target_date"], "20261103")
             self.assertEqual(generated["plan_sha256"], initialized["script_sha256"])
             self.assertTrue((scene_plan.parent / "audio" / "01.mp3").is_file())
