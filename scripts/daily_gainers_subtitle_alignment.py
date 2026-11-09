@@ -11,6 +11,22 @@ class SubtitleAlignmentError(ValueError):
         super().__init__(f"{code}: {message}")
 
 
+def format_srt_interval(start, end):
+    """Format a cue only when millisecond serialization keeps it positive."""
+    start_ms = round(float(start) * 1000)
+    end_ms = round(float(end) * 1000)
+    if end_ms <= start_ms:
+        raise SubtitleAlignmentError(
+            "srt_precision_non_positive",
+            f"serialized cue ends at {end_ms}ms <= start {start_ms}ms",
+        )
+    def fmt(ms):
+        h, rem = divmod(ms, 3_600_000)
+        m, rem = divmod(rem, 60_000)
+        s, z = divmod(rem, 1000)
+        return f"{h:02d}:{m:02d}:{s:02d},{z:03d}"
+    return fmt(start_ms), fmt(end_ms)
+
 def align_cues(cues, normalize, boundaries, duration, tolerance=0.10):
     """Return per-cue (start,end), seconds relative to a single audio scene.
 

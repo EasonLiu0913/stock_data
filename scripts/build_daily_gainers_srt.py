@@ -3,7 +3,7 @@ import json, re, sys
 from pathlib import Path
 from mutagen.mp3 import MP3
 from daily_gainers_spoken_text import normalize_spoken_text
-from daily_gainers_subtitle_alignment import align_cues
+from daily_gainers_subtitle_alignment import align_cues, format_srt_interval, SubtitleAlignmentError
 from daily_gainers_caption_segments import segment_pairs
 
 if len(sys.argv) < 2:
@@ -148,12 +148,6 @@ def detect_silence_centers(audio_path):
                 centers.append((start + end) / 2)
     return centers
 
-def fmt_srt(seconds):
-    ms = max(0, round(seconds * 1000))
-    h, rem = divmod(ms, 3_600_000)
-    m, rem = divmod(rem, 60_000)
-    s, z = divmod(rem, 1000)
-    return f"{h:02d}:{m:02d}:{s:02d},{z:03d}"
 
 cursor = 0.0
 cue_no = 1
@@ -245,8 +239,12 @@ for scene in plan.get("scenes", []):
         end = min(end, rendered_duration)
         if end <= start:
             raise RuntimeError(f"Scene {sid}: subtitle exceeds actual rendered scene duration")
+        try:
+            srt_start, srt_end = format_srt_interval(cursor + start, cursor + end)
+        except SubtitleAlignmentError as exc:
+            raise RuntimeError(f"Scene {sid}: subtitle alignment failed: {exc}") from exc
         blocks.append(
-            f"{cue_no}\n{fmt_srt(cursor+start)} --> {fmt_srt(cursor+end)}\n{chunk}\n"
+            f"{cue_no}\n{srt_start} --> {srt_end}\n{chunk}\n"
         )
         cue_audit.append({"cue": cue_no, "scene_id": sid, "scene_title": scene.get("title"),
                           "start_seconds": round(cursor+start, 3),

@@ -3,7 +3,7 @@ import sys
 import unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from daily_gainers_subtitle_alignment import align_cues
+from daily_gainers_subtitle_alignment import align_cues, format_srt_interval, SubtitleAlignmentError
 from daily_gainers_spoken_text import normalize_spoken_text
 
 def boundaries(parts):
@@ -40,6 +40,20 @@ class CaptionTimingTest(unittest.TestCase):
         spans = align_cues(["甲", "乙"], normalize_spoken_text, words, 3.0)
         self.assertEqual(spans, [[0.0, 1.0], [1.0, 3.0]])
 
+    def test_submillisecond_positive_span_fails_closed_at_srt_precision(self):
+        with self.assertRaises(SubtitleAlignmentError) as context:
+            format_srt_interval(1.0001, 1.0004)
+        self.assertEqual(context.exception.code, "srt_precision_non_positive")
+
+    def test_srt_serialized_cue_remains_positive_and_monotonic(self):
+        intervals = [
+            format_srt_interval(0.0000, 0.0006),
+            format_srt_interval(0.0006, 0.0016),
+        ]
+        self.assertEqual(intervals, [
+            ("00:00:00,000", "00:00:00,001"),
+            ("00:00:00,001", "00:00:00,002"),
+        ])
     def test_equal_offset_cue_transition_has_distinct_diagnostic(self):
         words = [
             {"text": "甲", "offset": 0, "duration": 0},
