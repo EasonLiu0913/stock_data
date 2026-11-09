@@ -51,16 +51,58 @@ def scene_text(scene):
     return normalize_spoken_text(scene.get("speech_text") or scene.get("narration") or "")
 
 
-def scene_fingerprint(scene_id, text, voice, rate, engine_version):
-    parts = {
+def scene_fingerprint(scene_id, text, voice, rate, engine_version, provider_identity=None, target_date=None, script_sha256=None):
+    text_identity = {
         "scene_id": int(scene_id),
         "normalized_text_sha256": sha256_bytes(text.encode("utf-8")),
-        "voice": voice,
-        "rate": rate,
-        "engine": "edge-tts",
-        "engine_version": engine_version,
-        "pipeline_version": PIPELINE_VERSION,
     }
+    if provider_identity is None:
+        # Preserve the exact historical Edge fingerprint shape and reuse contract.
+        parts = {
+            **text_identity,
+            "voice": voice,
+            "rate": rate,
+            "engine": "edge-tts",
+            "engine_version": engine_version,
+            "pipeline_version": PIPELINE_VERSION,
+        }
+    else:
+        required = {
+            "provider", "endpoint", "model", "reference_id", "prosody_speed",
+            "format", "sample_rate", "mp3_bitrate", "normalize", "language",
+            "parser_version",
+        }
+        if not isinstance(provider_identity, dict) or set(provider_identity) != required:
+            raise ValueError("FISH_PROVIDER_IDENTITY_INCOMPLETE")
+        if provider_identity.get("provider") != "fish.audio":
+            raise ValueError("FISH_PROVIDER_IDENTITY_INVALID")
+        if any(not isinstance(provider_identity[key], str) or not provider_identity[key] for key in (
+            "endpoint", "model", "reference_id", "format", "language", "parser_version"
+        )):
+            raise ValueError("FISH_PROVIDER_IDENTITY_INVALID")
+        if (not isinstance(provider_identity["prosody_speed"], (int, float))
+                or isinstance(provider_identity["prosody_speed"], bool)
+                or provider_identity["prosody_speed"] <= 0
+                or not isinstance(provider_identity["sample_rate"], int)
+                or isinstance(provider_identity["sample_rate"], bool)
+                or provider_identity["sample_rate"] <= 0
+                or not isinstance(provider_identity["mp3_bitrate"], int)
+                or isinstance(provider_identity["mp3_bitrate"], bool)
+                or provider_identity["mp3_bitrate"] <= 0
+                or not isinstance(provider_identity["normalize"], bool)):
+            raise ValueError("FISH_PROVIDER_IDENTITY_INVALID")
+        normalized_provider = json.loads(canonical_json(provider_identity))
+        if not isinstance(target_date, str) or not isinstance(script_sha256, str) or not script_sha256:
+            raise ValueError("FISH_SCRIPT_IDENTITY_MISSING")
+        parts = {
+            **text_identity,
+            "target_date": target_date,
+            "script_sha256": script_sha256,
+            "voice": voice,
+            "rate": rate,
+            "provider_identity": normalized_provider,
+            "pipeline_version": PIPELINE_VERSION,
+        }
     return sha256_bytes(canonical_json(parts)), parts
 
 
@@ -106,7 +148,7 @@ def read_script(script_path, target_date):
     return sha256_bytes(raw), normalized
 
 
-def initialize(script_path, target_date, manifest_path, checkpoint_dir, voice, rate, engine_version):
+def initialize(script_path, target_date, manifest_path, checkpoint_dir, voice, rate, engine_version, provider_identity=None):
     script_sha, scenes = read_script(script_path, target_date)
     manifest_path = Path(manifest_path)
     checkpoint_dir = Path(checkpoint_dir)
@@ -119,7 +161,11 @@ def initialize(script_path, target_date, manifest_path, checkpoint_dir, voice, r
 
     records = []
     for scene in scenes:
-        fingerprint, identity = scene_fingerprint(scene["id"], scene["text"], voice, rate, engine_version)
+        fingerprint, identity = scene_fingerprint(
+            scene["id"], scene["text"], voice, rate, engine_version, provider_identity,
+            target_date=target_date if provider_identity else None,
+            script_sha256=script_sha if provider_identity else None,
+        )
         prior = existing.get(scene["id"], {})
         prior_path = checkpoint_dir / "audio" / f'{scene["id"]:02d}.mp3'
         prior_boundary = checkpoint_dir / "audio" / f'{scene["id"]:02d}.wordboundaries.json'
@@ -156,10 +202,12 @@ def initialize(script_path, target_date, manifest_path, checkpoint_dir, voice, r
         "script_sha256": script_sha,
         "voice": voice,
         "rate": rate,
-        "engine": "edge-tts",
+        "engine": provider_identity["provider"] if provider_identity else "edge-tts",
         "engine_version": engine_version,
         "scenes": records,
     }
+    if provider_identity is not None:
+        manifest["provider_identity"] = json.loads(canonical_json(provider_identity))
     atomic_json(manifest_path, manifest)
     return manifest
 
@@ -197,15 +245,25 @@ def record_success(manifest_path, checkpoint_dir, scene_id, audio_source, bounda
     checkpoint_dir = Path(checkpoint_dir)
     generated = json.loads(Path(generated_manifest_path).read_text(encoding="utf-8"))
     source_scene = next((item for item in generated.get("scenes", []) if int(item.get("id", -1)) == int(scene_id)), None)
-    if source_scene is None or source_scene.get("engine") != "edge-tts":
-        raise ValueError("GENERATED_SCENE_NOT_EDGE_TTS")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    expected_provider_identity = manifest.get("provider_identity")
+    if expected_provider_identity is None:
+        if source_scene is None or source_scene.get("engine") != "edge-tts":
+            raise ValueError("GENERATED_SCENE_NOT_EDGE_TTS")
+    else:
+        if (source_scene is None or source_scene.get("engine") != "fish.audio"
+                or generated.get("engine") != "fish.audio"
+                or generated.get("provider_identity") != expected_provider_identity):
+            raise ValueError("GENERATED_PROVIDER_IDENTITY_MISMATCH")
+        if (generated.get("target_date") != manifest.get("target_date")
+                or generated.get("plan_sha256") != manifest.get("script_sha256")):
+            raise ValueError("GENERATED_SCRIPT_IDENTITY_MISMATCH")
     boundaries = source_scene.get("word_boundaries")
     if not boundary_valid(boundaries):
         raise ValueError("GENERATED_WORDBOUNDARY_INVALID")
     audio_source = Path(audio_source)
     if not audio_source.is_file() or audio_source.stat().st_size < 1000:
         raise ValueError("GENERATED_AUDIO_INVALID")
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     target = next((item for item in manifest["scenes"] if int(item["scene_id"]) == int(scene_id)), None)
     if target is None or target.get("status") == "success":
         raise ValueError("SCENE_NOT_PENDING")

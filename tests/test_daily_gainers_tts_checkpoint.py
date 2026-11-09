@@ -28,32 +28,43 @@ class TtsCheckpointTests(unittest.TestCase):
     def write_script(self, scenes):
         self.script.write_text(json.dumps({"target_date": "20261104", "scenes": scenes}, ensure_ascii=False), encoding="utf-8")
 
-    def initialize(self, voice="zh-TW-YunJheNeural", rate="+15%"):
+    def initialize(self, voice="zh-TW-YunJheNeural", rate="+15%", provider_identity=None):
         return checkpoint.initialize(
             self.script, "20261104", self.manifest, self.audio_dir,
-            voice, rate, "7.3.1"
+            voice, rate, "7.3.1", provider_identity=provider_identity
         )
 
-    def record_scene(self, scene_id):
+    def record_scene(self, scene_id, provider_identity=None, generated_provider_identity="use-expected"):
         audio = self.root / f"generated-{scene_id}.mp3"
         audio.write_bytes(bytes([scene_id]) * 2048)
         text = "第一段內容。" if scene_id == 1 else "第二段內容。"
         generated = self.root / f"generated-{scene_id}.json"
-        generated.write_text(json.dumps({
-            "voice": "zh-TW-YunJheNeural",
-            "rate": "+15%",
-            "scenes": [{
-                "id": scene_id,
-                "engine": "edge-tts",
-                "spoken_text": text,
-                "word_boundaries": [
-                    {"text": "內容", "offset": 0, "duration": 2500000}
-                ],
-                "sha256": checkpoint.sha256_file(audio),
-            }]
-        }, ensure_ascii=False), encoding="utf-8")
+        scene = {
+            "id": scene_id,
+            "engine": "fish.audio" if provider_identity else "edge-tts",
+            "spoken_text": text,
+            "word_boundaries": [
+                {"text": "內容", "offset": 0, "duration": 2500000}
+            ],
+            "sha256": checkpoint.sha256_file(audio),
+        }
+        generated_doc = {
+            "voice": f"fish:{provider_identity['reference_id']}" if provider_identity else "zh-TW-YunJheNeural",
+            "rate": f"speed={provider_identity['prosody_speed']}" if provider_identity else "+15%",
+            "engine": "fish.audio" if provider_identity else "edge-tts",
+            "target_date": "20261104",
+            "plan_sha256": checkpoint.sha256_file(self.script),
+            "scenes": [scene],
+        }
+        if provider_identity:
+            scene["provider"] = "fish.audio"
+            generated_doc["provider_identity"] = (
+                provider_identity if generated_provider_identity == "use-expected"
+                else generated_provider_identity
+            )
+        generated.write_text(json.dumps(generated_doc, ensure_ascii=False), encoding="utf-8")
         boundaries = self.root / f"boundaries-{scene_id}.json"
-        boundaries.write_text(json.dumps([{"text": "內容", "offset": 0, "duration": 2500000}], ensure_ascii=False), encoding="utf-8")
+        boundaries.write_text(json.dumps(scene["word_boundaries"], ensure_ascii=False), encoding="utf-8")
         return checkpoint.record_success(
             self.manifest, self.audio_dir, scene_id, audio, boundaries,
             "run-1", generated
@@ -65,6 +76,114 @@ class TtsCheckpointTests(unittest.TestCase):
         self.assertEqual(checkpoint.missing_scenes(current), [2])
         self.assertEqual(current["scenes"][0]["status"], "success")
         self.assertEqual(current["scenes"][1]["status"], "pending")
+
+    def test_edge_checkpoint_is_not_reusable_for_fish_identity(self):
+        fish = {
+            "provider": "fish.audio",
+            "endpoint": "https://api.fish.audio/v1/tts/stream/with-timestamp",
+            "model": "s2.1-pro-free",
+            "reference_id": "e7af89da8abc4fbdacd9a10ab9881933",
+            "prosody_speed": 1.15,
+            "format": "mp3",
+            "sample_rate": 44100,
+            "mp3_bitrate": 128,
+            "normalize": False,
+            "language": "zh-TW",
+            "parser_version": "fish-timestamp-parser-v1",
+        }
+        self.record_scene(1)
+        current = self.initialize(voice="fish:e7af89da8abc4fbdacd9a10ab9881933", rate="speed=1.15", provider_identity=fish)
+        self.assertEqual(checkpoint.missing_scenes(current), [1, 2])
+        self.assertEqual(current["engine"], "fish.audio")
+        self.assertEqual(current["scenes"][0]["status"], "pending")
+
+    def test_fish_fingerprint_binds_frozen_script_sha(self):
+        fish = {
+            "provider": "fish.audio",
+            "endpoint": "https://api.fish.audio/v1/tts/stream/with-timestamp",
+            "model": "s2.1-pro-free",
+            "reference_id": "e7af89da8abc4fbdacd9a10ab9881933",
+            "prosody_speed": 1.15,
+            "format": "mp3",
+            "sample_rate": 44100,
+            "mp3_bitrate": 128,
+            "normalize": False,
+            "language": "zh-TW",
+            "parser_version": "fish-timestamp-parser-v1",
+        }
+        voice = f"fish:{fish['reference_id']}"
+        self.initialize(voice=voice, rate="speed=1.15", provider_identity=fish)
+        self.record_scene(1, provider_identity=fish)
+        previous = self.initialize(voice=voice, rate="speed=1.15", provider_identity=fish)
+        self.write_script([
+            {"id": 1, "scene_type": "stock_list_revised", "narration": "第一段內容。"},
+            {"id": 2, "scene_type": "closing_summary", "narration": "第二段內容。"},
+        ])
+        current = self.initialize(voice=voice, rate="speed=1.15", provider_identity=fish)
+        self.assertEqual(current["scenes"][0]["identity"]["normalized_text_sha256"],
+                         previous["scenes"][0]["identity"]["normalized_text_sha256"])
+        self.assertNotEqual(current["scenes"][0]["fingerprint"], previous["scenes"][0]["fingerprint"])
+        self.assertEqual(checkpoint.missing_scenes(current), [1, 2])
+
+    def test_matching_fish_provider_checkpoint_is_reusable_and_validates(self):
+        fish = {
+            "provider": "fish.audio",
+            "endpoint": "https://api.fish.audio/v1/tts/stream/with-timestamp",
+            "model": "s2.1-pro-free",
+            "reference_id": "e7af89da8abc4fbdacd9a10ab9881933",
+            "prosody_speed": 1.15,
+            "format": "mp3",
+            "sample_rate": 44100,
+            "mp3_bitrate": 128,
+            "normalize": False,
+            "language": "zh-TW",
+            "parser_version": "fish-timestamp-parser-v1",
+        }
+        self.initialize(voice=f"fish:{fish['reference_id']}", rate="speed=1.15", provider_identity=fish)
+        self.record_scene(1, provider_identity=fish)
+        self.record_scene(2, provider_identity=fish)
+        current = self.initialize(voice=f"fish:{fish['reference_id']}", rate="speed=1.15", provider_identity=fish)
+        self.assertEqual(checkpoint.missing_scenes(current), [])
+        self.assertEqual(checkpoint.validate_checkpoint(current, self.audio_dir), [])
+
+    def test_fish_provider_identity_change_invalidates_only_affected_audio(self):
+        fish = {
+            "provider": "fish.audio",
+            "endpoint": "https://api.fish.audio/v1/tts/stream/with-timestamp",
+            "model": "s2.1-pro-free",
+            "reference_id": "e7af89da8abc4fbdacd9a10ab9881933",
+            "prosody_speed": 1.15,
+            "format": "mp3",
+            "sample_rate": 44100,
+            "mp3_bitrate": 128,
+            "normalize": False,
+            "language": "zh-TW",
+            "parser_version": "fish-timestamp-parser-v1",
+        }
+        self.initialize(voice="fish:e7af89da8abc4fbdacd9a10ab9881933", rate="speed=1.15", provider_identity=fish)
+        self.record_scene(1, provider_identity=fish)
+        changed = {**fish, "prosody_speed": 1.1}
+        current = self.initialize(voice="fish:e7af89da8abc4fbdacd9a10ab9881933", rate="speed=1.1", provider_identity=changed)
+        self.assertEqual(checkpoint.missing_scenes(current), [1, 2])
+
+    def test_fish_record_success_requires_exact_provider_identity(self):
+        fish = {
+            "provider": "fish.audio",
+            "endpoint": "https://api.fish.audio/v1/tts/stream/with-timestamp",
+            "model": "s2.1-pro-free",
+            "reference_id": "e7af89da8abc4fbdacd9a10ab9881933",
+            "prosody_speed": 1.15,
+            "format": "mp3",
+            "sample_rate": 44100,
+            "mp3_bitrate": 128,
+            "normalize": False,
+            "language": "zh-TW",
+            "parser_version": "fish-timestamp-parser-v1",
+        }
+        self.initialize(voice="fish:e7af89da8abc4fbdacd9a10ab9881933", rate="speed=1.15", provider_identity=fish)
+        with self.assertRaisesRegex(ValueError, "GENERATED_PROVIDER_IDENTITY_MISMATCH"):
+            self.record_scene(1, provider_identity=fish, generated_provider_identity={**fish, "prosody_speed": 1.1})
+        self.assertFalse((self.audio_dir / "audio" / "01.mp3").exists())
 
     def test_matching_complete_checkpoint_validates(self):
         self.record_scene(1)
