@@ -22,6 +22,14 @@ tts_manifest_path = plan_path.parent / "tts-manifest.json"
 if not tts_manifest_path.exists():
     raise FileNotFoundError(f"Missing TTS timing manifest: {tts_manifest_path}")
 tts_manifest = json.loads(tts_manifest_path.read_text(encoding="utf-8"))
+tts_engine = tts_manifest.get("engine")
+if tts_engine not in ("edge-tts", "fish.audio"):
+    raise RuntimeError("Unsupported TTS timing provider")
+if tts_engine == "fish.audio" and (
+    not isinstance(tts_manifest.get("provider_identity"), dict)
+    or tts_manifest["provider_identity"].get("provider") != "fish.audio"
+):
+    raise RuntimeError("Fish timing manifest omitted provider identity")
 tts_scenes = {int(item["id"]): item for item in tts_manifest["scenes"]}
 
 
@@ -199,8 +207,8 @@ for scene in plan.get("scenes", []):
         continue
 
     tts_scene = tts_scenes.get(sid)
-    if not tts_scene or tts_scene.get("engine") != "edge-tts":
-        raise RuntimeError(f"Scene {sid}: word-level subtitle timing requires edge-tts")
+    if not tts_scene or tts_scene.get("engine") != tts_engine:
+        raise RuntimeError(f"Scene {sid}: word-level subtitle timing provider mismatch")
     try:
         cue_intervals = align_cues(spoken_chunks, normalize_spoken_text,
                                    tts_scene.get("word_boundaries", []), duration)

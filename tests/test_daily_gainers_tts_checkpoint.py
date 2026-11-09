@@ -52,6 +52,7 @@ class TtsCheckpointTests(unittest.TestCase):
             "voice": f"fish:{provider_identity['reference_id']}" if provider_identity else "zh-TW-YunJheNeural",
             "rate": f"speed={provider_identity['prosody_speed']}" if provider_identity else "+15%",
             "engine": "fish.audio" if provider_identity else "edge-tts",
+            "pipeline_version": provider_identity["pipeline_version"] if provider_identity else checkpoint.PIPELINE_VERSION,
             "target_date": "20261104",
             "plan_sha256": checkpoint.sha256_file(self.script),
             "scenes": [scene],
@@ -90,6 +91,7 @@ class TtsCheckpointTests(unittest.TestCase):
             "normalize": False,
             "language": "zh-TW",
             "parser_version": "fish-timestamp-parser-v1",
+            "pipeline_version": "fish-audio-timestamp-parser-v1",
         }
         self.record_scene(1)
         current = self.initialize(voice="fish:e7af89da8abc4fbdacd9a10ab9881933", rate="speed=1.15", provider_identity=fish)
@@ -110,6 +112,7 @@ class TtsCheckpointTests(unittest.TestCase):
             "normalize": False,
             "language": "zh-TW",
             "parser_version": "fish-timestamp-parser-v1",
+            "pipeline_version": "fish-audio-timestamp-parser-v1",
         }
         voice = f"fish:{fish['reference_id']}"
         self.initialize(voice=voice, rate="speed=1.15", provider_identity=fish)
@@ -138,8 +141,11 @@ class TtsCheckpointTests(unittest.TestCase):
             "normalize": False,
             "language": "zh-TW",
             "parser_version": "fish-timestamp-parser-v1",
+            "pipeline_version": "fish-audio-timestamp-parser-v1",
         }
-        self.initialize(voice=f"fish:{fish['reference_id']}", rate="speed=1.15", provider_identity=fish)
+        initialized = self.initialize(voice=f"fish:{fish['reference_id']}", rate="speed=1.15", provider_identity=fish)
+        self.assertEqual(initialized["pipeline_version"], checkpoint.PIPELINE_VERSION)
+        self.assertEqual(initialized["provider_identity"]["pipeline_version"], fish["pipeline_version"])
         self.record_scene(1, provider_identity=fish)
         self.record_scene(2, provider_identity=fish)
         current = self.initialize(voice=f"fish:{fish['reference_id']}", rate="speed=1.15", provider_identity=fish)
@@ -159,6 +165,7 @@ class TtsCheckpointTests(unittest.TestCase):
             "normalize": False,
             "language": "zh-TW",
             "parser_version": "fish-timestamp-parser-v1",
+            "pipeline_version": "fish-audio-timestamp-parser-v1",
         }
         self.initialize(voice="fish:e7af89da8abc4fbdacd9a10ab9881933", rate="speed=1.15", provider_identity=fish)
         self.record_scene(1, provider_identity=fish)
@@ -179,6 +186,7 @@ class TtsCheckpointTests(unittest.TestCase):
             "normalize": False,
             "language": "zh-TW",
             "parser_version": "fish-timestamp-parser-v1",
+            "pipeline_version": "fish-audio-timestamp-parser-v1",
         }
         self.initialize(voice="fish:e7af89da8abc4fbdacd9a10ab9881933", rate="speed=1.15", provider_identity=fish)
         with self.assertRaisesRegex(ValueError, "GENERATED_PROVIDER_IDENTITY_MISMATCH"):
@@ -245,23 +253,44 @@ class TtsCheckpointTests(unittest.TestCase):
 
 
 class TtsRecoveryWorkflowContractTests(unittest.TestCase):
-    def test_each_fresh_scene_runner_installs_the_pinned_edge_tts_client(self):
-        workflow_path = ".github/workflows/daily-gainers-tts-scene-recovery.yml"
-        workflow = subprocess.run(
-            ["git", "show", f"HEAD:{workflow_path}"],
+    def read_head(self, path):
+        return subprocess.run(
+            ["git", "show", f"HEAD:{path}"],
             check=True, capture_output=True, text=True
         ).stdout
-        self.assertIn("  synthesize:\n", workflow)
-        synthesize = workflow.split("  synthesize:\n", 1)[1].split("\n  sync-status:\n", 1)[0]
 
-        setup_step = synthesize.find("uses: actions/setup-python@v6")
-        install_step = synthesize.find("name: Install pinned Edge TTS client")
-        synthesize_step = synthesize.find("name: Create one-scene plan and synthesize once")
-        self.assertGreaterEqual(setup_step, 0)
-        self.assertIn('python-version: "3.12"', synthesize[setup_step:install_step])
-        self.assertIn("edge-tts==7.3.1", synthesize[install_step:synthesize_step])
-        self.assertGreaterEqual(install_step, 0)
-        self.assertGreater(synthesize_step, install_step)
+    def test_fresh_scene_runner_uses_fish_once_without_edge_fallback(self):
+        workflow = self.read_head(".github/workflows/daily-gainers-tts-scene-recovery.yml")
+        synth = self.read_head("scripts/synthesize_daily_gainers_fish_tts.py")
+        self.assertIn("  synthesize:\n", workflow)
+        self.assertIn("max-parallel: 1", workflow)
+        self.assertIn("--limit 3", workflow)
+        self.assertIn("synthesize_daily_gainers_fish_tts.py --plan", workflow)
+        self.assertNotIn("edge-tts==", workflow)
+        self.assertNotIn("synthesize_daily_gainers_tts.py", workflow)
+        self.assertEqual(workflow.count("FISH_API_KEY: ${{ secrets.FISH_API_KEY }}"), 1)
+        synthesize = workflow.split("  synthesize:\n", 1)[1].split("\n  sync-status:\n", 1)[0]
+        self.assertIn("FISH_API_KEY: ${{ secrets.FISH_API_KEY }}", synthesize)
+        self.assertEqual(synth.count("request_tts(spoken_text, api_key)"), 1)
+        self.assertNotIn("edge-tts", synth)
+        self.assertIn("Fish Audio transport failed", synth)
+
+    def test_render_only_validates_existing_checkpoint_without_api_or_mutating_init(self):
+        workflow = self.read_head(".github/workflows/daily-gainers-date-render-only.yml")
+        render = workflow.split("Restore and validate durable cross-run TTS checkpoint", 1)[1]
+        self.assertIn("daily_gainers_tts_checkpoint.py validate", render)
+        self.assertIn("--provider-identity", render)
+        self.assertNotIn("daily_gainers_tts_checkpoint.py init", render)
+        self.assertNotIn("FISH_API_KEY", workflow)
+        self.assertNotIn("secrets.FISH_API_KEY", workflow)
+        self.assertNotIn("synthesize_daily_gainers_fish_tts.py --plan", render)
+        self.assertIn('"engine":source["engine"]', render)
+
+    def test_srt_builder_accepts_only_explicit_fish_provider_manifest(self):
+        srt = self.read_head("scripts/build_daily_gainers_srt.py")
+        self.assertIn('tts_engine not in ("edge-tts", "fish.audio")', srt)
+        self.assertIn('tts_manifest["provider_identity"].get("provider") != "fish.audio"', srt)
+        self.assertIn('tts_scene.get("engine") != tts_engine', srt)
 
 
 if __name__ == "__main__":

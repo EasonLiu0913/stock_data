@@ -27,8 +27,8 @@ jobs:
       matrix: ${{ steps.queue.outputs.matrix }}
     env:
       REQUESTED_DATE: ${{ inputs.target_date || '' }}
-      YOUTUBE_TTS_VOICE: zh-TW-YunJheNeural
-      YOUTUBE_TTS_RATE: '+15%'
+      FISH_TTS_VOICE: fish:e7af89da8abc4fbdacd9a10ab9881933
+      FISH_TTS_RATE: '1.15'
     steps:
       - name: Checkout validated script inputs
         uses: actions/checkout@v7
@@ -80,9 +80,14 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install pinned TTS client
+      - name: Install MP3 probe for Fish timestamp validation
         if: steps.resolve.outputs.target_date != ''
-        run: python -m pip install --disable-pip-version-check --no-cache-dir edge-tts==7.3.1
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg
+      - name: Freeze Fish provider identity contract
+        if: steps.resolve.outputs.target_date != ''
+        run: python scripts/synthesize_daily_gainers_fish_tts.py --write-provider-identity "$RUNNER_TEMP/fish-provider-identity.json"
 
       - name: Re-run formal script and news gates
         if: steps.resolve.outputs.target_date != ''
@@ -134,8 +139,8 @@ jobs:
         shell: bash
         env:
           DATE: ${{ steps.resolve.outputs.target_date }}
-          YOUTUBE_TTS_VOICE: zh-TW-YunJheNeural
-          YOUTUBE_TTS_RATE: '+15%'
+          FISH_TTS_VOICE: fish:e7af89da8abc4fbdacd9a10ab9881933
+          FISH_TTS_RATE: '1.15'
         run: |
           set -euo pipefail
           script="research_pending/daily-gainers-render-scripts/$DATE.json"
@@ -155,9 +160,10 @@ jobs:
             --date "$DATE" \
             --manifest "$checkpoint/tts-audio/$DATE/manifest.json" \
             --checkpoint-dir "$checkpoint/tts-audio/$DATE" \
-            --voice "$YOUTUBE_TTS_VOICE" \
-            --rate "$YOUTUBE_TTS_RATE" \
-            --engine-version "7.3.1"
+            --voice "$FISH_TTS_VOICE" \
+            --rate "$FISH_TTS_RATE" \
+            --engine-version "fish-timestamped-stream-v1" \
+            --provider-identity "$RUNNER_TEMP/fish-provider-identity.json"
           git -C "$checkpoint" add "tts-audio/$DATE/manifest.json"
           if ! git -C "$checkpoint" diff --cached --quiet; then
             git -C "$checkpoint" config user.name "github-actions[bot]"
@@ -200,8 +206,8 @@ jobs:
     env:
       DATE: ${{ needs.prepare.outputs.target_date }}
       SCENE_ID: ${{ matrix.scene_id }}
-      YOUTUBE_TTS_VOICE: zh-TW-YunJheNeural
-      YOUTUBE_TTS_RATE: '+15%'
+      FISH_TTS_VOICE: fish:e7af89da8abc4fbdacd9a10ab9881933
+      FISH_TTS_RATE: '1.15'
       TAIWAN_STOCK_TTS_MAX_ATTEMPTS: '1'
       TAIWAN_STOCK_TTS_TRANSPORT_DIAGNOSTICS: '1'
     steps:
@@ -220,8 +226,10 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install pinned Edge TTS client
-        run: python -m pip install --disable-pip-version-check --no-cache-dir edge-tts==7.3.1
+      - name: Install MP3 probe for Fish timestamp validation
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg
 
       - name: Download frozen plan
         uses: actions/download-artifact@v7
@@ -255,7 +263,9 @@ jobs:
           python scripts/daily_gainers_tts_checkpoint.py make-scene-plan \
             --script "$RUNNER_TEMP/tts-plan/plan.json" --date "$DATE" \
             --scene-id "$SCENE_ID" --output "$RUNNER_TEMP/scene/plan.json"
-          python scripts/synthesize_daily_gainers_tts.py "$RUNNER_TEMP/scene/plan.json"
+          python scripts/synthesize_daily_gainers_fish_tts.py --plan "$RUNNER_TEMP/scene/plan.json" --scene-id "$SCENE_ID"
+        env:
+          FISH_API_KEY: ${{ secrets.FISH_API_KEY }}
 
       - name: Upload payload-free TTS transport diagnostics
         if: always() && env.SCENE_ID != '0'

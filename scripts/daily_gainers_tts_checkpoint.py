@@ -70,14 +70,14 @@ def scene_fingerprint(scene_id, text, voice, rate, engine_version, provider_iden
         required = {
             "provider", "endpoint", "model", "reference_id", "prosody_speed",
             "format", "sample_rate", "mp3_bitrate", "normalize", "language",
-            "parser_version",
+            "parser_version", "pipeline_version",
         }
         if not isinstance(provider_identity, dict) or set(provider_identity) != required:
             raise ValueError("FISH_PROVIDER_IDENTITY_INCOMPLETE")
         if provider_identity.get("provider") != "fish.audio":
             raise ValueError("FISH_PROVIDER_IDENTITY_INVALID")
         if any(not isinstance(provider_identity[key], str) or not provider_identity[key] for key in (
-            "endpoint", "model", "reference_id", "format", "language", "parser_version"
+            "endpoint", "model", "reference_id", "format", "language", "parser_version", "pipeline_version"
         )):
             raise ValueError("FISH_PROVIDER_IDENTITY_INVALID")
         if (not isinstance(provider_identity["prosody_speed"], (int, float))
@@ -216,6 +216,45 @@ def missing_scenes(manifest):
     return [item["scene_id"] for item in manifest["scenes"] if item["status"] != "success"]
 
 
+def validate_checkpoint_identity(manifest, script_path, target_date, voice, rate, engine_version, provider_identity):
+    script_sha, scenes = read_script(script_path, target_date)
+    failures = []
+    if manifest.get("target_date") != target_date:
+        failures.append("CHECKPOINT_DATE_MISMATCH")
+    if manifest.get("script_sha256") != script_sha:
+        failures.append("CHECKPOINT_SCRIPT_SHA_MISMATCH")
+    if provider_identity is None:
+        if manifest.get("engine") != "edge-tts" or manifest.get("provider_identity") is not None:
+            failures.append("CHECKPOINT_PROVIDER_IDENTITY_MISMATCH")
+    else:
+        if manifest.get("engine") != provider_identity.get("provider"):
+            failures.append("CHECKPOINT_PROVIDER_MISMATCH")
+        if manifest.get("pipeline_version") != PIPELINE_VERSION:
+            failures.append("CHECKPOINT_PIPELINE_VERSION_MISMATCH")
+        if manifest.get("provider_identity") != provider_identity:
+            failures.append("CHECKPOINT_PROVIDER_IDENTITY_MISMATCH")
+    expected_records = {scene["id"]: scene for scene in scenes}
+    actual_records = {int(item["scene_id"]): item for item in manifest.get("scenes", [])}
+    if set(actual_records) != set(expected_records):
+        failures.append("CHECKPOINT_SCENE_COVERAGE_MISMATCH")
+    for scene_id, scene in expected_records.items():
+        record = actual_records.get(scene_id)
+        if record is None:
+            continue
+        try:
+            fingerprint, identity = scene_fingerprint(
+                scene_id, scene["text"], voice, rate, engine_version, provider_identity,
+                target_date=target_date if provider_identity else None,
+                script_sha256=script_sha if provider_identity else None,
+            )
+        except (TypeError, ValueError):
+            failures.append(f"SCENE_{scene_id:02d}_IDENTITY_INVALID")
+            continue
+        if record.get("fingerprint") != fingerprint or record.get("identity") != identity:
+            failures.append(f"SCENE_{scene_id:02d}_FINGERPRINT_MISMATCH")
+    return failures
+
+
 def validate_checkpoint(manifest, checkpoint_dir):
     checkpoint_dir = Path(checkpoint_dir)
     failures = []
@@ -253,7 +292,9 @@ def record_success(manifest_path, checkpoint_dir, scene_id, audio_source, bounda
     else:
         if (source_scene is None or source_scene.get("engine") != "fish.audio"
                 or generated.get("engine") != "fish.audio"
-                or generated.get("provider_identity") != expected_provider_identity):
+                or generated.get("provider_identity") != expected_provider_identity
+                or generated.get("pipeline_version") != expected_provider_identity.get("pipeline_version")
+                or manifest.get("pipeline_version") != PIPELINE_VERSION):
             raise ValueError("GENERATED_PROVIDER_IDENTITY_MISMATCH")
         if (generated.get("target_date") != manifest.get("target_date")
                 or generated.get("plan_sha256") != manifest.get("script_sha256")):
@@ -315,6 +356,7 @@ def make_scene_plan(script_path, target_date, scene_id, output_path):
     payload = {
         "schema_version": 1,
         "target_date": target_date,
+        "script_sha256": sha256_bytes(Path(script_path).read_bytes()),
         "scenes": [{"id": int(scene_id), "narration": source_scene.get("narration") or source_scene.get("speech_text")}],
     }
     atomic_json(output_path, payload)
@@ -345,6 +387,7 @@ def main():
     init.add_argument("--voice", required=True)
     init.add_argument("--rate", required=True)
     init.add_argument("--engine-version", required=True)
+    init.add_argument("--provider-identity", help="Path to Fish provider identity JSON; omitted for legacy Edge")
     plan = sub.add_parser("plan")
     plan.add_argument("--manifest", required=True)
     plan.add_argument("--checkpoint-dir", required=True)
@@ -365,13 +408,20 @@ def main():
     validate = sub.add_parser("validate")
     validate.add_argument("--manifest", required=True)
     validate.add_argument("--checkpoint-dir", required=True)
+    validate.add_argument("--script")
+    validate.add_argument("--date")
+    validate.add_argument("--voice")
+    validate.add_argument("--rate")
+    validate.add_argument("--engine-version")
+    validate.add_argument("--provider-identity", help="Path to Fish provider identity JSON")
     cleanup = sub.add_parser("cleanup-check")
     cleanup.add_argument("--manifest", required=True)
     cleanup.add_argument("--receipt", required=True)
     args = parser.parse_args()
 
     if args.command == "init":
-        result = initialize(args.script, args.date, args.manifest, args.checkpoint_dir, args.voice, args.rate, args.engine_version)
+        provider = json.loads(Path(args.provider_identity).read_text(encoding="utf-8")) if args.provider_identity else None
+        result = initialize(args.script, args.date, args.manifest, args.checkpoint_dir, args.voice, args.rate, args.engine_version, provider_identity=provider)
         print(json.dumps({"target_date": args.date, "script_sha256": result["script_sha256"], "missing_scene_ids": missing_scenes(result)}))
     elif args.command == "plan":
         manifest = json.loads(Path(args.manifest).read_text(encoding="utf-8"))
@@ -384,7 +434,16 @@ def main():
         print(json.dumps({"recorded_scene": args.scene_id, "script_sha256": result["script_sha256"]}))
     elif args.command == "validate":
         manifest = json.loads(Path(args.manifest).read_text(encoding="utf-8"))
-        failures = validate_checkpoint(manifest, args.checkpoint_dir)
+        failures = []
+        identity_args = (args.script, args.date, args.voice, args.rate, args.engine_version)
+        if any(identity_args) or args.provider_identity:
+            if not all(identity_args):
+                raise SystemExit("CHECKPOINT_IDENTITY_VALIDATION_ARGUMENTS_INCOMPLETE")
+            provider = json.loads(Path(args.provider_identity).read_text(encoding="utf-8")) if args.provider_identity else None
+            failures.extend(validate_checkpoint_identity(
+                manifest, args.script, args.date, args.voice, args.rate, args.engine_version, provider
+            ))
+        failures.extend(validate_checkpoint(manifest, args.checkpoint_dir))
         if failures:
             print(json.dumps({"status": "FAIL", "failures": failures}), file=sys.stderr)
             raise SystemExit(1)
