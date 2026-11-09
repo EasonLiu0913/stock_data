@@ -113,20 +113,40 @@ def request_tts(text: str, api_key: str) -> tuple[bytes, dict[int, dict], str]:
         raise FishStreamError(f"Fish Audio transport failed ({type(error.reason).__name__})") from error
 
 
-def media_duration(audio_path: Path) -> float:
+def probe_mp3(audio_path: Path) -> dict:
     result = subprocess.run(
-        ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", str(audio_path)],
+        [
+            "ffprobe", "-v", "error", "-show_entries",
+            "stream=codec_type,codec_name,sample_rate,channels,bit_rate:format=duration",
+            "-of", "json", str(audio_path),
+        ],
         check=True,
         capture_output=True,
         text=True,
     )
     try:
-        duration = float(result.stdout.strip())
-    except ValueError as error:
-        raise FishStreamError("Fish MP3 duration probe returned invalid output") from error
+        report = json.loads(result.stdout)
+        audio_streams = [stream for stream in report.get("streams", []) if stream.get("codec_type") == "audio"]
+        stream = audio_streams[0]
+        duration = float(report["format"]["duration"])
+        sample_rate = int(stream["sample_rate"])
+        channels = int(stream["channels"])
+        bitrate = int(stream["bit_rate"])
+    except (KeyError, IndexError, TypeError, ValueError, json.JSONDecodeError) as error:
+        raise FishStreamError("Fish MP3 probe returned incomplete media metadata") from error
+    if stream.get("codec_name") != "mp3":
+        raise FishStreamError("Fish Audio output is not MP3")
+    if sample_rate != SAMPLE_RATE or channels != 1 or bitrate != MP3_BITRATE * 1000:
+        raise FishStreamError("Fish MP3 does not match the pinned mono 44.1kHz/128kbps format")
     if not duration > 0:
         raise FishStreamError("Fish MP3 duration must be positive")
-    return duration
+    return {
+        "codec": stream["codec_name"],
+        "sample_rate": sample_rate,
+        "channels": channels,
+        "bitrate": bitrate,
+        "duration_seconds": duration,
+    }
 
 
 def run(plan_path: Path, scene_id: int) -> dict:
@@ -146,7 +166,8 @@ def run(plan_path: Path, scene_id: int) -> dict:
     out_dir.mkdir(parents=True, exist_ok=True)
     audio_path = out_dir / f"{scene_id:02d}.mp3"
     audio_path.write_bytes(audio)
-    boundaries = timeline_to_word_boundaries(timeline, media_duration(audio_path))
+    audio_probe = probe_mp3(audio_path)
+    boundaries = timeline_to_word_boundaries(timeline, audio_probe["duration_seconds"])
     identity = provider_identity()
     scene_doc = {
         "id": scene_id,
@@ -184,6 +205,7 @@ def run(plan_path: Path, scene_id: int) -> dict:
             "http_content_type": content_type,
             "audio_bytes": len(audio),
             "audio_sha256": scene_doc["sha256"],
+            "audio_probe": audio_probe,
             "alignment_chunks": len(alignments),
             "alignment_coverage": round(coverage, 6),
         }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
