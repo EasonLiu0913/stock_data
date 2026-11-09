@@ -1,4 +1,3 @@
-/Users/eason/.zlogin:7: nice(5) failed: operation not permitted
 import base64
 import json
 import tempfile
