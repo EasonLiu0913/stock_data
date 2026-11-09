@@ -2,6 +2,7 @@ import base64
 import json
 import tempfile
 import unittest
+from decimal import Decimal
 from pathlib import Path
 from unittest.mock import patch
 
@@ -159,7 +160,7 @@ class FishTimestampStreamTests(unittest.TestCase):
     def test_reports_positive_interval_float_collapse_separately(self):
         with self.assertRaises(FishStreamError) as context:
             build_global_timeline({0: {"content": "微", "offset": 0, "audio_duration": 100000001, "segments": [
-                {"text": "微", "start": 100000000, "end": 100000000.000000001},
+                {"text": "微", "start": Decimal("100000000"), "end": Decimal("100000000.000000001")},
             ]}})
         self.assertEqual(context.exception.code, "adapter_precision_collapse")
 
