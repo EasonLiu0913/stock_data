@@ -131,40 +131,107 @@ def _spoken_chars(text: str) -> str:
 def build_global_timeline(alignment_by_chunk: dict[int, dict]) -> list[dict]:
     timeline: list[dict] = []
     for seq, item in sorted(alignment_by_chunk.items()):
-        previous_start = -1.0
+        previous_start = Decimal("-1")
+        try:
+            offset = Decimal(str(item["offset"]))
+            chunk_duration = Decimal(str(item["audio_duration"]))
+        except (KeyError, InvalidOperation, TypeError, ValueError) as error:
+            raise FishStreamError(
+                "Fish Audio alignment chunk has invalid timing metadata",
+                code="invalid_chunk_timing",
+                details={"chunk_seq": seq},
+            ) from error
         for segment in item["segments"]:
             if not isinstance(segment, dict) or not isinstance(segment.get("text"), str):
                 raise FishStreamError("Fish Audio alignment segment has invalid text")
             try:
-                local_start = float(segment["start"])
-                local_end = float(segment["end"])
-            except (KeyError, TypeError, ValueError) as error:
+                local_start = Decimal(str(segment["start"]))
+                local_end = Decimal(str(segment["end"]))
+            except (KeyError, InvalidOperation, TypeError, ValueError) as error:
                 raise FishStreamError("Fish Audio alignment segment has invalid times") from error
+            if not local_start.is_finite() or not local_end.is_finite():
+                raise FishStreamError(
+                    "Fish Audio alignment segment has a non-finite timestamp",
+                    code="non_finite_timestamp",
+                    details={
+                        "chunk_seq": seq,
+                        "local_start_seconds": str(local_start),
+                        "local_end_seconds": str(local_end),
+                        "chunk_offset_seconds": str(offset),
+                    },
+                )
             if local_start < 0:
                 raise FishStreamError(
                     "Fish Audio alignment has a negative start",
                     code="negative_start",
-                    details={"chunk_seq": seq, "start_seconds": local_start},
+                    details={"chunk_seq": seq, "local_start_seconds": str(local_start)},
                 )
             if local_start < previous_start:
                 raise FishStreamError(
                     "Fish Audio alignment starts are not ordered within a chunk",
                     code="chunk_start_order_violation",
-                    details={"chunk_seq": seq, "start_seconds": local_start, "previous_start_seconds": previous_start},
+                    details={
+                        "chunk_seq": seq,
+                        "local_start_seconds": str(local_start),
+                        "previous_local_start_seconds": str(previous_start),
+                    },
                 )
             if local_end < local_start:
                 raise FishStreamError(
                     "Fish Audio alignment segment has a negative duration",
-                    code="negative_duration",
-                    details={"chunk_seq": seq, "start_seconds": local_start, "end_seconds": local_end},
+                    code="provider_negative_duration",
+                    details={
+                        "chunk_seq": seq,
+                        "local_start_seconds": str(local_start),
+                        "local_end_seconds": str(local_end),
+                        "chunk_offset_seconds": str(offset),
+                    },
                 )
-            if local_end > item["audio_duration"] + 0.25:
-                raise FishStreamError("Fish Audio alignment exceeds its chunk duration")
+            if local_end == local_start:
+                raise FishStreamError(
+                    "Fish Audio provider alignment segment has zero duration",
+                    code="provider_zero_duration",
+                    details={
+                        "chunk_seq": seq,
+                        "local_start_seconds": str(local_start),
+                        "local_end_seconds": str(local_end),
+                        "chunk_offset_seconds": str(offset),
+                        "time_condition": "provider_interval_non_positive",
+                    },
+                )
+            if local_end > chunk_duration + Decimal("0.25"):
+                raise FishStreamError(
+                    "Fish Audio alignment exceeds its chunk duration",
+                    code="end_after_chunk_duration",
+                    details={
+                        "chunk_seq": seq,
+                        "local_end_seconds": str(local_end),
+                        "chunk_duration_seconds": str(chunk_duration),
+                    },
+                )
+            global_start = local_start + offset
+            global_end = local_end + offset
+            mapped_start = float(global_start)
+            mapped_end = float(global_end)
+            if mapped_end <= mapped_start:
+                raise FishStreamError(
+                    "Positive Fish Audio interval collapsed during numeric mapping",
+                    code="adapter_precision_collapse",
+                    details={
+                        "chunk_seq": seq,
+                        "local_start_seconds": str(local_start),
+                        "local_end_seconds": str(local_end),
+                        "chunk_offset_seconds": str(offset),
+                        "mapped_start_seconds": repr(mapped_start),
+                        "mapped_end_seconds": repr(mapped_end),
+                        "time_condition": "positive_provider_interval_collapsed_by_adapter",
+                    },
+                )
             previous_start = local_start
             timeline.append({
                 "text": segment["text"],
-                "start": round(local_start + item["offset"], 6),
-                "end": round(local_end + item["offset"], 6),
+                "start": mapped_start,
+                "end": mapped_end,
                 "chunk_seq": seq,
             })
     return timeline
