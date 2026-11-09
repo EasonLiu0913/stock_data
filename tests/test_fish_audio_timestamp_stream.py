@@ -1,12 +1,18 @@
 import base64
 import json
+import tempfile
 import unittest
+from pathlib import Path
+from unittest.mock import patch
 
 from scripts.fish_audio_timestamp_stream import (
+    FishStreamError,
     build_global_timeline,
     parse_sse_events,
     timeline_to_word_boundaries,
     validate_alignment,
+    write_failure_diagnostic,
+    run as run_timestamp_adapter,
 )
 from scripts.daily_gainers_spoken_text import normalize_spoken_text
 from scripts.daily_gainers_subtitle_alignment import align_cues
@@ -70,11 +76,70 @@ class FishTimestampStreamTests(unittest.TestCase):
         self.assertEqual(cues[1][0], 0.8)
 
     def test_rejects_timeline_outside_mp3_duration(self):
-        with self.assertRaisesRegex(RuntimeError, "exceeds MP3 duration"):
+        with self.assertRaises(FishStreamError) as context:
             timeline_to_word_boundaries(
                 [{"text": "超時", "start": 0.9, "end": 1.1}],
                 1.0,
             )
+        self.assertEqual(context.exception.code, "end_after_media_duration")
+
+    def test_normalizes_small_backward_start_jitter_for_word_boundaries(self):
+        boundaries = timeline_to_word_boundaries([
+            {"text": "甲", "start": 1.0, "end": 1.2},
+            {"text": "乙", "start": 0.9, "end": 1.4},
+        ], 1.5)
+        self.assertEqual(boundaries, [
+            {"text": "甲", "offset": 10_000_000, "duration": 2_000_000},
+            {"text": "乙", "offset": 10_000_000, "duration": 4_000_000},
+        ])
+
+    def test_reports_large_backward_start_violation_separately(self):
+        with self.assertRaises(FishStreamError) as context:
+            timeline_to_word_boundaries([
+                {"text": "甲", "start": 1.0, "end": 1.2},
+                {"text": "乙", "start": 0.7, "end": 1.4},
+            ], 1.5)
+        self.assertEqual(context.exception.code, "start_order_violation")
+        self.assertEqual(context.exception.details["backward_jitter_seconds"], "0.3")
+
+    def test_reports_non_positive_segment_duration_separately(self):
+        with self.assertRaises(FishStreamError) as context:
+            timeline_to_word_boundaries([{"text": "零", "start": 0.5, "end": 0.5}], 1.0)
+        self.assertEqual(context.exception.code, "non_positive_duration")
+
+    def test_failure_diagnostic_is_payload_free_and_names_time_condition(self):
+        error = FishStreamError(
+            "Fish Audio timeline exceeds MP3 duration",
+            code="end_after_media_duration",
+            details={"end_seconds": "1.1", "media_duration_seconds": "1.0"},
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = write_failure_diagnostic(
+                Path(temp_dir),
+                scene_id=2,
+                error=error,
+            )
+            document = json.loads(path.read_text(encoding="utf-8"))
+        self.assertEqual(document["error_code"], "end_after_media_duration")
+        self.assertEqual(document["scene_id"], 2)
+        self.assertNotIn("text", document)
+        self.assertNotIn("api_key", document)
+
+    def test_adapter_cli_path_writes_diagnostic_before_preserving_failure(self):
+        failure = FishStreamError(
+            "Fish Audio timeline exceeds MP3 duration",
+            code="end_after_media_duration",
+            details={"end_seconds": "1.1", "media_duration_seconds": "1.0"},
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with patch("scripts.fish_audio_timestamp_stream._run", side_effect=failure):
+                with self.assertRaises(FishStreamError):
+                    run_timestamp_adapter(Path("unused-plan.json"), 2, Path(temp_dir))
+            document = json.loads(
+                (Path(temp_dir) / "tts-transport-diagnostics.json").read_text(encoding="utf-8")
+            )
+        self.assertEqual(document["status"], "failure")
+        self.assertEqual(document["error_code"], "end_after_media_duration")
 
     def test_rejects_alignment_with_text_coverage_gap(self):
         by_chunk = {0: {"content": "台灣", "offset": 0, "audio_duration": 1, "segments": [
