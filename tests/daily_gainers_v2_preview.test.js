@@ -32,9 +32,13 @@ try {
  const result=preview(date,tmp);
  const plan=JSON.parse(fs.readFileSync(path.join(result.output,'plan.json')));
  assert.equal(plan.schema_version,2);
- assert.equal(plan.scenes[0].caption_cues.length,2);
- assert.equal(plan.scenes[0].caption_text,'10/9，台積電上漲3.25%。外資買超12,500張。');
- assert.equal(plan.scenes[0].speech_text,'十月九日，台積電上漲百分之三點二五。外資買超一萬二千五百張。');
+ assert.equal(plan.scenes[0].caption_cues.length,5);
+ const {OPENING_LINES,OPENING_TEXT}=require('../scripts/daily_gainers_brand_opening');
+ assert.deepEqual(plan.scenes[0].caption_cues.slice(0,3).map(c=>c.caption),OPENING_LINES);
+ assert.ok(plan.scenes[0].caption_text.startsWith(OPENING_TEXT));
+ assert.ok(plan.scenes[0].speech_text.startsWith(OPENING_TEXT));
+ assert.equal(plan.scenes[0].caption_text,OPENING_TEXT+'10/9，台積電上漲3.25%。外資買超12,500張。');
+ assert.equal(plan.scenes[0].speech_text,OPENING_TEXT+'十月九日，台積電上漲百分之三點二五。外資買超一萬二千五百張。');
  assert.equal(plan.scenes[0].caption_cues.map(c=>c.caption).join(''),plan.scenes[0].caption_text);
  assert.equal(plan.scenes[0].caption_cues.map(c=>c.speech).join(''),plan.scenes[0].speech_text);
  assert.ok(fs.existsSync(path.join(result.output,'display.json')));

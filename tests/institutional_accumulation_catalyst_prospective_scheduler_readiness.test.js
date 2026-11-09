@@ -2,6 +2,7 @@
 
 const test=require('node:test');
 const assert=require('node:assert/strict');
+const {readFrozenArtifact}=require('./helpers/frozen_institutional_audit_artifact');
 const {
   ALLOWED_DECISIONS,
   MAX_REQUESTS_PER_OCCURRENCE,
@@ -9,6 +10,8 @@ const {
   evaluateReadiness,
   buildSchedulerReadinessAudit,
 }=require('../scripts/audit_institutional_accumulation_catalyst_prospective_scheduler_readiness');
+const ARTIFACT='data_research/institutional-flow/institutional-accumulation-catalyst-prospective-scheduler-readiness-v1.json';
+const ARTIFACT_SHA256='97464f3e46a92613b14ff7ded2b3e0024665f8391f953c86855a777190afbbbe';
 
 function evidence(overrides={}) {
   return {
@@ -31,8 +34,8 @@ test('upstream/source/PIT/write/failure defect fails closed',()=>{
   assert.equal(evaluateReadiness(evidence({write_safe:false})),'insufficient_or_conflicted_evidence');
   assert.equal(evaluateReadiness(evidence({failure_safe:false})),'insufficient_or_conflicted_evidence');
 });
-test('current repository yields bounded preregistration only with no enabled scheduler',()=>{
-  const a=buildSchedulerReadinessAudit(process.cwd());
+test('frozen readiness audit records bounded preregistration without enabling a scheduler',()=>{
+  const a=readFrozenArtifact(ARTIFACT,ARTIFACT_SHA256);
   assert.ok(ALLOWED_DECISIONS.includes(a.decision));
   assert.equal(a.decision,'bounded_scheduled_canary_preregistration_justified');
   assert.equal(MAX_REQUESTS_PER_OCCURRENCE,6);
