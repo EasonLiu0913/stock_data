@@ -1,6 +1,6 @@
 # CHANGE_PROPOSAL — Fish Audio zero-duration alignment compatibility v2
 
-Status: **DRAFT — owner decision required; not approved for implementation**
+Status: **OWNER-AUTHORIZED SCOPE CLARIFICATION — implementation remains gated by this paired R2 process**
 Project: `daily-gainers-market-opening-end-to-end`
 Current phase: `MVP10-A-FISH-AUDIO-TIMESTAMP-MIGRATION-R1`
 Supersedes: none. This draft does not replace v1 or rewrite its paired Prompt A/B.
@@ -11,7 +11,7 @@ Date: 2026-11-09 (Asia/Taipei)
 
 Approve or reject this prospective clarification: a Fish alignment segment with exactly equal finite start/end times is a valid zero-duration alignment point. Preserve the original word and exact offset in Fish alignment and WordBoundary output with duration `0`; never stretch, shift, merge, or silently drop the word to manufacture positive duration. Keep rejecting negative, non-finite, out-of-media, materially out-of-order, and positive intervals collapsed by the adapter.
 
-No code acceptance or historical result changes unless this proposal is explicitly approved and a new paired round is registered before implementation.
+The owner has authorized the Fish acceptance redesign and stated that PRs do not require separate owner approval. This proposal records that scope clarification prospectively; R1 acceptance and historical results remain unchanged. Implementation must follow the paired R2 below after it is on main.
 
 ## Evidence
 
