@@ -51,7 +51,7 @@ def scene_text(scene):
     return normalize_spoken_text(scene.get("speech_text") or scene.get("narration") or "")
 
 
-def scene_fingerprint(scene_id, text, voice, rate, engine_version, provider_identity=None):
+def scene_fingerprint(scene_id, text, voice, rate, engine_version, provider_identity=None, target_date=None, script_sha256=None):
     text_identity = {
         "scene_id": int(scene_id),
         "normalized_text_sha256": sha256_bytes(text.encode("utf-8")),
@@ -92,8 +92,12 @@ def scene_fingerprint(scene_id, text, voice, rate, engine_version, provider_iden
                 or not isinstance(provider_identity["normalize"], bool)):
             raise ValueError("FISH_PROVIDER_IDENTITY_INVALID")
         normalized_provider = json.loads(canonical_json(provider_identity))
+        if not isinstance(target_date, str) or not isinstance(script_sha256, str) or not script_sha256:
+            raise ValueError("FISH_SCRIPT_IDENTITY_MISSING")
         parts = {
             **text_identity,
+            "target_date": target_date,
+            "script_sha256": script_sha256,
             "voice": voice,
             "rate": rate,
             "provider_identity": normalized_provider,
@@ -157,7 +161,11 @@ def initialize(script_path, target_date, manifest_path, checkpoint_dir, voice, r
 
     records = []
     for scene in scenes:
-        fingerprint, identity = scene_fingerprint(scene["id"], scene["text"], voice, rate, engine_version, provider_identity)
+        fingerprint, identity = scene_fingerprint(
+            scene["id"], scene["text"], voice, rate, engine_version, provider_identity,
+            target_date=target_date if provider_identity else None,
+            script_sha256=script_sha if provider_identity else None,
+        )
         prior = existing.get(scene["id"], {})
         prior_path = checkpoint_dir / "audio" / f'{scene["id"]:02d}.mp3'
         prior_boundary = checkpoint_dir / "audio" / f'{scene["id"]:02d}.wordboundaries.json'
@@ -247,6 +255,9 @@ def record_success(manifest_path, checkpoint_dir, scene_id, audio_source, bounda
                 or generated.get("engine") != "fish.audio"
                 or generated.get("provider_identity") != expected_provider_identity):
             raise ValueError("GENERATED_PROVIDER_IDENTITY_MISMATCH")
+        if (generated.get("target_date") != manifest.get("target_date")
+                or generated.get("plan_sha256") != manifest.get("script_sha256")):
+            raise ValueError("GENERATED_SCRIPT_IDENTITY_MISMATCH")
     boundaries = source_scene.get("word_boundaries")
     if not boundary_valid(boundaries):
         raise ValueError("GENERATED_WORDBOUNDARY_INVALID")
