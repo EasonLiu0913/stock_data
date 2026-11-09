@@ -54,6 +54,7 @@ def provider_identity() -> dict:
         "normalize": False,
         "language": "zh-TW",
         "parser_version": PARSER_VERSION,
+        "pipeline_version": PIPELINE_VERSION,
     }
 
 
@@ -185,7 +186,7 @@ def run(plan_path: Path, scene_id: int) -> dict:
             "audio_sha256": scene_doc["sha256"],
             "alignment_chunks": len(alignments),
             "alignment_coverage": round(coverage, 6),
-        }, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8"
+        }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
     (plan_path.parent / "fish-alignment.json").write_text(
         json.dumps({
