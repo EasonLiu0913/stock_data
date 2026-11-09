@@ -10,7 +10,7 @@ test('thumbnail uses real date and stock count',()=>{
  assert.match(svg, /10\/07/);
  assert.match(svg, />36<\/tspan>檔盤點/);
  assert.match(svg, /5%強勢股/);
- assert.match(svg, /TAIWANSTOCK/);
+ assert.match(svg, /TAIWAN STOCK/);
 });
 test('invalid data rejected instead of inventing claims',()=>{
  assert.throws(()=>label('2026107',36),/Invalid date/);

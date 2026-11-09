@@ -8,7 +8,7 @@ function build(f){
  if(n.some(v=>!Number.isSafeInteger(v)||v<0)||!Number.isFinite(f.index_change_points))throw Error('V3_BREADTH_OR_INDEX_INVALID');
  const {turnover_twd,prior_five_average_twd}=f.market||{};
  const groups=f.institutional?.groups;
- if(![turnover_twd,prior_five_average_twd].every(x=>Number.isSafeInteger(x)&&x>0)||!groups||!['foreign','trust','dealers'].every(k=>Number.isSafeInteger(groups[k])))throw Error('V3_MONEY_UNVERIFIED');
+ if(!Number.isSafeInteger(turnover_twd)||turnover_twd<=0||!Number.isFinite(prior_five_average_twd)||prior_five_average_twd<=0||!groups||!['foreign','trust','dealers'].every(k=>Number.isSafeInteger(groups[k])))throw Error('V3_MONEY_UNVERIFIED');
  if(f.market.scope!=='TWSE_WHOLE_MARKET'||f.institutional.scope_compatible_with_turnover!==true||f.institutional.unit!=='TWD'||f.market.unit!=='TWD')throw Error('V3_INCOMPATIBLE_FLOW_TURNOVER_SCOPE');
  const net=groups.foreign+groups.trust+groups.dealers;
  if(!Number.isSafeInteger(net)||net!==f.institutional.total_net_twd)throw Error('V3_NET_RECONCILIATION');

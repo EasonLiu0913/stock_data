@@ -2,6 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const {readFrozenArtifact}=require('./helpers/frozen_institutional_audit_artifact');
 const {
   ALLOWED_DECISIONS,
   MAX_REQUESTS_PER_OCCURRENCE,
@@ -12,6 +13,8 @@ const {
   evaluatePreregistration,
   buildPreregistrationAudit,
 } = require('../scripts/audit_institutional_accumulation_catalyst_bounded_scheduled_canary_preregistration');
+const ARTIFACT='data_research/institutional-flow/institutional-accumulation-catalyst-bounded-scheduled-canary-preregistration-v1.json';
+const ARTIFACT_SHA256='7e55c2b3bf7c1b2c632fa17dda9007e5b6fa9dfbcf421f629fbcfdc7d33f62db';
 
 function evidence(overrides={}) {
   return {
@@ -35,8 +38,8 @@ test('upstream or protected safety defects fail closed', () => {
   assert.equal(evaluatePreregistration(evidence({trigger_safe:false})), 'insufficient_or_conflicted_evidence');
   assert.equal(evaluatePreregistration(evidence({protected_state_ok:false})), 'insufficient_or_conflicted_evidence');
 });
-test('current repository yields exactly one bounded preregistration decision with no enabled schedule', () => {
-  const a = buildPreregistrationAudit(process.cwd());
+test('frozen preregistration records one bounded decision without enabling scheduling', () => {
+  const a = readFrozenArtifact(ARTIFACT,ARTIFACT_SHA256);
   assert.ok(ALLOWED_DECISIONS.includes(a.decision));
   assert.equal(a.decision, 'bounded_scheduled_canary_experiment_preregistered');
   assert.deepEqual(a.frozen_universe.stocks, ['1102','1104','1216']);

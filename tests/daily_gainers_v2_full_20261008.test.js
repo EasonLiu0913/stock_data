@@ -36,18 +36,7 @@ for(let i=0;i<9;i++){
  });
  assert.equal(rebuilt,expected,'semantic omission, duplication or drift in scene '+(i+1));
 }
-const out=preview('20261008',root);
-assert.equal(out.plan.scene_count,9);
-assert.ok(out.plan.scenes.every(s=>s.caption_cues.map(x=>x.caption).join('')===s.caption_text));
-assert.ok(out.plan.scenes.every(s=>s.caption_cues.map(x=>x.speech).join('')===s.speech_text));
-assert.ok(out.plan.scenes[2].speech_text.includes('美德醫療-DR'));
-assert.ok(out.plan.scenes[2].stock_labels.includes('美德醫療-DR（9103）'));
-assert.equal(out.plan.scenes[2].title,'美德醫療-DR（9103）與防疫概念');
-assert.ok(out.plan.scenes[3].speech_text.includes('騰輝電子-KY'));
-assert.ok(out.plan.scenes[4].speech_text.includes('全友'));
-assert.ok(out.plan.scenes[8].caption_text.includes('零星個股'));
-assert.ok(!out.plan.scenes[8].caption_text.includes('0星個股'));
-assert.ok(out.plan.scenes[8].speech_text.includes('零星個股'));
-assert.ok(out.plan.scenes[2].caption_text.includes('缺值當作0'));
-
-console.log('20261008 full nine-scene typed Master + preview contract PASS; NO MP3/MP4 or upload');
+// This preserved historical Master uses a superseded opening line. Keep its typed
+// narration comparison, and assert the current immutable-opening gate rejects it.
+assert.throws(()=>preview('20261008',root),/V2 first-scene opening conflicts with immutable brand opening/);
+console.log('20261008 archived typed Master semantics preserved; current opening gate fails closed; NO MP3/MP4 or upload');
