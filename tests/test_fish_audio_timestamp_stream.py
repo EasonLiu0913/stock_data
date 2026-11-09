@@ -5,8 +5,11 @@ import unittest
 from scripts.fish_audio_timestamp_stream import (
     build_global_timeline,
     parse_sse_events,
+    timeline_to_word_boundaries,
     validate_alignment,
 )
+from scripts.daily_gainers_spoken_text import normalize_spoken_text
+from scripts.daily_gainers_subtitle_alignment import align_cues
 
 
 def event(audio, seq, offset, words, duration, content):
@@ -51,6 +54,27 @@ class FishTimestampStreamTests(unittest.TestCase):
         ]}}
         with self.assertRaisesRegex(RuntimeError, "not ordered"):
             build_global_timeline(by_chunk)
+
+    def test_converts_seconds_to_consumer_wordboundary_ticks_and_aligns_cues(self):
+        timeline = [
+            {"text": "大家好", "start": 0.25, "end": 0.75},
+            {"text": "歡迎", "start": 0.8, "end": 1.0},
+        ]
+        boundaries = timeline_to_word_boundaries(timeline, 1.1)
+        self.assertEqual(boundaries, [
+            {"text": "大家好", "offset": 2_500_000, "duration": 5_000_000},
+            {"text": "歡迎", "offset": 8_000_000, "duration": 2_000_000},
+        ])
+        cues = align_cues(["大家好", "歡迎"], normalize_spoken_text, boundaries, 1.1)
+        self.assertEqual(cues[0][0], 0.25)
+        self.assertEqual(cues[1][0], 0.8)
+
+    def test_rejects_timeline_outside_mp3_duration(self):
+        with self.assertRaisesRegex(RuntimeError, "exceeds MP3 duration"):
+            timeline_to_word_boundaries(
+                [{"text": "超時", "start": 0.9, "end": 1.1}],
+                1.0,
+            )
 
     def test_rejects_alignment_with_text_coverage_gap(self):
         by_chunk = {0: {"content": "台灣", "offset": 0, "audio_duration": 1, "segments": [
