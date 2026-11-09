@@ -1,0 +1,94 @@
+name: Fish Audio TTS API smoke test
+
+on:
+  workflow_dispatch:
+    inputs:
+      text:
+        description: Traditional Chinese narration to synthesize (max 2,000 UTF-8 bytes)
+        required: true
+        type: string
+        default: "各位投資朋友大家好，歡迎收看台股每日盤勢與強勢股觀察。今天我們將整理市場焦點，並逐一說明個股表現與相關消息。投資前請留意自身風險承受能力，以上內容僅供研究參考，不構成投資建議。"
+
+# Test-only: this workflow never commits, renders, deploys, or publishes.
+permissions: {}
+
+concurrency:
+  group: fish-audio-tts-api-smoke
+  cancel-in-progress: false
+
+jobs:
+  synthesize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Validate bounded narration input
+        shell: bash
+        env:
+          TEST_TEXT: ${{ inputs.text }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${TEST_TEXT:-}" ]]; then
+            echo "::error::Narration text is required."
+            exit 1
+          fi
+          text_bytes="$(printf '%s' "$TEST_TEXT" | wc -c | tr -d '[:space:]')"
+          if (( text_bytes > 2000 )); then
+            echo "::error::Narration text exceeds the 2,000-byte test limit."
+            exit 1
+          fi
+          echo "Narration input accepted (${text_bytes} UTF-8 bytes)."
+
+      - name: Request one Fish Audio MP3 and validate response
+        shell: bash
+        env:
+          FISH_API_KEY: ${{ secrets.FISH_API_KEY }}
+          TEST_TEXT: ${{ inputs.text }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${FISH_API_KEY:-}" ]]; then
+            echo "::error::Missing Actions secret FISH_API_KEY."
+            exit 1
+          fi
+          audio="$RUNNER_TEMP/fish-audio-test.mp3"
+          body="$(jq -n --arg text "$TEST_TEXT" '{text: $text, reference_id: "e7af89da8abc4fbdacd9a10ab9881933", format: "mp3"}')"
+          response="$(curl --silent --show-error --connect-timeout 15 --max-time 180 \
+            --output "$audio" --write-out $'%{http_code}\t%{content_type}' \
+            --request POST https://api.fish.audio/v1/tts \
+            --header "Authorization: Bearer ${FISH_API_KEY}" \
+            --header 'Content-Type: application/json' \
+            --header 'model: s2.1-pro-free' \
+            --data-binary "$body")"
+          http_code="${response%%$'\t'*}"
+          content_type="${response#*$'\t'}"
+          printf 'Fish Audio response: HTTP %s, %s\n' "$http_code" "$content_type"
+          if [[ "$http_code" != "200" ]]; then
+            echo "::error::Fish Audio did not return HTTP 200."
+            exit 1
+          fi
+          if [[ "${content_type%%;*}" != "audio/mpeg" ]]; then
+            echo "::error::Fish Audio response is not audio/mpeg."
+            exit 1
+          fi
+          if [[ ! -s "$audio" ]]; then
+            echo "::error::Fish Audio returned an empty file."
+            exit 1
+          fi
+          mime_type="$(file --brief --mime-type "$audio")"
+          if [[ "$mime_type" != "audio/mpeg" ]]; then
+            echo "::error::Generated file failed MP3 MIME validation ($mime_type)."
+            exit 1
+          fi
+          audio_bytes="$(wc -c < "$audio" | tr -d '[:space:]')"
+          if (( audio_bytes < 1024 )); then
+            echo "::error::Generated MP3 is unexpectedly small (${audio_bytes} bytes)."
+            exit 1
+          fi
+          echo "Verified MP3 artifact payload (${audio_bytes} bytes)."
+
+      - name: Save test MP3 artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: fish-audio-tts-smoke-${{ github.run_id }}
+          path: ${{ runner.temp }}/fish-audio-test.mp3
+          if-no-files-found: error
+          retention-days: 7

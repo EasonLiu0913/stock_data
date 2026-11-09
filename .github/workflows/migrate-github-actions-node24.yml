@@ -28,6 +28,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          sparse-checkout: .github/workflows
+          sparse-checkout-cone-mode: true
 
       - name: Audit for obsolete Node runtimes and official Actions
         shell: bash
