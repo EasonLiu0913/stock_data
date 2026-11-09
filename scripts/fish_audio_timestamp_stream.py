@@ -97,8 +97,35 @@ def parse_sse_events(lines) -> tuple[bytes, dict[int, dict]]:
             duration = Decimal(str(alignment["audio_duration"]))
         except (KeyError, TypeError, ValueError) as error:
             raise FishStreamError("Fish Audio alignment snapshot has an invalid shape") from error
-        if seq < 0 or offset < 0 or duration < 0 or not isinstance(segments, list):
-            raise FishStreamError("Fish Audio alignment values are outside their valid range")
+        if not offset.is_finite() or not duration.is_finite():
+            raise FishStreamError(
+                "Fish Audio alignment chunk has a non-finite timestamp",
+                code="non_finite_timestamp",
+                details={
+                    "chunk_seq": seq,
+                    "chunk_offset_seconds": str(offset),
+                    "chunk_duration_seconds": str(duration),
+                    "time_condition": "non_finite_chunk_metadata",
+                },
+            )
+        if offset < 0:
+            raise FishStreamError(
+                "Fish Audio alignment chunk has a negative offset",
+                code="negative_chunk_offset",
+                details={"chunk_seq": seq, "chunk_offset_seconds": str(offset)},
+            )
+        if duration < 0:
+            raise FishStreamError(
+                "Fish Audio alignment chunk has a negative duration",
+                code="negative_chunk_duration",
+                details={"chunk_seq": seq, "chunk_duration_seconds": str(duration)},
+            )
+        if seq < 0 or not isinstance(segments, list):
+            raise FishStreamError(
+                "Fish Audio alignment values are outside their valid range",
+                code="invalid_chunk_metadata",
+                details={"chunk_seq": seq},
+            )
         if not isinstance(event.get("content"), str):
             raise FishStreamError("Fish Audio alignment event omitted text content")
         # API contract: snapshots are cumulative and latest-wins for each chunk_seq.
