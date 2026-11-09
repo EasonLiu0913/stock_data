@@ -52,6 +52,7 @@ class TtsCheckpointTests(unittest.TestCase):
             "voice": f"fish:{provider_identity['reference_id']}" if provider_identity else "zh-TW-YunJheNeural",
             "rate": f"speed={provider_identity['prosody_speed']}" if provider_identity else "+15%",
             "engine": "fish.audio" if provider_identity else "edge-tts",
+            "pipeline_version": provider_identity["pipeline_version"] if provider_identity else checkpoint.PIPELINE_VERSION,
             "target_date": "20261104",
             "plan_sha256": checkpoint.sha256_file(self.script),
             "scenes": [scene],
