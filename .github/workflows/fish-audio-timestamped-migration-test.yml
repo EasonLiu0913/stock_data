@@ -8,6 +8,7 @@ on:
       - 'scripts/fish_audio_timestamp_stream.py'
       - 'tests/test_fish_audio_timestamp_stream.py'
       - 'scripts/daily_gainers_subtitle_alignment.py'
+      - 'scripts/build_daily_gainers_srt.py'
       - 'tests/test_daily_gainers_subtitle_alignment.py'
 
 # Isolated API experiment only. This workflow cannot commit, render, deploy, or publish.
@@ -29,6 +30,7 @@ jobs:
           sparse-checkout: |
             scripts/daily_gainers_spoken_text.py
             scripts/daily_gainers_subtitle_alignment.py
+            scripts/build_daily_gainers_srt.py
             scripts/fish_audio_timestamp_stream.py
             tests/test_fish_audio_timestamp_stream.py
             tests/test_daily_gainers_subtitle_alignment.py
@@ -37,6 +39,7 @@ jobs:
         run: |
           python -m unittest discover -s tests -p 'test_fish_audio_timestamp_stream.py' -v
           python -m unittest discover -s tests -p 'test_daily_gainers_subtitle_alignment.py' -v
+          python -m py_compile scripts/build_daily_gainers_srt.py
 
   synthesize:
     if: github.event_name == 'workflow_dispatch'
