@@ -51,10 +51,13 @@
     "Single bounded post-merge recovery run 42637145283 on main 90c7646eec9dfeed9d5eac8894dd6cc1707dfab2; prepare PASS, synthesize scenes 1/2/3 failed with non_positive_duration (jobs 129228545447, 129228545641, 129228545637); diagnostic artifacts 13684156882, 13683087469, 13684002692.",
     "Main pending manifest research_pending/daily-gainers-tts/20261103.json blob 8a9d7e7382ef49866337c440966b61aa54b5d01a has scenes 1–5 pending with no audio/WordBoundary hashes; failed scenes were not checkpointed as success.",
     "Fish R2 implementation PR #80 merged to main 50912fa0b14fdd83feb7da4f1b7a10a4968ae325; all 6 registered PR workflow runs succeeded.",
-    "Fish timestamp live validation run 42653564114 on main SHA 50912fa0b14fdd83feb7da4f1b7a10a4968ae325 passed at 60.970 seconds, alignment coverage 1.0; artifact 13690727809."
+    "Fish timestamp live validation run 42653564114 on main SHA 50912fa0b14fdd83feb7da4f1b7a10a4968ae325 passed at 60.970 seconds, alignment coverage 1.0; artifact 13690727809.",
+    "R2 Prompt B found an SRT serialization defect: positive raw cue [1.0001, 1.0004] seconds rounded to the same millisecond. PR #83 added fail-closed srt_precision_non_positive, no timing stretch/shift, and regression tests.",
+    "SRT repair PR #83 merged at eb7325f4f737fae18956f888b7bc404c5ec7ca91; post-repair blobs: subtitle alignment 90a69aafbaa91345fe85b3f6b86da96f52e3f869, SRT builder d83f6da92d11372910d7bc04d9a9811eead9f501, alignment tests 9c4a70c3ad4e18c04025659f98106e2e31d719d5, isolated Fish workflow 8fbf68a2c5c46a3da0785d973480333900dcb8b2.",
+    "PR #83 checks all passed on head 5f9b4ae1f4f5409551c977c095510342721be074: Fish parser workflow 42657762208 (synthesis skipped on PR), checkpoint contract 42657762110, Node regression 42657762417, registry 42657762393, public page/workflow safety 42657762165, Node 24 audit 42657762173."
   ],
   "research_progress_reason": "Independent Prompt B verified the Fish zero-duration mapping, distinct timing diagnostics, subtitle fail-closed behavior, all required checks, one main-branch live test, and its durable short-retention artifact. This advances the provider compatibility subround only; production TTS persistence and the ultimate daily video goal remain incomplete.",
-  "next_action": "WAITING_OWNER: Fish timestamp migration R2 is closed; no successor phase or paired Prompt A/B is preregistered. Owner must promote/register the next governed phase before implementation continues.",
+  "next_action": "WAITING_OWNER: R2 is closed PASS after the SRT millisecond serialization repair. Owner must promote/register the next governed phase and its immutable Prompt A/B pair.",
   "automatic_continuation_permitted": false,
   "plan_changed": true,
   "publication_authorized": false,
@@ -62,7 +65,7 @@
   "youtube_scheduling_authorized": false,
   "public_release_authorized": false,
   "render_authorized_in_repair_phase": false,
-  "updated_at": "2026-11-10T00:36:01+08:00",
+  "updated_at": "2026-11-10T09:33:10+08:00",
   "prompt_b_failure_evidence": [
     "R1 frozen Prompt B criterion 5 required verifying no prohibited workflow was triggered.",
     "Render-only push-trigger runs: 42401534137 (20261102), 42401534168 (20261103); both failed before render and produced no artifacts.",
@@ -111,7 +114,7 @@
   "pages_run_artifact_steps": "skipped",
   "pages_run_deploy_step": "skipped",
   "r2_closeout_status": "PASS",
-  "r2_closeout_commit": "290d70c449575de521ed2fbfd91120b36fcc6bd7",
+  "r2_closeout_commit": "eb7325f4f737fae18956f888b7bc404c5ec7ca91",
   "r2_candidate_blob": "f690c703058a4367ac1f619dd786d61f9d55eab0",
   "r2_test_blob": "dbd5d64cbd774060488c5e846bd21043b11d2fd0",
   "news_narration_covered_stocks": 44,
@@ -601,7 +604,7 @@
     "checkpoint_status": "all five scenes pending; no audio or WordBoundary hashes",
     "acceptance_changed": false
   },
-  "current_blocker": "Fish timestamped response for target date 20261103 contains non-positive-duration timeline segment(s); exact numeric boundaries are only in run diagnostic artifacts. Frozen acceptance rejects these values. The existing */15 schedule may naturally select the still-pending unchanged date again; no manual dispatch/rerun should be made without changed inputs or an owner-approved schedule/acceptance decision.",
+  "current_blocker": "R2 Fish timestamp migration is closed PASS. No successor phase or immutable A/B pair is preregistered; owner must promote/register the next governed phase before further implementation. Parent TTS persistence and ultimate video delivery remain incomplete.",
   "planned_research": {
     "question": "Do the retained scene diagnostic artifacts show Fish emitting zero-duration events for spoken text, or does adapter conversion collapse a positive provider interval?",
     "method": "Read artifacts 13684156882, 13683087469, and 13684002692 through authenticated GitHub UI; compare raw start/end fields with the Fish-to-WordBoundary conversion in main.",
@@ -678,6 +681,16 @@
     "proposal_blob": "441d89dc2845c378c7d60fb3ac44adf27a78c607",
     "paired_prompt_blob": "530984dd288fd142ec05df2adcb5a6a99d2a8d4e",
     "owner_action_required": "No successor A/B pair is preregistered; owner must promote/register the next governed phase before further implementation.",
-    "production_tts_persistence_complete": false
+    "production_tts_persistence_complete": false,
+    "srt_serialization_repair_pr": 83,
+    "srt_serialization_repair_merge_sha": "eb7325f4f737fae18956f888b7bc404c5ec7ca91",
+    "srt_repair_head_sha": "5f9b4ae1f4f5409551c977c095510342721be074",
+    "srt_regression_run_id": 42657762208,
+    "checkpoint_contract_run_id": 42657762110,
+    "node_regression_run_id": 42657762417,
+    "workflow_registry_run_id": 42657762393,
+    "public_page_safety_run_id": 42657762165,
+    "node24_audit_run_id": 42657762173,
+    "srt_serialization_diagnostic": "srt_precision_non_positive"
   }
 }
