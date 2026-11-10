@@ -5,14 +5,14 @@
   "project_state": "active",
   "goal_id": "goal-v3/MVP-10DAY-v1",
   "ultimate_goal_status": "not_complete",
-  "current_phase_id": "MVP10-A-FISH-TTS-PERSISTENCE-R1",
-  "phase_status": "registered",
-  "round_id": "MVP10-A-FISH-AUDIO-TIMESTAMP-MIGRATION-R2",
-  "prompt_a_status": "not_started",
+  "current_phase_id": "MVP10-A-FISH-TTS-PERSISTENCE-R1-ALL-SCENES-V2",
+  "phase_status": "blocked_ci",
+  "round_id": "MVP10-A-FISH-TTS-PERSISTENCE-R1-ALL-SCENES-V2",
+  "prompt_a_status": "in_progress_blocked_ci",
   "prompt_b_status": "not_eligible",
   "owner_approved_on": "2026-11-09",
-  "change_proposal": "data_research/m5/change-proposals/MVP10-A-FISH-TTS-PERSISTENCE-CHANGE-PROPOSAL-v1.md",
-  "paired_prompt": "data_research/m5/change-proposals/MVP10-A-FISH-TTS-PERSISTENCE-PAIR-v1.md",
+  "change_proposal": "data_research/m5/change-proposals/MVP10-A-FISH-TTS-PERSISTENCE-CHANGE-PROPOSAL-v2.md",
+  "paired_prompt": "data_research/m5/change-proposals/MVP10-A-FISH-TTS-PERSISTENCE-PAIR-v2.md",
   "predecessor_phase": "MVP10-A-FISH-AUDIO-TIMESTAMP-MIGRATION-R2",
   "next_phase_id": null,
   "mvp10_a_status": "FISH_TTS_PERSISTENCE_R1_REGISTERED",
@@ -55,10 +55,14 @@
     "R2 Prompt B found an SRT serialization defect: positive raw cue [1.0001, 1.0004] seconds rounded to the same millisecond. PR #83 added fail-closed srt_precision_non_positive, no timing stretch/shift, and regression tests.",
     "SRT repair PR #83 merged at eb7325f4f737fae18956f888b7bc404c5ec7ca91; post-repair blobs: subtitle alignment 90a69aafbaa91345fe85b3f6b86da96f52e3f869, SRT builder d83f6da92d11372910d7bc04d9a9811eead9f501, alignment tests 9c4a70c3ad4e18c04025659f98106e2e31d719d5, isolated Fish workflow 8fbf68a2c5c46a3da0785d973480333900dcb8b2.",
     "PR #83 checks all passed on head 5f9b4ae1f4f5409551c977c095510342721be074: Fish parser workflow 42657762208 (synthesis skipped on PR), checkpoint contract 42657762110, Node regression 42657762417, registry 42657762393, public page/workflow safety 42657762165, Node 24 audit 42657762173.",
-    "Owner-selected objective registered as MVP10-A-FISH-TTS-PERSISTENCE-R1; proposal/pair v1 define Fish identity, cross-run scene checkpointing, missing-only recovery, and Render-only consumption. No workflow or API was triggered."
+    "Owner-selected objective registered as MVP10-A-FISH-TTS-PERSISTENCE-R1; proposal/pair v1 define Fish identity, cross-run scene checkpointing, missing-only recovery, and Render-only consumption. No workflow or API was triggered.",
+    "PR #92 head cc680b787d76c3c1ec3dcae28d7c7734a99c75fb: [08 TTS] checkpoint-contract run 42849400896/job 129945567077 success; 28 tests pass including all-missing queue regression; no Fish request.",
+    "PR #92 Node regression run 42849400440/job 129945568306 failure: 1254/1257 pass; three tests fail on frozen source identity mismatch for data_history_sma/1213.json expected SHA256 641afb37313090d5090329d3fc0ff8a8c02bb22a4b593da9c568a525b517d6f4.",
+    "Current main base 864a9592d3f07663a89feb1c06b811caf8dde211 and current main cb77216e82733a626945a49c8b30999e9e95a961 both resolve data_history_sma/1213.json to blob 74e5f719416999acdd7397af3c5196078bd2f992; a previous green Node run 42800367172 at head 327371e56baa1458dfbd376e31a5c818c37ce421 used blob dc52d8eb2ec32dd57606b6dc1a0c4a904d4e8346.",
+    "Source history identifies commit fdbe6e0bfaa193626aa1197bcba52e5be49e5236 at 2026-11-10T11:27:33Z, message 'data: backfill SMA history stocks 0-99', as the commit changing 1213.json; that historical research freeze is outside Fish TTS v2 scope."
   ],
-  "research_progress_reason": "Owner selected and registered the Fish cross-Actions persistence objective with a versioned immutable A/B pair; implementation has not started.",
-  "next_action": "promptA (explicit new owner turn required; registration does not execute it)",
+  "research_progress_reason": "The all-scenes implementation's focused TTS contract and queue regression pass. A separate Node suite is blocked by a source identity mismatch introduced by main's SMA backfill commit, which needs its own owner-governed resolution; no frozen research identity or CI gate was altered.",
+  "next_action": "WAITING_OWNER: resolve the independently frozen SMA source identity mismatch (commit fdbe6e0, data_history_sma/1213.json) under its governed scope; then reissue promptA to resume PR #92 validation and merge.",
   "automatic_continuation_permitted": false,
   "plan_changed": true,
   "publication_authorized": false,
@@ -66,7 +70,7 @@
   "youtube_scheduling_authorized": false,
   "public_release_authorized": false,
   "render_authorized_in_repair_phase": false,
-  "updated_at": "2026-11-10T10:10:06.000+08:00",
+  "updated_at": "2026-11-10T16:08:05Z",
   "prompt_b_failure_evidence": [
     "R1 frozen Prompt B criterion 5 required verifying no prohibited workflow was triggered.",
     "Render-only push-trigger runs: 42401534137 (20261102), 42401534168 (20261103); both failed before render and produced no artifacts.",
@@ -605,19 +609,19 @@
     "checkpoint_status": "all five scenes pending; no audio or WordBoundary hashes",
     "acceptance_changed": false
   },
-  "current_blocker": "Prompt A has not started; an explicit promptA turn is required. Before any Fish request, the fresh-main FIFO date must have all formal source/script/news/editorial input gates PASS.",
+  "current_blocker": "PR #92 cannot merge: required Node regression suite run 42849400440/job 129945568306 fails three institutional accumulation freeze tests because data_history_sma/1213.json now has current blob 74e5f719416999acdd7397af3c5196078bd2f992 while the immutable sample freeze expects content SHA256 641afb37313090d5090329d3fc0ff8a8c02bb22a4b593da9c568a525b517d6f4. Commit fdbe6e0bfaa193626aa1197bcba52e5be49e5236 updated this SMA history file. PR #92's TTS checkpoint-contract run 42849400896 passes. Do not alter the research freeze or bypass the Node gate within the Fish TTS phase.",
   "planned_research": {
-    "question": "Do the retained scene diagnostic artifacts show Fish emitting zero-duration events for spoken text, or does adapter conversion collapse a positive provider interval?",
-    "method": "Read artifacts 13684156882, 13683087469, and 13684002692 through authenticated GitHub UI; compare raw start/end fields with the Fish-to-WordBoundary conversion in main.",
-    "expected_evidence": "Per-scene offending timestamp values plus provider/adapter boundary mapping, without audio payload or secret.",
-    "success_criterion": "Identify whether the first invalid interval originates in the Fish response or in conversion; retain fail-closed behavior until the frozen contract permits a correction.",
-    "fallback": "If artifacts cannot be downloaded, preserve current failure, do not rerun unchanged input, and request owner decision through the versioned proposal process."
+    "question": "How should the separate institutional-accumulation research owner reconcile its frozen sample identity with the SMA file updated by main commit fdbe6e0?",
+    "method": "Use that project's registered handoff/change proposal to validate the source backfill and determine whether the sample must remain byte-pinned or be versioned as a new freeze; do not change Fish TTS files or silently update the expected digest.",
+    "expected_evidence": "Owner-governed decision and durable source/freeze evidence that makes the existing Node regression pass without weakening its identity check.",
+    "success_criterion": "Current main Node regression suite passes with the sample identity contract preserved or explicitly versioned under its owning project.",
+    "fallback": "Keep PR #92 open, do not alter the unrelated freeze, and do not trigger Fish until the required PR checks are green."
   },
   "anti_loop": {
     "repeats_previous_method": false,
-    "prior_attempt": "Run 42637145283 is the single post-fix bounded live validation; all three queued scenes failed non_positive_duration.",
-    "distinct_next_step": "Inspect retained numeric diagnostics and compare provider intervals against adapter conversion; only change code if that proves an in-scope adapter defect. Otherwise ask owner for a versioned acceptance decision.",
-    "stop_condition": "No retry on the same date/script/provider fingerprint; stop until a different input, demonstrated adapter defect, or owner-approved versioned change exists."
+    "prior_attempt": "PR #92 Node run 42849400440 failed on the same frozen SHA mismatch in three tests; source file's current blob differs from the older blob in green run 42800367172. TTS focused tests succeeded.",
+    "distinct_next_step": "Route the changed SMA source/frozen-sample identity to its owning governed handoff and resolve there; then rerun the exact required PR checks only after actual base/input change.",
+    "stop_condition": "No unchanged rerun, no alteration of frozen sample identity, no CI bypass, no PR merge and no Fish synthesis until the unrelated gate has an approved resolution and required checks pass."
   },
   "fish_timestamp_migration_r1_checkpoint": {
     "status": "BOUNDED_VALIDATION_FAILED_PROVIDER_TIMING",
@@ -728,5 +732,49 @@
     "release_lock_changed": false,
     "parent_edge_tts_phase_preserved": "MVP10-A-TTS-PERSISTENCE-R1",
     "fish_timestamp_r2_closeout": "PASS"
+  },
+  "fish_tts_all_scenes_v2_prompt_a": {
+    "phase_id": "MVP10-A-FISH-TTS-PERSISTENCE-R1-ALL-SCENES-V2",
+    "status": "in_progress_blocked_ci",
+    "prompt_a_status": "in_progress",
+    "prompt_b_status": "not_eligible",
+    "implementation_pr": 92,
+    "implementation_branch": "codex/fish-tts-all-scenes-implementation-v2",
+    "implementation_head": "cc680b787d76c3c1ec3dcae28d7c7734a99c75fb",
+    "current_main_sha": "cb77216e82733a626945a49c8b30999e9e95a961",
+    "merge_status": "not_merged",
+    "runs": {
+      "tts_checkpoint_contract": {
+        "run_id": 42849400896,
+        "job_id": 129945567077,
+        "status": "success",
+        "result": "28 focused TTS contract/integration tests passed; added all-missing-scenes regression passed; no Fish API call"
+      },
+      "node_regression": {
+        "run_id": 42849400440,
+        "job_id": 129945568306,
+        "status": "failure",
+        "result": "1254/1257 passed; 3 unrelated frozen SMA sample identity tests failed"
+      }
+    },
+    "root_cause": {
+      "expected_source_sha256": "641afb37313090d5090329d3fc0ff8a8c02bb22a4b593da9c568a525b517d6f4",
+      "current_source_blob": "74e5f719416999acdd7397af3c5196078bd2f992",
+      "changed_by_commit": "fdbe6e0bfaa193626aa1197bcba52e5be49e5236",
+      "changed_path": "data_history_sma/1213.json",
+      "previous_green_run": {
+        "run_id": 42800367172,
+        "head_sha": "327371e56baa1458dfbd376e31a5c818c37ce421",
+        "source_blob": "dc52d8eb2ec32dd57606b6dc1a0c4a904d4e8346"
+      },
+      "owning_scope": "institutional-accumulation research freeze; separate from Fish TTS v2"
+    },
+    "fifo_selector": "carried forward; selector logic and test already exist on main; no change needed",
+    "no_dispatch_or_fish_synthesis": true,
+    "youtube_upload_authorized": false,
+    "youtube_scheduling_authorized": false,
+    "public_release_authorized": false,
+    "release_lock_changed": false,
+    "next_action": "Owner-governed reconciliation of SMA source/frozen sample identity, then resume promptA; no PR merge or Fish call until required checks pass."
   }
 }
