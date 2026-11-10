@@ -4,7 +4,7 @@ Canonical handoff: `docs/handoffs/daily-gainers-market-opening-end-to-end.md`
 Task id: `daily-gainers-market-opening-end-to-end`
 Project routing status: **ACTIVE**; previous project routing remains preserved.
 Plan version: `goal-v3/MVP-10DAY-v1`; owner-authorized Fish acceptance clarification v2 and paired round `MVP10-A-FISH-AUDIO-TIMESTAMP-MIGRATION-R2` are recorded on main. Earlier MVP10-A/B contracts, Edge TTS failures, R1 acceptance and historical outcomes remain immutable.
-Ultimate goal status: **NOT COMPLETE**. Current phase/round: `MVP10-A-FISH-AUDIO-TIMESTAMP-MIGRATION-R2` is closed with Prompt A complete and Prompt B PASS, including a bounded post-closeout repair for SRT millisecond serialization. No successor phase or paired prompt is registered; the overall project remains active and the ultimate video goal is not complete. Provider-migration R1 remains historically incomplete/blocked and is not rewritten. Parent `MVP10-A-TTS-PERSISTENCE-R1` remains incomplete and is superseded prospectively for provider selection only. Fish standard MP3 smoke run `42585154474` proves synthesis only, not timestamps or production readiness. Current main before this proposal: `8cd59ceac77f34c6b9543734c1aaa1ada1a44ad1`. See the owner-approved proposal and preregistered pair appended below.
+Ultimate goal status: **NOT COMPLETE**. Latest completed phase: `MVP10-A-FISH-AUDIO-TIMESTAMP-MIGRATION-R2` closed PASS after the bounded SRT millisecond repair. Current registered phase: `MVP10-A-FISH-TTS-PERSISTENCE-R1`; Prompt A is eligible but not started, Prompt B is not eligible. The owner selected the Fish cross-Actions persistence and Render-only objective. The overall project and ultimate video goal remain incomplete. Provider-migration R1 remains historically incomplete/blocked and is not rewritten. Parent `MVP10-A-TTS-PERSISTENCE-R1` remains incomplete and is superseded prospectively for provider selection only. Fish standard MP3 smoke run `42585154474` proves synthesis only, not timestamps or production readiness. Current main before this proposal: `8cd59ceac77f34c6b9543734c1aaa1ada1a44ad1`. See the owner-approved proposal and preregistered pair appended below.
 
 ## A. Immutable Project Charter — WHY
 
@@ -2589,10 +2589,24 @@ The owner directed that repeated MVP10-A-R2 Prompt A attempts stop and a new TTS
 ### Current phase
 
 - Active project/goal: `daily-gainers-market-opening-end-to-end` / `goal-v3/MVP-10DAY-v1`.
-- Current phase: `MVP10-A-TTS-PERSISTENCE-R1`; registered and Prompt A eligible, not yet started.
-- Objective: persist validated final narration and per-scene MP3/WordBoundary checkpoints across separate Actions runs; retry only missing or invalid scenes; let Render-only consume the verified checkpoint; then satisfy the unchanged MVP10-A delivery gates for 20261104.
-- Frozen pair: `data_research/m5/change-proposals/MVP10-A-TTS-CROSS-RUN-RECOVERY-PAIR-v1.md`. Change proposal: `data_research/m5/change-proposals/MVP10-A-TTS-CROSS-RUN-RECOVERY-CHANGE-PROPOSAL-v1.md`.
-- No code or workflow behavior was changed in this registration. No workflow was dispatched. YouTube upload, scheduling, publishing, and release-lock changes remain prohibited.
+- Latest completed phase: `MVP10-A-FISH-AUDIO-TIMESTAMP-MIGRATION-R2` — Prompt A complete, Prompt B PASS; historic evidence remains preserved below.
+- Current phase: `MVP10-A-FISH-TTS-PERSISTENCE-R1`; registered on main, Prompt A eligible but not started, Prompt B ineligible until A completes.
+- Owner-selected objective: persist successful Fish Audio per-scene MP3/WordBoundary across Actions runs; request only missing or invalid scenes; validate and consume the same date-specific checkpoint from Render-only.
+- Frozen proposal: `data_research/m5/change-proposals/MVP10-A-FISH-TTS-PERSISTENCE-CHANGE-PROPOSAL-v1.md`.
+- Frozen paired A/B: `data_research/m5/change-proposals/MVP10-A-FISH-TTS-PERSISTENCE-PAIR-v1.md`.
+- Fish identity: `fish.audio` timestamp endpoint, model `s2.1-pro-free`, reference `e7af89da8abc4fbdacd9a10ab9881933`, `prosody.speed=1.15`, MP3; Fish duration acceptance is at least 50 seconds with no upper cap. Original source/editorial/render gates remain otherwise unchanged.
+- Phase A must begin only after a separate explicit `promptA` command. Registration itself runs no workflow and makes no Fish request. If no FIFO date has all formal TTS input gates PASS, stop at `WAITING_SOURCE`.
+- Preserve `MVP10-A-TTS-PERSISTENCE-R1` and Edge run failures as incomplete historical work; the provider switch is prospective only. Preserve Fish migration R2 PASS. No YouTube upload, scheduling, publication, Pages, cleanup, or release-lock action is authorized.
+
+### Current registration evidence and safety
+
+- This registration adds only the versioned proposal/pair and updates this handoff and Task State; it does not modify production code or workflow behavior and does not dispatch any Action.
+- TTS-only recovery is authorized by the new phase only after code merge and date-specific source/script/news/editorial gates PASS. Date-scoped Render-only may consume a complete matching checkpoint only after all unchanged MVP10-A gates PASS.
+- Prompt A must establish durable cross-run evidence and finish the registered Render-only contract. Prompt B independently verifies it. A checkpoint alone is not MVP10-A or video delivery PASS.
+
+### Historical MVP10-A-TTS-PERSISTENCE-R1 registration and pair
+
+- The following Edge-specific phase record and embedded prompts are historical. They remain unchanged as historical evidence and are not eligible for execution; use the new Fish-specific paired prompt above.
 
 ### Registration evidence and safety
 
@@ -2603,7 +2617,7 @@ The owner directed that repeated MVP10-A-R2 Prompt A attempts stop and a new TTS
 
 ### Prompt A — next-round implementation prompt
 
-## Prompt A — implement and produce durable evidence
+## Historical Prompt A — Edge TTS Persistence R1 (preserved)
 
 Continue EasonLiu0913/stock_data.
 
@@ -2641,7 +2655,7 @@ A is COMPLETE only after the cross-run recovery implementation is on latest main
 
 ### Prompt B — next-round independent closeout prompt
 
-## Prompt B — independent closeout
+## Historical Prompt B — Edge TTS Persistence R1 (preserved)
 
 Run only after Prompt A reports COMPLETE and the owner invokes Prompt B for this exact phase.
 
@@ -2903,3 +2917,9 @@ Next: after the focused workflow checks pass, merge under the standing owner aut
 - `build_global_timeline()` preserves separate classifications for zero, negative, non-finite, out-of-range, ordering, float-collapse, and positive intervals rounded to zero 100 ns ticks. Equal finite Fish intervals retain exact text/offset and emit WordBoundary duration zero. `align_cues()` counts such boundary text toward coverage and fails an unrenderable equal-offset cue with `cue_transition_non_positive`. SRT conversion now separately fails if millisecond rounding collapses a positive cue; monotonic raw intervals remain monotonic under rounding and each serialized cue is checked positive.
 - No production checkpoint, Render, Pages, YouTube, upload, scheduling, or release-lock action occurred. YouTube publication lock remains closed. Parent TTS persistence and the ultimate video goal remain incomplete.
 - No next-phase A/B pair is preregistered. Stop at `WAITING_OWNER`; owner must promote/register the next governed phase and immutable pair before additional phase work. Do not reopen Edge R1 or start production Fish persistence under this R2 scope.
+
+## Next phase registration — Fish cross-Actions persistence (2026-11-10)
+
+Phase `MVP10-A-FISH-TTS-PERSISTENCE-R1` is the active registered successor selected by the owner. Exact acceptance is frozen in the proposal/pair paths above. Prompt A has not started. The next action is an explicit `promptA` turn, which must recheck latest main and formal FIFO input gates before any TTS dispatch. Prompt B remains ineligible until Prompt A's full completion contract is durably satisfied.
+
+R2 closeout remains PASS. Parent production TTS persistence and the ultimate video goal remain incomplete. YouTube upload/scheduling/publication and release-lock changes remain forbidden.
