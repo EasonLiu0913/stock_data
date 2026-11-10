@@ -20,6 +20,8 @@ concurrency:
 jobs:
   crawl-rankings:
     runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.57.0-noble
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -80,22 +82,13 @@ jobs:
         run: |
           echo 'Recovery targets JSON: ${{ steps.completion.outputs.targets_json }}'
 
-      - name: Cache Playwright browsers
-        if: github.event_name != 'schedule' || steps.completion.outputs.complete != 'true'
-        uses: actions/cache@v5
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-playwright-
-
       - name: Install dependencies
         if: github.event_name != 'schedule' || steps.completion.outputs.complete != 'true'
         run: npm ci
 
-      - name: Install Playwright browsers
+      - name: Verify bundled Playwright Chromium
         if: github.event_name != 'schedule' || steps.completion.outputs.complete != 'true'
-        run: npx playwright install chromium
+        run: node -e 'const fs = require("node:fs"); const { chromium } = require("playwright"); const p = chromium.executablePath(); fs.accessSync(p, fs.constants.X_OK); console.log("Bundled Chromium ready: " + p);'
 
       - name: Run Main Force Ranking Crawler
         if: github.event_name != 'schedule' || steps.completion.outputs.complete != 'true'
