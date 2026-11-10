@@ -83,7 +83,8 @@ jobs:
 
       - name: Verify bundled Playwright Chromium
         if: steps.trading-day.outputs.is_trading_day == 'true'
-        run: node -e 'const fs = require("node:fs"); const { chromium } = require("playwright"); const p = chromium.executablePath(); fs.accessSync(p, fs.constants.X_OK); console.log("Bundled Chromium ready: " + p);'
+        run: |
+          node -e 'const fs = require("node:fs"); const { chromium } = require("playwright"); const p = chromium.executablePath(); fs.accessSync(p, fs.constants.X_OK); console.log("Bundled Chromium ready: " + p);'
 
       - name: Run Institutional crawler
         if: steps.trading-day.outputs.is_trading_day == 'true'
