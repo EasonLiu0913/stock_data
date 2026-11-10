@@ -78,6 +78,36 @@ class TtsCheckpointTests(unittest.TestCase):
         self.assertEqual(current["scenes"][0]["status"], "success")
         self.assertEqual(current["scenes"][1]["status"], "pending")
 
+    def test_plan_returns_all_missing_and_invalid_scenes_in_order(self):
+        scenes = [
+            {
+                "id": scene_id,
+                "scene_type": "stock_list" if scene_id < 8 else "closing_summary",
+                "narration": "第一段內容。" if scene_id == 1 else "第二段內容。",
+            }
+            for scene_id in range(1, 9)
+        ]
+        self.write_script(scenes)
+        self.initialize()
+        self.record_scene(1)
+        self.record_scene(2)
+        (self.audio_dir / "audio" / "02.mp3").write_bytes(b"corrupt")
+        current = self.initialize()
+        self.assertEqual(
+            [item["status"] for item in current["scenes"]],
+            ["success"] + ["pending"] * 7,
+        )
+
+        command = [
+            sys.executable,
+            str(Path(__file__).resolve().parents[1] / "scripts" / "daily_gainers_tts_checkpoint.py"),
+            "plan",
+            "--manifest", str(self.manifest),
+            "--checkpoint-dir", str(self.audio_dir),
+        ]
+        result = subprocess.run(command, check=True, capture_output=True, text=True)
+        self.assertEqual(json.loads(result.stdout)["scene_ids"], [2, 3, 4, 5, 6, 7, 8])
+
     def test_edge_checkpoint_is_not_reusable_for_fish_identity(self):
         fish = {
             "provider": "fish.audio",
@@ -304,7 +334,8 @@ class TtsRecoveryWorkflowContractTests(unittest.TestCase):
         synth = self.read_head("scripts/synthesize_daily_gainers_fish_tts.py")
         self.assertIn("  synthesize:\n", workflow)
         self.assertIn("max-parallel: 1", workflow)
-        self.assertIn("--limit 3", workflow)
+        self.assertNotIn("--limit", workflow)
+        self.assertIn("fail-fast: false", workflow)
         self.assertIn("synthesize_daily_gainers_fish_tts.py --plan", workflow)
         self.assertNotIn("edge-tts==", workflow)
         self.assertNotIn("synthesize_daily_gainers_tts.py", workflow)
