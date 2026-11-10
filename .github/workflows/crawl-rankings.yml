@@ -88,7 +88,8 @@ jobs:
 
       - name: Verify bundled Playwright Chromium
         if: github.event_name != 'schedule' || steps.completion.outputs.complete != 'true'
-        run: node -e 'const fs = require("node:fs"); const { chromium } = require("playwright"); const p = chromium.executablePath(); fs.accessSync(p, fs.constants.X_OK); console.log("Bundled Chromium ready: " + p);'
+        run: |
+          node -e 'const fs = require("node:fs"); const { chromium } = require("playwright"); const p = chromium.executablePath(); fs.accessSync(p, fs.constants.X_OK); console.log("Bundled Chromium ready: " + p);'
 
       - name: Run Main Force Ranking Crawler
         if: github.event_name != 'schedule' || steps.completion.outputs.complete != 'true'
