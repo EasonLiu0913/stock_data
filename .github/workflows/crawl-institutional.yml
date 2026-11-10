@@ -23,6 +23,8 @@ concurrency:
 jobs:
   crawl-institutional:
     runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.57.0-noble
     outputs:
       is_trading_day: ${{ steps.trading-day.outputs.is_trading_day }}
       publish_ready: ${{ steps.reconcile.outputs.publish_ready }}
@@ -75,22 +77,13 @@ jobs:
         id: trading-day
         run: node scripts/check_twse_trading_day.js --date ${{ steps.date.outputs.target }}
 
-      - name: Cache Playwright browsers
-        if: steps.trading-day.outputs.is_trading_day == 'true'
-        uses: actions/cache@v5
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-playwright-
-
       - name: Install dependencies
         if: steps.trading-day.outputs.is_trading_day == 'true'
         run: npm ci
 
-      - name: Install Playwright browsers
+      - name: Verify bundled Playwright Chromium
         if: steps.trading-day.outputs.is_trading_day == 'true'
-        run: npx playwright install chromium
+        run: node -e 'const fs = require("node:fs"); const { chromium } = require("playwright"); const p = chromium.executablePath(); fs.accessSync(p, fs.constants.X_OK); console.log("Bundled Chromium ready: " + p);'
 
       - name: Run Institutional crawler
         if: steps.trading-day.outputs.is_trading_day == 'true'
