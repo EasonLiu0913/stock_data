@@ -2973,3 +2973,19 @@ Prompt A remains **IN PROGRESS**; Prompt B is not eligible. This is a bounded re
 - Changed paths: `.github/workflows/daily-gainers-tts-scene-recovery.yml` and `tests/test_daily_gainers_tts_checkpoint.py`. Added a focused workflow contract regression for ordered candidates, read-only validation, identity binding, unchanged explicit-date behavior, and fail-closed selection. Existing request cap (three scenes), max-parallel one, fresh scene runners, pacing and checkpoint writer are unchanged.
 - No schedule dispatch, Fish request, Render, Pages, YouTube/upload/scheduling/publication, release-lock change, or checkpoint deletion occurred. Validate the PR checks before merging; after merge, observe the next natural `[08 TTS]` schedule and verify that a fully validated 20261103 checkpoint is skipped and 20261104 is selected only if it is the earliest remaining candidate. If 20261104 is not yet formally eligible, its existing gates must fail closed without calling Fish.
 - Overall video goal remains **NOT COMPLETE**. YouTube publication lock remains closed.
+
+
+## Owner-directed versioned revision — all missing Fish scenes per invocation v2 (2026-11-10)
+
+**Registration status:** owner-approved change is recorded in proposal/pair v2 on branch `codex/tts-all-scenes-per-run-v2`; this registration PR is pending. It becomes the current registered successor only after merge. Prompt A v2 has not started and must not start automatically. The active project and ultimate goal remain unchanged.
+
+- Active project: `daily-gainers-market-opening-end-to-end`; goal `goal-v3/MVP-10DAY-v1`.
+- New phase revision: `MVP10-A-FISH-TTS-PERSISTENCE-R1-ALL-SCENES-V2`.
+- Proposal: `data_research/m5/change-proposals/MVP10-A-FISH-TTS-PERSISTENCE-CHANGE-PROPOSAL-v2.md`.
+- Frozen pair: `data_research/m5/change-proposals/MVP10-A-FISH-TTS-PERSISTENCE-PAIR-v2.md`.
+- Owner authorization: “登記一下版本化變更，改成全部場景。” The only acceptance change is removal of the per-invocation maximum-three-scenes cap. v1 proposal/pair and prior history remain unchanged.
+- Evidence: run [#19 / 42836332036](https://github.com/EasonLiu0913/stock_data/actions/runs/42836332036) completed success, event `workflow_dispatch`, head `234b46f1f66924a081a8b5c62bc3793e9f265d2a`. It synthesized only scenes 1–3. Date branch `tts-audio-pending-20261104` commit `17e69d0a5d96b6a831f50e28bf4284a505909b7e`; manifest blob `67ba38b7b3b607524e9bb053e66b22e190dd064c`; target date `20261104`; script SHA-256 `de2ea3550050ad5a8ec1d5b988fbe91b9344ce98cdebe74272ee4cd7678546f3`; 17 ordered scenes, 1–3 success and 4–17 pending. This is dispatch evidence, not a natural schedule event.
+- v2 requires the full deterministic set of missing/identity-invalid scenes to be queued in one invocation, without truncation. Matching successful scenes are reused. The existing `max-parallel: 1`, fresh runner per scene, `fail-fast: false`, one Fish request per attempt, 15–35 second cooldown, and durable per-scene commits remain in force. If a platform limit prevents the full queue, fail before synthesis and report its exact size; do not silently cap it.
+- The unfinished v1 FIFO-selector repair remains preserved at branch `codex/fix-fish-tts-fifo-completed-date`, commit `65988bd122712882e25fa04f7a45161e33a4b962`; v2 Prompt A must independently inspect/carry forward its eligible work and must not overwrite it. The v1 in-progress record remains historical; after this registration merges, v2 governs prospective work.
+- No Fish request, workflow dispatch, Render, Pages, YouTube/upload/publication, release-lock change, or checkpoint deletion was performed in this registration. YouTube publication lock remains closed.
+- Next: merge the registration PR only under normal repository checks/policy. Then require a separate explicit `promptA` turn to start v2. Do not run Prompt B before v2 Prompt A is complete; do not rewrite v1 or auto-promote any later phase.
