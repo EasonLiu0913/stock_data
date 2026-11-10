@@ -24,8 +24,8 @@ The deliverable is a reproducible research evidence dossier with source provenan
 
 | Order | Phase | State | Gate |
 |---|---|---|---|
-| 0 | institutional-accumulation-catalyst-bounded-scheduled-canary-post-collection-freeze-audit-v1 | A complete; original B pending in routed canonical handoff | Execute only its original preregistered Prompt B; preserve its exact acceptance and closeout record. |
-| 0a | Reconcile the linked legacy handoff's separate institutional-accumulation-material-information-final-preflight-v1 status | Pending reconciliation | Do not run its A in parallel or change its historic status. Reconcile its relation to the routed canonical handoff after the current B closes, using a durable versioned checkpoint. |
+| 0 | institutional-accumulation-catalyst-bounded-scheduled-canary-post-collection-freeze-audit-v1 | COMPLETE — Prompt B PASS | Zero-source, outcome-blind freeze audit closed; original acceptance preserved. |
+| 0a | institutional-accumulation-legacy-handoff-sequencing-reconciliation-v1 | ACTIVE — Prompt A not started; paired B preregistered | Documentation-only reconciliation. Preserve linked legacy preflight pair and source-lineage v2 pair; resolve order before either A runs. |
 | 1 | institutional-accumulation-source-lineage-repair-v2 | Preregistered, not promoted / not A-eligible | Only after Phase 0 B PASS and an explicit durable phase-promotion/reconciliation checkpoint. A must preserve v1, define old-to-new source lineage, compare the frozen sample's resolved observations, and add CI monitoring last. |
 | 2 | institutional-accumulation-material-information-final-preflight-v1 | Existing pair preserved; order unresolved until Phase 0a reconciliation | Do not alter the original pair or infer that this registration has superseded it. |
 | Later | Further catalyst interpretation or promotion | Not registered by this charter revision | Requires its own evidence-based phase and frozen A/B; no automatic promotion. |
