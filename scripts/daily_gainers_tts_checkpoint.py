@@ -393,7 +393,6 @@ def main():
     plan = sub.add_parser("plan")
     plan.add_argument("--manifest", required=True)
     plan.add_argument("--checkpoint-dir", required=True)
-    plan.add_argument("--limit", type=int, default=3)
     make = sub.add_parser("make-scene-plan")
     make.add_argument("--script", required=True)
     make.add_argument("--date", required=True)
@@ -427,7 +426,7 @@ def main():
         print(json.dumps({"target_date": args.date, "script_sha256": result["script_sha256"], "missing_scene_ids": missing_scenes(result)}))
     elif args.command == "plan":
         manifest = json.loads(Path(args.manifest).read_text(encoding="utf-8"))
-        ids = missing_scenes(manifest)[:max(0, args.limit)]
+        ids = missing_scenes(manifest)
         print(json.dumps({"scene_ids": ids}))
     elif args.command == "make-scene-plan":
         make_scene_plan(args.script, args.date, args.scene_id, args.output)
