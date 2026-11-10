@@ -71,6 +71,12 @@ function expectedUsMarketDate(baseDate, now = new Date()) {
   return expectedFromBaseDate < latestCompletedDate ? expectedFromBaseDate : latestCompletedDate;
 }
 
+function requireExactBaseDateSource(source, baseDate, label) {
+  if (source?.date !== baseDate) {
+    throw new Error(`${label} base-date source missing: expected ${baseDate}, latest valid ${source?.date || 'none'}`);
+  }
+}
+
 function trigger(id, label, value, points) {
   return { id, label, value, points };
 }
@@ -216,12 +222,10 @@ function main() {
   const futuresHistory = loadFuturesHistory(baseDate);
   const futuresCurrent = [...futuresHistory].reverse().find((item) => item.date === baseDate) || futuresHistory.at(-1) || null;
   const futuresPrevious = futuresHistory.length >= 2 ? futuresHistory.at(-2) : null;
-  // A stale TAIFEX source must never be promoted into a same-day strict forecast.
-  if (strict && futuresCurrent?.date !== baseDate) {
-    throw new Error(`foreign_futures base-date source missing: expected ${baseDate}, latest valid ${futuresCurrent?.date || 'none'}; run the date-scoped TAIFEX futures crawler first`);
-  }
-  if (strict && twseCurrent?.date !== baseDate) {
-    throw new Error(`twse_index base-date source missing: expected ${baseDate}, latest valid ${twseCurrent?.date || 'none'}`);
+  // Do not promote a prior trading day's inputs into a strict base-date snapshot.
+  if (strict) {
+    requireExactBaseDateSource(futuresCurrent, baseDate, 'foreign_futures');
+    requireExactBaseDateSource(twseCurrent, baseDate, 'twse_index');
   }
   const latestActual = latestActualEnvironment(baseDate);
   const previousActual = latestActual?.date === baseDate ? latestActual : null;
@@ -375,6 +379,7 @@ function main() {
 if (require.main === module) main();
 
 module.exports = {
+  requireExactBaseDateSource,
   main,
   strategyPolicy,
   classifyExternalFreshness,
