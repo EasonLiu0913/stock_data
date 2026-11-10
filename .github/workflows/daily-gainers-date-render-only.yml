@@ -130,7 +130,7 @@ jobs:
           cp "$checkpoint"/audio/*.mp3 "$date_dir/audio/"
           python - "$checkpoint/manifest.json" "$date_dir/tts-manifest.json" "$frozen" <<'PY'
           import json, pathlib, sys
-          from daily_gainers_spoken_text import normalize_spoken_text
+          from scripts.daily_gainers_spoken_text import normalize_spoken_text
           source=json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
           plan=json.loads(pathlib.Path(sys.argv[3]).read_text(encoding="utf-8"))
           plan_scenes={int(item["id"]):item for item in plan["scenes"]}
