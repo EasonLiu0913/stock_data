@@ -27,6 +27,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: prepare-market-environment
@@ -109,8 +110,46 @@ jobs:
         run: |
           set -euo pipefail
           git fetch origin main
-          git checkout origin/main -- data_external_market data_market_risk
-          echo "Refreshed external-market and market-risk inputs from current origin/main immediately before generation."
+          git checkout origin/main -- data_external_market data_market_risk data_taifex_major_institutional_traders_futures_contracts
+          echo "Refreshed external-market, market-risk and TAIFEX futures inputs from current origin/main."
+
+      - name: Recover missing base-date TAIFEX futures source
+        if: steps.existing.outputs.skip != 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_SCHEDULE: ${{ github.event.schedule || '' }}
+        run: |
+          set -euo pipefail
+          source="data_taifex_major_institutional_traders_futures_contracts/${FORECAST_BASE_DATE}_taifex_major_institutional_traders_futures_contracts.json"
+          if [ -s "$source" ]; then
+            echo "TAIFEX base-date source present: $source"
+            exit 0
+          fi
+
+          # Only the first scheduled run dispatches a recovery, avoiding three
+          # redundant TAIFEX crawler runs every morning. Manual runs may retry.
+          if [ "$GITHUB_EVENT_NAME" != "schedule" ] || [ "$EVENT_SCHEDULE" = "55 22 * * 1-5" ]; then
+            echo "::notice::Missing $source; dispatching date-scoped TAIFEX source recovery"
+            gh workflow run crawl-taifex-major-institutional-traders-futures-contracts.yml \
+              --ref main -f date="$FORECAST_BASE_DATE"
+          else
+            echo "::notice::TAIFEX source missing; checking whether the earlier recovery has completed"
+          fi
+
+          for attempt in $(seq 1 20); do
+            git fetch -q origin main
+            if git cat-file -e "origin/main:$source" 2>/dev/null; then
+              git show "origin/main:$source" > "$source"
+              test -s "$source"
+              echo "Recovered verified-date TAIFEX input from main: $source"
+              exit 0
+            fi
+            echo "TAIFEX $FORECAST_BASE_DATE not yet committed to main ($attempt/20)"
+            sleep 15
+          done
+          echo "::error::Required TAIFEX input $source is absent from main after bounded recovery. Check the [01 台股資料] TAIFEX crawler job and its official source; never substitute a prior trading date."
+          exit 1
 
       - name: Generate immutable shadow environment snapshot
         if: steps.existing.outputs.skip != 'true'
