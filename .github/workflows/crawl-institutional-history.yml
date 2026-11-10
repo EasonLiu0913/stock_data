@@ -23,6 +23,8 @@ on:
 jobs:
   crawl-institutional:
     runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.57.0-noble
     
     steps:
       - name: Checkout repository
@@ -37,18 +39,12 @@ jobs:
           cache: 'npm'
           cache-dependency-path: package-lock.json
 
-      - name: Cache Playwright browsers
-        uses: actions/cache@v5
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-playwright-
-
       - name: Install dependencies
         run: |
           npm ci
-          npx playwright install --with-deps chromium
+
+      - name: Verify bundled Playwright Chromium
+        run: node -e 'const fs = require("node:fs"); const { chromium } = require("playwright"); const p = chromium.executablePath(); fs.accessSync(p, fs.constants.X_OK); console.log("Bundled Chromium ready: " + p);'
 
       - name: Run Institutional Crawler
         run: |
