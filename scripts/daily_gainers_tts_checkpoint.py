@@ -106,7 +106,7 @@ def scene_fingerprint(scene_id, text, voice, rate, engine_version, provider_iden
     return sha256_bytes(canonical_json(parts)), parts
 
 
-def boundary_valid(boundaries):
+def boundary_valid(boundaries, *, allow_zero_duration=False):
     if not isinstance(boundaries, list) or not boundaries:
         return False
     previous_offset = -1
@@ -115,7 +115,9 @@ def boundary_valid(boundaries):
             return False
         offset = item.get("offset")
         duration = item.get("duration")
-        if not isinstance(offset, int) or not isinstance(duration, int) or offset < 0 or duration <= 0:
+        if (not isinstance(offset, int) or not isinstance(duration, int)
+                or offset < 0 or duration < 0
+                or (duration == 0 and not allow_zero_duration)):
             return False
         if offset < previous_offset:
             return False
@@ -177,7 +179,7 @@ def initialize(script_path, target_date, manifest_path, checkpoint_dir, voice, r
             and prior.get("audio_sha256") == sha256_file(prior_path)
             and prior.get("wordboundaries_sha256") == sha256_file(prior_boundary)
             and prior_path.stat().st_size >= 1000
-            and boundary_valid(json.loads(prior_boundary.read_text(encoding="utf-8")))
+            and boundary_valid(json.loads(prior_boundary.read_text(encoding="utf-8")), allow_zero_duration=provider_identity is not None)
         )
         records.append({
             "scene_id": scene["id"],
@@ -274,7 +276,7 @@ def validate_checkpoint(manifest, checkpoint_dir):
             boundaries = json.loads(boundaries_file.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             boundaries = None
-        if sha256_file(boundaries_file) != item.get("wordboundaries_sha256") or not boundary_valid(boundaries):
+        if sha256_file(boundaries_file) != item.get("wordboundaries_sha256") or not boundary_valid(boundaries, allow_zero_duration=manifest.get("engine") == "fish.audio"):
             failures.append(f"SCENE_{sid:02d}_WORDBOUNDARY_INVALID")
     return failures
 
@@ -300,7 +302,7 @@ def record_success(manifest_path, checkpoint_dir, scene_id, audio_source, bounda
                 or generated.get("plan_sha256") != manifest.get("script_sha256")):
             raise ValueError("GENERATED_SCRIPT_IDENTITY_MISMATCH")
     boundaries = source_scene.get("word_boundaries")
-    if not boundary_valid(boundaries):
+    if not boundary_valid(boundaries, allow_zero_duration=expected_provider_identity is not None):
         raise ValueError("GENERATED_WORDBOUNDARY_INVALID")
     audio_source = Path(audio_source)
     if not audio_source.is_file() or audio_source.stat().st_size < 1000:

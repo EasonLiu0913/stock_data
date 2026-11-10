@@ -270,7 +270,11 @@ manifest = {
     "schema_version": 1,
     "target_date": plan["target_date"],
     "language": "zh-TW",
-    "source": "Edge TTS actual WordBoundary offsets + synthesized MP3 durations",
+    "source": (
+        "Fish Audio timestamp alignment + synthesized MP3 durations"
+        if tts_engine == "fish.audio"
+        else "Edge TTS actual WordBoundary offsets + synthesized MP3 durations"
+    ),
     "alignment_method": "word-boundary-with-rendered-scene-offsets-v2",
     "cue_count": cue_no - 1,
     "duration_seconds": round(cursor, 3),

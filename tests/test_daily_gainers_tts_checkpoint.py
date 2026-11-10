@@ -34,7 +34,7 @@ class TtsCheckpointTests(unittest.TestCase):
             voice, rate, "7.3.1", provider_identity=provider_identity
         )
 
-    def record_scene(self, scene_id, provider_identity=None, generated_provider_identity="use-expected"):
+    def record_scene(self, scene_id, provider_identity=None, generated_provider_identity="use-expected", boundary_duration=2500000):
         audio = self.root / f"generated-{scene_id}.mp3"
         audio.write_bytes(bytes([scene_id]) * 2048)
         text = "第一段內容。" if scene_id == 1 else "第二段內容。"
@@ -44,7 +44,7 @@ class TtsCheckpointTests(unittest.TestCase):
             "engine": "fish.audio" if provider_identity else "edge-tts",
             "spoken_text": text,
             "word_boundaries": [
-                {"text": "內容", "offset": 0, "duration": 2500000}
+                {"text": "內容", "offset": 0, "duration": boundary_duration}
             ],
             "sha256": checkpoint.sha256_file(audio),
         }
@@ -221,6 +221,46 @@ class TtsCheckpointTests(unittest.TestCase):
         current = self.initialize()
         self.assertEqual(checkpoint.missing_scenes(current), [2])
 
+    def test_fish_zero_duration_wordboundary_is_durable_and_reusable(self):
+        fish = {
+            "provider": "fish.audio",
+            "endpoint": "https://api.fish.audio/v1/tts/stream/with-timestamp",
+            "model": "s2.1-pro-free",
+            "reference_id": "e7af89da8abc4fbdacd9a10ab9881933",
+            "prosody_speed": 1.15,
+            "format": "mp3",
+            "sample_rate": 44100,
+            "mp3_bitrate": 128,
+            "normalize": False,
+            "language": "zh-TW",
+            "parser_version": "fish-audio-timestamp-stream-v1",
+            "pipeline_version": "daily-gainers-fish-tts-v1",
+        }
+        voice = f"fish:{fish['reference_id']}"
+        rate = "speed=1.15"
+        self.initialize(voice=voice, rate=rate, provider_identity=fish)
+        self.record_scene(1, provider_identity=fish, boundary_duration=0)
+        self.record_scene(2, provider_identity=fish, boundary_duration=0)
+
+        current = json.loads(self.manifest.read_text(encoding="utf-8"))
+        self.assertEqual(checkpoint.missing_scenes(current), [])
+        self.assertEqual(checkpoint.validate_checkpoint(current, self.audio_dir), [])
+        self.assertTrue(checkpoint.boundary_valid(
+            [{"text": "內容", "offset": 0, "duration": 0}],
+            allow_zero_duration=True,
+        ))
+        self.assertFalse(checkpoint.boundary_valid(
+            [{"text": "內容", "offset": 0, "duration": 0}],
+        ))
+        self.assertFalse(checkpoint.boundary_valid(
+            [{"text": "內容", "offset": 0, "duration": -1}],
+            allow_zero_duration=True,
+        ))
+
+        reused = self.initialize(voice=voice, rate=rate, provider_identity=fish)
+        self.assertEqual(checkpoint.missing_scenes(reused), [])
+        self.assertEqual([item["status"] for item in reused["scenes"]], ["success", "success"])
+
     def test_invalid_wordboundary_blocks_completion(self):
         self.record_scene(1)
         self.record_scene(2)
@@ -291,6 +331,8 @@ class TtsRecoveryWorkflowContractTests(unittest.TestCase):
         self.assertIn('tts_engine not in ("edge-tts", "fish.audio")', srt)
         self.assertIn('tts_manifest["provider_identity"].get("provider") != "fish.audio"', srt)
         self.assertIn('tts_scene.get("engine") != tts_engine', srt)
+        self.assertIn('"Fish Audio timestamp alignment + synthesized MP3 durations"', srt)
+        self.assertIn('"Edge TTS actual WordBoundary offsets + synthesized MP3 durations"', srt)
 
 
 if __name__ == "__main__":
