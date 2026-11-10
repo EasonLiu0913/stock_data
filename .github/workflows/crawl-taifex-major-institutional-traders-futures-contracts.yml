@@ -130,6 +130,11 @@ jobs:
         run: |
           set -euo pipefail
 
+          # Checkout marks the workspace safe only in its temporary HOME.
+          # The Playwright container runs as root after checkout restores HOME,
+          # so Git may not discover the mounted repository without this entry.
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git -C "$GITHUB_WORKSPACE" rev-parse --show-toplevel
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add data_taifex_major_institutional_traders_futures_contracts/
