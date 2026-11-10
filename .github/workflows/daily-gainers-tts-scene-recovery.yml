@@ -46,48 +46,117 @@ jobs:
             tests
           sparse-checkout-cone-mode: false
 
-      - name: Resolve FIFO target date
-        id: resolve
+      - name: Enumerate FIFO TTS date candidates
+        id: candidates
         shell: bash
         run: |
           set -euo pipefail
           if [ -n "$REQUESTED_DATE" ]; then
             [[ "$REQUESTED_DATE" =~ ^20[0-9]{6}$ ]] || { echo "Invalid target_date" >&2; exit 1; }
             [[ "$REQUESTED_DATE" > "20261102" ]] || { echo "TTS recovery queue starts at 20261103" >&2; exit 1; }
-            date="$REQUESTED_DATE"
+            candidates="$REQUESTED_DATE"
           else
-            candidate="$(find research_pending/daily-gainers-video-scripts -maxdepth 1 -type f -name '20??????.json' -print 2>/dev/null | sed -E 's#^.*/([0-9]{8})\.json$#\1#' | awk '$1 > "20261102"' | sort | head -n 1)"
-            date="$candidate"
+            candidates="$(find research_pending/daily-gainers-video-scripts -maxdepth 1 -type f -name '20??????.json' -print 2>/dev/null | sed -E 's#^.*/([0-9]{8})\.json$#\1#' | awk '$1 > "20261102"' | sort | paste -sd' ' -)"
           fi
-          echo "target_date=$date" >> "$GITHUB_OUTPUT"
-          if [ -z "$date" ]; then
-            echo "No pending script candidate; no date is inferred or skipped."
-            exit 0
+          echo "candidate_dates=$candidates" >> "$GITHUB_OUTPUT"
+          if [ -z "$candidates" ]; then
+            echo "No pending script candidates; no date is inferred or skipped."
+          else
+            echo "FIFO TTS date candidates: $candidates"
           fi
-          echo "FIFO TTS recovery candidate: $date"
 
       - name: Stop cleanly when no candidate exists
-        if: steps.resolve.outputs.target_date == ''
+        if: steps.candidates.outputs.candidate_dates == ''
         run: echo "No candidate; no TTS request was made."
 
       - uses: actions/setup-node@v7
-        if: steps.resolve.outputs.target_date != ''
+        if: steps.candidates.outputs.candidate_dates != ''
         with:
           node-version: '24'
 
       - uses: actions/setup-python@v6
-        if: steps.resolve.outputs.target_date != ''
+        if: steps.candidates.outputs.candidate_dates != ''
         with:
           python-version: '3.12'
 
       - name: Install MP3 probe for Fish timestamp validation
-        if: steps.resolve.outputs.target_date != ''
+        if: steps.candidates.outputs.candidate_dates != ''
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends ffmpeg
       - name: Freeze Fish provider identity contract
-        if: steps.resolve.outputs.target_date != ''
+        if: steps.candidates.outputs.candidate_dates != ''
         run: python scripts/synthesize_daily_gainers_fish_tts.py --write-provider-identity "$RUNNER_TEMP/fish-provider-identity.json"
+
+      - name: Resolve FIFO target date from validated checkpoints
+        id: resolve
+        if: steps.candidates.outputs.candidate_dates != ''
+        shell: bash
+        env:
+          CANDIDATE_DATES: ${{ steps.candidates.outputs.candidate_dates }}
+        run: |
+          set -euo pipefail
+          date=""
+          if [ -n "$REQUESTED_DATE" ]; then
+            # Explicit workflow_dispatch targets remain pinned to the requested date.
+            date="$REQUESTED_DATE"
+          else
+            for candidate in $CANDIDATE_DATES; do
+              plan="research_pending/daily-gainers-render-scripts/$candidate.json"
+              branch="tts-audio-pending-$candidate"
+              if [ ! -s "$plan" ]; then
+                echo "Selecting earliest incomplete date $candidate: frozen plan is missing."
+                date="$candidate"
+                break
+              fi
+
+              remote_ref="$(git ls-remote --heads origin "refs/heads/$branch")"
+              if [ -z "$remote_ref" ]; then
+                echo "Selecting earliest incomplete date $candidate: checkpoint branch is missing."
+                date="$candidate"
+                break
+              fi
+              git fetch --quiet --depth=1 origin "refs/heads/$branch"
+              checkpoint_commit="$(git rev-parse FETCH_HEAD)"
+              manifest_path="tts-audio/$candidate/manifest.json"
+              if ! git cat-file -e "$checkpoint_commit:$manifest_path" 2>/dev/null; then
+                echo "Selecting earliest incomplete date $candidate: checkpoint manifest is missing."
+                date="$candidate"
+                break
+              fi
+
+              checkpoint_root="$RUNNER_TEMP/fifo-checkpoints/$candidate"
+              mkdir -p "$checkpoint_root"
+              git archive "$checkpoint_commit" "tts-audio/$candidate" | tar -x -C "$checkpoint_root"
+              checkpoint_dir="$checkpoint_root/tts-audio/$candidate"
+              if validation_output="$(python scripts/daily_gainers_tts_checkpoint.py validate \
+                --manifest "$checkpoint_dir/manifest.json" \
+                --checkpoint-dir "$checkpoint_dir" \
+                --script "$plan" \
+                --date "$candidate" \
+                --voice "$FISH_TTS_VOICE" \
+                --rate "$FISH_TTS_RATE" \
+                --engine-version "fish-timestamped-stream-v1" \
+                --provider-identity "$RUNNER_TEMP/fish-provider-identity.json" 2>&1)"; then
+                echo "Skipping completed FIFO date $candidate: $validation_output"
+              else
+                echo "Selecting earliest incomplete date $candidate; checkpoint validation failed: $validation_output"
+                date="$candidate"
+                break
+              fi
+            done
+          fi
+
+          echo "target_date=$date" >> "$GITHUB_OUTPUT"
+          if [ -z "$date" ]; then
+            echo "Every candidate has a validated complete checkpoint; no TTS request was made."
+          else
+            echo "FIFO TTS recovery target: $date"
+          fi
+
+      - name: Stop cleanly when all candidates are complete
+        if: steps.candidates.outputs.candidate_dates != '' && steps.resolve.outputs.target_date == ''
+        run: echo "All candidate dates already have validated complete checkpoints."
 
       - name: Re-run formal script and news gates
         if: steps.resolve.outputs.target_date != ''
