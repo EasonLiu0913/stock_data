@@ -99,7 +99,10 @@ jobs:
       max-parallel: 1
       matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
     name: 股票歷史批次回填
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    # Match the installed Playwright 1.57.0 browser binaries to Ubuntu 24.04.
+    container:
+      image: mcr.microsoft.com/playwright:v1.57.0-noble
     timeout-minutes: 350
     steps:
       - uses: actions/checkout@v7
@@ -111,7 +114,13 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - name: Verify bundled Chromium and Git checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          node -e 'const {chromium}=require("playwright");const fs=require("fs");if(!fs.existsSync(chromium.executablePath()))process.exit(1);console.log(chromium.executablePath())'
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git -C "$GITHUB_WORKSPACE" rev-parse --show-toplevel
       - name: Crawl and safely persist one stock batch
         env:
           START_DATE: ${{ needs.plan.outputs.start_date }}
