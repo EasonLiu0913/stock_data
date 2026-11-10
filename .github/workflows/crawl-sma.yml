@@ -24,7 +24,10 @@ concurrency:
 
 jobs:
   crawl-sma:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    # Pin the browser OS to match Playwright 1.57.0; runner host may be Ubuntu 26.04.
+    container:
+      image: mcr.microsoft.com/playwright:v1.57.0-noble
     outputs:
       target_date: ${{ steps.crawl.outputs.target_date }}
       ready: ${{ steps.crawl.outputs.ready }}
@@ -43,19 +46,11 @@ jobs:
           cache: 'npm'
           cache-dependency-path: package-lock.json
 
-      - name: Cache Playwright browsers
-        uses: actions/cache@v5
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-playwright-
-
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Playwright browsers
-        run: npx playwright install chromium
+      - name: Verify bundled Chromium
+        run: node -e 'const {chromium}=require("playwright");const fs=require("node:fs");if(!fs.existsSync(chromium.executablePath()))process.exit(1);console.log(chromium.executablePath())'
 
       - name: Validate SMA date detector and schedule resolver
         run: |
@@ -189,6 +184,9 @@ jobs:
         if: steps.crawl.outputs.ready == 'true'
         shell: bash
         run: |
+          # Checkout's temporary HOME trust setting is not retained in a container.
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git -C "$GITHUB_WORKSPACE" rev-parse --show-toplevel
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data_fubon/ data_history_sma/trading_days.json
