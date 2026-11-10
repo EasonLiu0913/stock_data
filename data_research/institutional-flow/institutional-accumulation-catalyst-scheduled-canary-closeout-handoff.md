@@ -45,7 +45,7 @@ institutional-accumulation-catalyst-bounded-scheduled-canary-post-collection-fre
 
 Status:
 - Prompt A: COMPLETE
-- Prompt B: PREREGISTERED / PENDING
+- Prompt B: PASS
 
 ## Objective
 
@@ -118,6 +118,36 @@ Independently verify:
 - bounded diff contains only authorized audit/handoff files plus classified unrelated concurrent changes.
 
 If any criterion fails, fix only the bounded defect and restart this Prompt B. On PASS, checkpoint this handoff and preregister only the smallest evidence-driven next round. Do not automatically open outcomes or promote strategy. End Prompt B closeout: PASS.
+
+## Prompt B closeout — post-collection freeze audit
+
+**Prompt B closeout: PASS**
+
+The exact phase-specific Prompt B above was recovered from the durable pre-Prompt-A handoff. Current remote main at independent closeout: `97f563f13f5d5a1e6747e381e7396dc92a6a8bb2`.
+
+Independent closeout evidence:
+
+1. Unique active route remains `institutional-accumulation`; the daily-gainers project remains pending. The original A completion checkpoint and original B acceptance remain intact.
+2. The third-natural-occurrence closeout remains durable: run `37589122480`, accepted state `3/3`, no pending occurrence.
+3. Audit artifact `data_research/institutional-flow/institutional-accumulation-catalyst-bounded-scheduled-canary-post-collection-freeze-audit-v1.json` exists remotely at blob `079679bed50a048ef49f0983f8da6219d8bcdb89`; it records zero source requests and no live dispatch.
+4. Scheduled-state accepted identities remain exactly `schedule:37298104341:1`, `schedule:37434295221:1`, and `schedule:37589122480:1`, in order. The nine observability records show exactly 2 requests and 2 snapshots per stock per accepted occurrence, using only official MOPS listing/detail endpoints.
+5. All 18 immutable snapshots were re-read from remote main and validated against `scripts/institutional_accumulation_catalyst_prospective_pit_capture_contract.js`: paths and immutable IDs match; PIT timestamp equals collection timestamp; historical back-imputation is false; frozen methodology/parser identity is preserved.
+6. Latest accepted observation timestamp equals latest snapshot timestamp: `2026-10-07T07:49:03.529Z`.
+7. Read-only target-reached manager probe reproduced `should_collect=false`, reason `accepted_eligible_target_reached`, count `3 -> 3`, zero requests/snapshots/endpoints, and no persisted state. A later natural scheduled run `42785898914` was success/no-op; 34 later durable occurrence records are target-reached skips with zero requests and zero snapshots. None adds a fourth accepted occurrence.
+8. Deterministic audit regeneration was byte-identical. Protected canary workflow, PIT contract, historical/prospective audit and research/outcome boundaries were unchanged by the audit A. The separate source-lineage registration PR #93 and concurrent daily-gainers data commits are outside the audit A diff and are not counted as audit changes.
+9. No source-network request, manual dispatch/rerun, fourth occurrence, outcome/holdout opening, catalyst-significance interpretation, universe widening, model/strategy/production change, or YouTube action occurred.
+
+### Next ordered phase: Phase 0a sequencing reconciliation
+
+The goal-v2 charter requires reconciling the linked legacy handoff's separate `institutional-accumulation-material-information-final-preflight-v1` active label before promoting source-lineage v2. Preserve the linked handoff and its preregistered A/B verbatim; do not run it in parallel. Phase 0a is documentation-only and does not change either round's acceptance.
+
+**Phase 0a Prompt A — sequencing reconciliation (not executed in this closeout)**
+
+Before work, fetch current main and read AGENTS.md, this canonical handoff, `data_research/institutional-flow/institutional-accumulation-validation-handoff.md`, the goal-v2 charter, task-routing, and task state. Reconstruct the pre-A original pair for Phase 0a from durable repository state. Update only the goal-v2 charter, canonical routed handoff, and task state to make the order unambiguous: Phase 0 audit B PASS → Phase 0a reconciliation → source-lineage v2 A/B → preserved material-information preflight A/B, unless the source-lineage B evidence requires a newly owner-approved versioned roadmap decision. Keep the linked legacy handoff and both original prompt pairs unchanged; do not edit CI, source data, research artifacts, workflows, or acceptance. Verify routing remains unique and the state points to one active phase. Commit a durable checkpoint and stop without executing source-lineage A.
+
+**Phase 0a Prompt B — sequencing closeout (preregistered before Phase 0a A)**
+
+After Phase 0a A completes, independently verify from fresh remote main that only the three authorized governance files changed; the linked legacy handoff, all original A/B prompt text, source-lineage preregistration, source data and workflows remain unchanged; the charter and routed handoff specify the same unambiguous phase order; task-routing has exactly one active project; task state names Phase 0a A complete/B pending; no source calls, data writes, workflow dispatch/rerun, or research/outcome opening occurred. If any item fails, repair only within this documentation-only contract and repeat verification. On PASS, record durable evidence, promote only the preregistered source-lineage v2 round if its original pair is recoverable and no owner-only gate remains; otherwise mark WAITING_OWNER with the exact missing decision. Do not execute the next A.
 
 ## Owner-approved route and source-lineage registration (2026-11-11)
 
