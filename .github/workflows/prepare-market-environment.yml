@@ -140,9 +140,11 @@ jobs:
           for attempt in $(seq 1 20); do
             git fetch -q origin main
             if git cat-file -e "origin/main:$source" 2>/dev/null; then
-              git show "origin/main:$source" > "$source"
+              # Fast-forward before generating, so the recovered source is tracked
+              # rather than left untracked and blocking the clean-worktree push gate.
+              git reset --hard origin/main
               test -s "$source"
-              echo "Recovered verified-date TAIFEX input from main: $source"
+              echo "Recovered exact-date TAIFEX input from main: $source"
               exit 0
             fi
             echo "TAIFEX $FORECAST_BASE_DATE not yet committed to main ($attempt/20)"
