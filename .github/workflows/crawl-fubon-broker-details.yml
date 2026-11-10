@@ -190,7 +190,7 @@ jobs:
       fail-fast: false
       max-parallel: 1
       matrix: ${{ fromJSON(needs.plan-range.outputs.matrix) }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 330
     name: Fubon batch ${{ matrix.batch_index }}/${{ matrix.batch_count }} (${{ matrix.first_date }} ~ ${{ matrix.last_date }})
     steps:
@@ -395,7 +395,7 @@ jobs:
   crawl-single:
     needs: validate-inputs
     if: needs.validate-inputs.outputs.mode == 'single'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 330
     steps:
       - name: Checkout latest main
