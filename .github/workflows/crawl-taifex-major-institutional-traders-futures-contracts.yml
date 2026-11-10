@@ -37,6 +37,10 @@ concurrency:
 jobs:
   crawl-taifex-futures-contracts:
     runs-on: ubuntu-24.04
+    # Keep the browser OS and binaries aligned with the pinned Playwright 1.57.0.
+    # The host runner currently reports Ubuntu 26.04, unsupported by this version.
+    container:
+      image: mcr.microsoft.com/playwright:v1.57.0-noble
     timeout-minutes: 360
     steps:
       - name: Checkout repository
@@ -54,8 +58,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+      - name: Verify bundled Chromium
+        run: node -e 'const {chromium}=require("playwright"); const fs=require("fs"); if (!fs.existsSync(chromium.executablePath())) process.exit(1); console.log(chromium.executablePath())'
 
       - name: Resolve crawl inputs
         id: crawl-inputs
