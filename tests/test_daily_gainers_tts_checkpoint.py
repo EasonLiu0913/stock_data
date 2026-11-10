@@ -326,6 +326,31 @@ class TtsRecoveryWorkflowContractTests(unittest.TestCase):
         self.assertNotIn("synthesize_daily_gainers_fish_tts.py --plan", render)
         self.assertIn('"engine":source["engine"]', render)
 
+    def test_fifo_resolver_skips_only_dates_with_valid_complete_checkpoints(self):
+        workflow = self.read_head(".github/workflows/daily-gainers-tts-scene-recovery.yml")
+        candidates = workflow.split("      - name: Enumerate FIFO TTS date candidates", 1)[1].split(
+            "      - name: Resolve FIFO target date from validated checkpoints", 1
+        )[0]
+        resolver = workflow.split("      - name: Resolve FIFO target date from validated checkpoints", 1)[1].split(
+            "      - name: Re-run formal script and news gates", 1
+        )[0]
+
+        self.assertIn("sort | paste -sd' ' -", candidates)
+        self.assertIn('if [ -n "$REQUESTED_DATE" ]', resolver)
+        self.assertIn('date="$REQUESTED_DATE"', resolver)
+        self.assertIn('for candidate in $CANDIDATE_DATES', resolver)
+        self.assertIn("git ls-remote --heads origin", resolver)
+        self.assertIn("git archive", resolver)
+        self.assertIn("daily_gainers_tts_checkpoint.py validate", resolver)
+        self.assertIn("--provider-identity", resolver)
+        self.assertIn("if validation_output=", resolver)
+        self.assertIn('Skipping completed FIFO date $candidate', resolver)
+        self.assertIn('Selecting earliest incomplete date $candidate', resolver)
+        self.assertIn("Every candidate has a validated complete checkpoint", resolver)
+        self.assertNotIn("daily_gainers_tts_checkpoint.py init", resolver)
+        self.assertLess(workflow.index("Resolve FIFO target date from validated checkpoints"),
+                        workflow.index("Re-run formal script and news gates"))
+
     def test_srt_builder_accepts_only_explicit_fish_provider_manifest(self):
         srt = self.read_head("scripts/build_daily_gainers_srt.py")
         self.assertIn('tts_engine not in ("edge-tts", "fish.audio")', srt)
