@@ -12,8 +12,9 @@ The v1 development sample freeze pins both semantic identity and source bytes. F
 
 - v1 semantic SHA-256: 66ddb3bbf99e40bb1babb9e25a5257612a61206d827e273e6fb9b45b9c35e25b;
 - v1 source-file SHA-256: b5951a9a69a3f915a7d69e07851631ec41e06a58c12321ce8008e044ac4097f3;
-- pre-update Git blob: dc52d8eb2ec32dd57606b6dc1a0c4a904d4e8346;
-- pinned base commit: fdbe6e0bfaa193626aa1197bcba52e5be49e5236;
+- v1-pinned source commit: 01d79c2ed2d6b5b78d5875a06e319b1f20dd480a;
+- v1-pinned Git blob at that commit: dc52d8eb2ec32dd57606b6dc1a0c4a904d4e8346;
+- source refresh commit: fdbe6e0bfaa193626aa1197bcba52e5be49e5236 (parent 01d79c2ed2d6b5b78d5875a06e319b1f20dd480a);
 - updated Git blob observed on main: 74e5f719416999acdd7397af3c5196078bd2f992.
 
 The observed JSON diff is 161 rows to 226: 65 additions, 17 dated on or before the frozen cutoff 2026-08-27; zero deletions and zero modifications to existing rows. These counts are a baseline to reverify at A startup, not permission to change v1 or interpret outcomes.

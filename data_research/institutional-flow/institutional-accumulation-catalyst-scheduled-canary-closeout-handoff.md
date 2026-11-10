@@ -129,3 +129,6 @@ If any criterion fails, fix only the bounded defect and restart this Prompt B. O
 - Task state: docs/handoffs/state/institutional-accumulation.json.
 - Source-lineage v2 is preregistered but NOT promoted and NOT eligible for Prompt A until the current original Prompt B passes and the linked-handoff ordering is explicitly reconciled. CI path filters are intentionally not changed in this registration commit; they are last in the frozen Prompt A.
 - The separate Fubon workflow failure run 42856368560, job 129970397296, head b8449802231fd713918f4ebea5670dc25011fdcb, failed at Commit and push changes with fatal: not in a git directory before staging/commit/push. It remains a separate workflow-plumbing diagnosis and does not alter this research round's A/B status.
+
+
+Source lineage registration correction (2026-11-11): commit graph verification confirms old source blob dc52d8eb2ec32dd57606b6dc1a0c4a904d4e8346 belongs to v1-pinned source commit 01d79c2ed2d6b5b78d5875a06e319b1f20dd480a. Commit fdbe6e0bfaa193626aa1197bcba52e5be49e5236 is the subsequent data refresh commit, not the v1 base.
