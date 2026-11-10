@@ -118,3 +118,14 @@ Independently verify:
 - bounded diff contains only authorized audit/handoff files plus classified unrelated concurrent changes.
 
 If any criterion fails, fix only the bounded defect and restart this Prompt B. On PASS, checkpoint this handoff and preregister only the smallest evidence-driven next round. Do not automatically open outcomes or promote strategy. End Prompt B closeout: PASS.
+
+## Owner-approved route and source-lineage registration (2026-11-11)
+
+- Owner selected institutional-accumulation as the unique active global route. daily-gainers-market-opening-end-to-end is pending; its project state and original daily-gainers A/B are preserved.
+- The routed current round remains unchanged: institutional-accumulation-catalyst-bounded-scheduled-canary-post-collection-freeze-audit-v1, Prompt A COMPLETE, original Prompt B PREREGISTERED / PENDING. Its exact Prompt B above remains the immediate eligible action. This registration does not run or replace it.
+- The linked institutional-accumulation-validation-handoff.md separately labels institutional-accumulation-material-information-final-preflight-v1 ACTIVE / NOT STARTED with a preregistered B. That linked record is preserved unchanged. Reconcile its sequencing against this routed canonical handoff in a durable phase-promotion checkpoint before any subsequent A; do not run the two active labels in parallel.
+- Goal charter v2: data_research/institutional-flow/institutional-accumulation-goal-v2-charter-roadmap.md.
+- Owner-approved source-lineage CHANGE_PROPOSAL and frozen next-round pair: data_research/institutional-flow/institutional-accumulation-source-lineage-repair-v2-preregistration.md.
+- Task state: docs/handoffs/state/institutional-accumulation.json.
+- Source-lineage v2 is preregistered but NOT promoted and NOT eligible for Prompt A until the current original Prompt B passes and the linked-handoff ordering is explicitly reconciled. CI path filters are intentionally not changed in this registration commit; they are last in the frozen Prompt A.
+- The separate Fubon workflow failure run 42856368560, job 129970397296, head b8449802231fd713918f4ebea5670dc25011fdcb, failed at Commit and push changes with fatal: not in a git directory before staging/commit/push. It remains a separate workflow-plumbing diagnosis and does not alter this research round's A/B status.
