@@ -6,20 +6,20 @@
   "goal_contract_version": "goal-v3/institutional-accumulation-goal-v2",
   "ultimate_goal_status": "in_progress",
   "current_phase_id": "institutional-accumulation-legacy-handoff-sequencing-reconciliation-v1",
-  "phase_status": "active_prompt_a_not_started",
+  "phase_status": "active_prompt_b_pending",
   "round_id": "institutional-accumulation-legacy-handoff-sequencing-reconciliation-v1",
-  "prompt_a_status": "PREREGISTERED_NOT_STARTED",
-  "prompt_b_status": "PREREGISTERED_NOT_STARTED",
-  "current_round_prompt_a_status": "NOT_STARTED",
-  "current_round_prompt_b_status": "PREREGISTERED_NOT_STARTED",
-  "blocker": "Phase 0 post-collection freeze audit B is PASS. Phase 0a documentation-only sequencing reconciliation must run before either conflicting linked legacy preflight A or source-lineage v2 A.",
-  "planned_research": "Reconcile ordering among the routed canonical handoff, linked legacy material-information-final-preflight pair, and owner-approved source-lineage v2 pair without changing their original acceptance or source artifacts.",
+  "prompt_a_status": "COMPLETE",
+  "prompt_b_status": "PREREGISTERED_PENDING",
+  "current_round_prompt_a_status": "COMPLETE",
+  "current_round_prompt_b_status": "PREREGISTERED_PENDING",
+  "blocker": "Phase 0a Prompt A checkpoint is committed on the reconciliation branch but not yet durable on main; after merge, run the unchanged paired Prompt B. Do not start source-lineage v2 or legacy preflight in parallel.",
+  "planned_research": "Prompt B independently verifies that the three governance documents encode the same order, routing stays unique, and frozen prompt pairs, linked handoff, source data and workflows remain unchanged.",
   "prior_attempt": {
-    "classification": "Phase 0 Prompt B independently passed; exact evidence and bounded Phase 0a pair are recorded in canonical routed handoff."
+    "classification": "Phase 0a Prompt A completed the authorized documentation-only sequencing reconciliation on branch; no source or workflow actions occurred."
   },
-  "anti_loop": "Do not rerun source collection, dispatch workflows, change data/CI, or start either downstream A until Phase 0a B closes. Do not rewrite legacy handoff or frozen prompts.",
+  "anti_loop": "Do not execute source-lineage v2 A or material-information preflight A during this phase. Do not rerun source collection or change source/CI inputs. Prompt B is required after this A checkpoint is on main.",
   "evidence": {
-    "current_main": "97f563f13f5d5a1e6747e381e7396dc92a6a8bb2",
+    "current_main": "eadd6151265167176ad2713ff1792652e71fb2e6",
     "routed_handoff_blob": "079e9c5a3d1cfcd59f76ad4574b4cd7af5673398",
     "v1_freeze_blob": "4215a84a110406714e200618d280b70d0d1e7f46",
     "v1_semantic_sha256": "66ddb3bbf99e40bb1babb9e25a5257612a61206d827e273e6fb9b45b9c35e25b",
@@ -40,10 +40,10 @@
     "source_commit_graph_verified": true
   },
   "research_progress_status": "PROGRESS",
-  "next_action": "promptA",
+  "next_action": "promptB",
   "automatic_continuation_permitted": false,
   "plan_changed": true,
-  "updated_at": "2026-11-11T02:12:00+08:00",
+  "updated_at": "2026-11-11T10:40:00+08:00",
   "completed_round": {
     "round_id": "institutional-accumulation-catalyst-bounded-scheduled-canary-post-collection-freeze-audit-v1",
     "prompt_a_status": "COMPLETE",
@@ -53,5 +53,12 @@
     "accepted_occurrences": 3,
     "referenced_snapshots_verified": 18,
     "target_reached_zero_request_probe": true
-  }
+  },
+  "research_progress_evidence": [
+    "data_research/institutional-flow/institutional-accumulation-catalyst-scheduled-canary-closeout-handoff.md: Phase 0a completion checkpoint",
+    "data_research/institutional-flow/institutional-accumulation-goal-v2-charter-roadmap.md: ordered Phase 0a/1/2 rows",
+    "data_research/institutional-flow/institutional-accumulation-source-lineage-repair-v2-preregistration.md blob 92fe52ad9317e32313bbb40536fef5caf8a71181",
+    "data_research/institutional-flow/institutional-accumulation-validation-handoff.md blob c64853198c95d1e23063b8d4cfb80a9110816e2e"
+  ],
+  "research_progress_reason": "Resolved the duplicate-looking active label by documenting one canonical route and an explicit order, while preserving both downstream frozen pairs."
 }
