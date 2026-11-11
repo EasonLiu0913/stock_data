@@ -6,20 +6,20 @@
   "goal_contract_version": "goal-v3/institutional-accumulation-goal-v2",
   "ultimate_goal_status": "in_progress",
   "current_phase_id": "institutional-accumulation-legacy-handoff-sequencing-reconciliation-v1",
-  "phase_status": "active_prompt_b_pending",
+  "phase_status": "blocked",
   "round_id": "institutional-accumulation-legacy-handoff-sequencing-reconciliation-v1",
   "prompt_a_status": "COMPLETE",
-  "prompt_b_status": "PREREGISTERED_PENDING",
+  "prompt_b_status": "BLOCKED",
   "current_round_prompt_a_status": "COMPLETE",
-  "current_round_prompt_b_status": "PREREGISTERED_PENDING",
-  "blocker": "Phase 0a Prompt A checkpoint is committed on the reconciliation branch but not yet durable on main; after merge, run the unchanged paired Prompt B. Do not start source-lineage v2 or legacy preflight in parallel.",
-  "planned_research": "Prompt B independently verifies that the three governance documents encode the same order, routing stays unique, and frozen prompt pairs, linked handoff, source data and workflows remain unchanged.",
+  "current_round_prompt_b_status": "BLOCKED",
+  "blocker": "Prompt B found that the protected v1 freeze file changed after the Phase 0a A base: blob 4215a84a... became 6c343ec4... in commit 7d618362. This rewrote frozen source provenance and content hash, conflicting with the charter and source-lineage v2 baseline. Owner must approve a versioned correction before downstream A.",
+  "planned_research": "Resolve the overwritten v1 freeze identity through a versioned owner-approved proposal. Preserve original blob 4215a84a110406714e200618d280b70d0d1e7f46 as v1 and treat regenerated blob 6c343ec4a3dfebf194222d37bf4ab2dd13ac4f96 separately only if approved.",
   "prior_attempt": {
-    "classification": "Phase 0a Prompt A completed the authorized documentation-only sequencing reconciliation on branch; no source or workflow actions occurred."
+    "classification": "Phase 0a Prompt B independently verified PR #95's bounded three-file diff and found a concurrent protected v1 freeze mutation; B did not pass or promote the next phase."
   },
-  "anti_loop": "Do not execute source-lineage v2 A or material-information preflight A during this phase. Do not rerun source collection or change source/CI inputs. Prompt B is required after this A checkpoint is on main.",
+  "anti_loop": "Do not rerun or alter source data, regenerate/fix the v1 freeze, dispatch workflows, or execute source-lineage/material-information A without a versioned owner-approved correction and a newly eligible frozen round. Preserve original Phase 0a B text and result.",
   "evidence": {
-    "current_main": "eadd6151265167176ad2713ff1792652e71fb2e6",
+    "current_main": "b3d58ecaa58ce2312289729ca3f31c7250360db9",
     "routed_handoff_blob": "079e9c5a3d1cfcd59f76ad4574b4cd7af5673398",
     "v1_freeze_blob": "4215a84a110406714e200618d280b70d0d1e7f46",
     "v1_semantic_sha256": "66ddb3bbf99e40bb1babb9e25a5257612a61206d827e273e6fb9b45b9c35e25b",
@@ -37,13 +37,27 @@
     "validation_workflow": ".github/workflows/test-node-regression-suite.yml",
     "old_source_commit": "01d79c2ed2d6b5b78d5875a06e319b1f20dd480a",
     "source_refresh_commit": "fdbe6e0bfaa193626aa1197bcba52e5be49e5236",
-    "source_commit_graph_verified": true
+    "source_commit_graph_verified": true,
+    "phase0a_pr95_merge": "b8743f40a3948e25c4b2ceadc70293c14f493999",
+    "phase0a_pr95_files": [
+      "data_research/institutional-flow/institutional-accumulation-catalyst-scheduled-canary-closeout-handoff.md",
+      "data_research/institutional-flow/institutional-accumulation-goal-v2-charter-roadmap.md",
+      "docs/handoffs/state/institutional-accumulation.json"
+    ],
+    "original_v1_freeze_blob": "4215a84a110406714e200618d280b70d0d1e7f46",
+    "current_v1_freeze_blob": "6c343ec4a3dfebf194222d37bf4ab2dd13ac4f96",
+    "freeze_mutation_commit": "7d618362fa7a9d446ab84f2be014753e48f5c944",
+    "source_data_1213_blob_unchanged": "74e5f719416999acdd7397af3c5196078bd2f992",
+    "source_lineage_prereg_blob": "92fe52ad9317e32313bbb40536fef5caf8a71181",
+    "linked_legacy_handoff_blob": "c64853198c95d1e23063b8d4cfb80a9110816e2e",
+    "ci_runner_pin_commit": "a31c0e476c75a703b52ee7eacfec610177cc5ea2",
+    "validation_workflow_current_blob": "5bc82be5ab1bdce1207850a80fcfe3872a09c7a3"
   },
-  "research_progress_status": "PROGRESS",
-  "next_action": "promptB",
+  "research_progress_status": "BLOCKED",
+  "next_action": "owner_versioned_change_proposal",
   "automatic_continuation_permitted": false,
   "plan_changed": true,
-  "updated_at": "2026-11-11T09:14:00+08:00",
+  "updated_at": "2026-11-11T11:58:03+08:00",
   "completed_round": {
     "round_id": "institutional-accumulation-catalyst-bounded-scheduled-canary-post-collection-freeze-audit-v1",
     "prompt_a_status": "COMPLETE",
@@ -55,10 +69,9 @@
     "target_reached_zero_request_probe": true
   },
   "research_progress_evidence": [
-    "data_research/institutional-flow/institutional-accumulation-catalyst-scheduled-canary-closeout-handoff.md: Phase 0a completion checkpoint",
-    "data_research/institutional-flow/institutional-accumulation-goal-v2-charter-roadmap.md: ordered Phase 0a/1/2 rows",
-    "data_research/institutional-flow/institutional-accumulation-source-lineage-repair-v2-preregistration.md blob 92fe52ad9317e32313bbb40536fef5caf8a71181",
-    "data_research/institutional-flow/institutional-accumulation-validation-handoff.md blob c64853198c95d1e23063b8d4cfb80a9110816e2e"
+    "PR #95 merged at b8743f40a3948e25c4b2ceadc70293c14f493999; remote file list verifies exactly the three approved governance paths.",
+    "Source-lineage preregistration blob 92fe52ad9317e32313bbb40536fef5caf8a71181 and linked legacy handoff blob c64853198c95d1e23063b8d4cfb80a9110816e2e remain unchanged.",
+    "v1 freeze blob changed from 4215a84a110406714e200618d280b70d0d1e7f46 to 6c343ec4a3dfebf194222d37bf4ab2dd13ac4f96 in commit 7d618362fa7a9d446ab84f2be014753e48f5c944."
   ],
-  "research_progress_reason": "Resolved the duplicate-looking active label by documenting one canonical route and an explicit order, while preserving both downstream frozen pairs."
+  "research_progress_reason": "A newly verified concurrent rewrite of the protected v1 freeze invalidates the existing v2 source-lineage baseline, so the original B cannot pass and no downstream phase can be promoted without a versioned owner decision."
 }

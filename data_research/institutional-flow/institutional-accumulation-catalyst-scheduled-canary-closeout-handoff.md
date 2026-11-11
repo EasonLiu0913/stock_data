@@ -154,8 +154,8 @@ After Phase 0a A completes, independently verify from fresh remote main that onl
 Round: `institutional-accumulation-legacy-handoff-sequencing-reconciliation-v1`
 
 Status:
-- Prompt A: COMPLETE on this branch; awaiting durable merge to main
-- Original paired Prompt B: PREREGISTERED / PENDING
+- Prompt A: COMPLETE and durable on remote main via PR #95 merge commit b8743f40a3948e25c4b2ceadc70293c14f493999
+- Original paired Prompt B: BLOCKED by a concurrent mutation of the protected v1 freeze artifact; original acceptance remains unchanged
 
 The original Phase 0a Prompt A and Prompt B above were already present on main before this A began and remain unchanged. Source-lineage v2 pair is preserved at `data_research/institutional-flow/institutional-accumulation-source-lineage-repair-v2-preregistration.md`; the linked material-information preflight pair remains byte-for-byte preserved in `data_research/institutional-flow/institutional-accumulation-validation-handoff.md`.
 
@@ -178,9 +178,9 @@ Evidence:
 
 `institutional-accumulation-legacy-handoff-sequencing-reconciliation-v1`
 
-- Prompt A: COMPLETE (pending merge to remote main)
-- Prompt B: PREREGISTERED / PENDING
-- Next action after this checkpoint is merged: run the unchanged Phase 0a Prompt B from the original pair above.
+- Prompt A: COMPLETE and durable on remote main at merge commit b8743f40a3948e25c4b2ceadc70293c14f493999.
+- Prompt B: attempted against fresh main; BLOCKED, not PASS.
+- No next-phase promotion occurred.
 
 ## Owner-approved route and source-lineage registration (2026-11-11)
 
@@ -198,3 +198,21 @@ Evidence:
 
 
 Source lineage registration correction (2026-11-11): commit graph verification confirms old source blob dc52d8eb2ec32dd57606b6dc1a0c4a904d4e8346 belongs to v1-pinned source commit 01d79c2ed2d6b5b78d5875a06e319b1f20dd480a. Commit fdbe6e0bfaa193626aa1197bcba52e5be49e5236 is the subsequent data refresh commit, not the v1 base.
+
+
+## Phase 0a sequencing reconciliation — Prompt B closeout (BLOCKED)
+
+The original Phase 0a Prompt B was recovered from the preregistered text above and checked against fresh remote main. Its closeout cannot pass because the protected v1 freeze artifact changed during this round, creating a material conflict with the charter and the already-preregistered source-lineage v2 baseline. The original B text and acceptance have not been edited.
+
+Closeout evidence on the checked main `b3d58ecaa58ce2312289729ca3f31c7250360db9` (which differs from PR #95 merge only by unrelated market-environment workflow/script updates):
+
+- PR #95 is merged at `b8743f40a3948e25c4b2ceadc70293c14f493999`; its remote changed-file list contains exactly the three authorized governance paths: this canonical handoff, `data_research/institutional-flow/institutional-accumulation-goal-v2-charter-roadmap.md`, and `docs/handoffs/state/institutional-accumulation.json`.
+- Unique active route remains `institutional-accumulation`; goal remains `goal-v3/institutional-accumulation-goal-v2`. The source-lineage v2 preregistration remains blob `92fe52ad9317e32313bbb40536fef5caf8a71181`; linked legacy handoff remains blob `c64853198c95d1e23063b8d4cfb80a9110816e2e`. The preregistration and linked handoff were not changed by PR #95.
+- `data_history_sma/1213.json` remains blob `74e5f719416999acdd7397af3c5196078bd2f992`, unchanged from the Phase 0a A base `eadd6151265167176ad2713ff1792652e71fb2e6`.
+- The v1 freeze file did change after the A base: blob `4215a84a110406714e200618d280b70d0d1e7f46` at A base became `6c343ec4a3dfebf194222d37bf4ab2dd13ac4f96` in commit `7d618362fa7a9d446ab84f2be014753e48f5c944` (`analysis: freeze accumulation development sample v1`). That commit changed frozen provenance from legacy Fubon files to current `data_history_sma` files, replaced the pinned source-file hashes, and changed the freeze content SHA-256 from `66ddb3bbf99e40bb1babb9e25a5257612a61206d827e273e6fb9b45b9c35e25b` to `4ffa70f518bf4c94c61630d09ee8e9cb6e37fb0eb98edc1bec828f151ba566ea`. This directly conflicts with the charter's immutable v1 freeze and the preregistered v2 baseline; it is not safe to classify as unrelated.
+- The separate validation workflow `.github/workflows/test-node-regression-suite.yml` also changed since the A base (current blob `5bc82be5ab1bdce1207850a80fcfe3872a09c7a3`, prior blob `fad579a62be53cf833d3f28bdc4440b16bfaa041`) under commit `a31c0e476c75a703b52ee7eacfec610177cc5ea2`, pinning runners to `ubuntu-24.04`. This concurrent runner change is unrelated to sequencing and is classified separately. PR #95 itself did not change workflows, source data, or research artifacts.
+- No source request, data write, workflow dispatch, job rerun, outcome/holdout opening, or research interpretation was performed by this Prompt B closeout.
+
+Result: Prompt B is BLOCKED / not PASS. Source-lineage v2 remains preregistered but not promoted and Prompt A is not eligible. The linked material-information preflight remains preserved and not active.
+
+Required owner action: approve a versioned CHANGE_PROPOSAL and paired round that resolves the overwritten-v1 identity before any downstream A. The proposal must state whether to restore the original v1 freeze exactly from blob `4215a84a110406714e200618d280b70d0d1e7f46` and retain the regenerated `6c343ec4a3dfebf194222d37bf4ab2dd13ac4f96` only as a separately named v2 view, or adopt a different owner-approved versioned history. Do not modify the existing v1 file or its hashes, reinterpret this B as PASS, or start source-lineage v2 until that versioned decision is recorded.
