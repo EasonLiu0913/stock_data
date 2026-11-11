@@ -6,9 +6,9 @@
   "goal_id": "goal-v3/MVP-10DAY-v1",
   "ultimate_goal_status": "not_complete",
   "current_phase_id": "MVP10-A-FISH-TTS-PERSISTENCE-R1-ALL-SCENES-V2",
-  "phase_status": "registered",
+  "phase_status": "in_progress",
   "round_id": "MVP10-A-FISH-TTS-PERSISTENCE-R1-ALL-SCENES-V2",
-  "prompt_a_status": "not_started",
+  "prompt_a_status": "in_progress",
   "prompt_b_status": "not_eligible",
   "owner_approved_on": "2026-11-09",
   "change_proposal": "data_research/m5/change-proposals/MVP10-A-FISH-TTS-PERSISTENCE-CHANGE-PROPOSAL-v2.md",
@@ -19,7 +19,7 @@
   "mvp10_a_acceptance_changed": false,
   "mvp10_b_status": "frozen_not_eligible",
   "mvp10_b_acceptance_changed": false,
-  "research_progress_status": "PROGRESS",
+  "research_progress_status": "IN_PROGRESS",
   "research_progress_evidence": [
     "https://github.com/EasonLiu0913/stock_data/actions/runs/41799842426",
     "https://github.com/EasonLiu0913/stock_data/actions/runs/41799842426/artifacts/13308740997",
@@ -58,7 +58,7 @@
     "Owner-selected objective registered as MVP10-A-FISH-TTS-PERSISTENCE-R1; proposal/pair v1 define Fish identity, cross-run scene checkpointing, missing-only recovery, and Render-only consumption. No workflow or API was triggered."
   ],
   "research_progress_reason": "Owner selected and registered the Fish cross-Actions persistence objective with a versioned immutable A/B pair; implementation has not started.",
-  "next_action": "promptA (separate owner turn required; route activation does not execute the prompt)",
+  "next_action": "continue_promptA; verify PR checks, merge under policy, then reassess date gates and supported TTS dispatch capability",
   "automatic_continuation_permitted": false,
   "plan_changed": true,
   "publication_authorized": false,
@@ -66,7 +66,7 @@
   "youtube_scheduling_authorized": false,
   "public_release_authorized": false,
   "render_authorized_in_repair_phase": false,
-  "updated_at": "2026-11-12T01:18:39+08:00",
+  "updated_at": "2026-11-12T01:32:06+08:00",
   "prompt_b_failure_evidence": [
     "R1 frozen Prompt B criterion 5 required verifying no prohibited workflow was triggered.",
     "Render-only push-trigger runs: 42401534137 (20261102), 42401534168 (20261103); both failed before render and produced no artifacts.",
@@ -735,8 +735,8 @@
     "pair": "data_research/m5/change-proposals/MVP10-A-FISH-TTS-PERSISTENCE-PAIR-v2.md",
     "registration_pr": "https://github.com/EasonLiu0913/stock_data/pull/91",
     "registration_merge_commit": "864a9592d3f07663a89feb1c06b811caf8dde211",
-    "prompt_a_status": "not_started",
-    "prompt_b_status": "frozen_not_eligible",
+    "prompt_a_status": "in_progress",
+    "prompt_b_status": "not_eligible",
     "run_19": {
       "url": "https://github.com/EasonLiu0913/stock_data/actions/runs/42836332036",
       "event": "workflow_dispatch",
@@ -766,7 +766,30 @@
         17
       ]
     },
-    "note": "This route/state checkpoint performs no workflow dispatch, Fish synthesis, render, merge-triggered production step, or Prompt A. Preserve v1 history and the existing FIFO-selector repair; Prompt A must verify the latest main state before execution."
+    "note": "This route/state checkpoint performs no workflow dispatch, Fish synthesis, render, merge-triggered production step, or Prompt A. Preserve v1 history and the existing FIFO-selector repair; Prompt A must verify the latest main state before execution.",
+    "started_at": "2026-11-12T01:32:06+08:00",
+    "implementation_branch": "codex/fish-all-scenes-prompta-20261112",
+    "base_main": "4d6c81ec64898c22e53927d79abd9ec2806eb8e7",
+    "selector_audit": {
+      "stale_branch": "codex/fix-fish-tts-fifo-completed-date",
+      "relation_to_current_main": "3 ahead / 206 behind",
+      "finding": "current main already contains ordered candidate resolution with exact frozen-plan/checkpoint validation and explicit-date pinning; no selector code cherry-pick needed",
+      "merge_stale_branch": false,
+      "existing_test": "test_fifo_resolver_skips_only_dates_with_valid_complete_checkpoints"
+    },
+    "queue_root_cause": {
+      "base_script_blob": "1912557c16c4c366abae0cc6eabb1138721e9ef6",
+      "base_workflow_blob": "e2eecbff1c1fb51c3ac7e855421050873a63bcc6",
+      "finding": "plan --limit defaults to 3 and slices missing_scenes; recovery workflow passes --limit 3",
+      "repair": "remove the plan limit and enqueue complete deterministic missing-scene queue; fail before synthesis if count exceeds documented 256-job GitHub matrix maximum"
+    },
+    "test_plan": "8 scene CLI regression: one matching success excluded, all seven missing scene IDs returned in order; workflow contract verifies no local cap and pre-synthesis matrix-limit failure",
+    "validation": {
+      "status": "pending_pr_checks",
+      "local_tests": "not_run",
+      "live_tts": "not_dispatched",
+      "render": "not_run"
+    }
   },
   "current_phase_acceptance_changed": true,
   "current_phase_owner_approved_on": "2026-11-10",
