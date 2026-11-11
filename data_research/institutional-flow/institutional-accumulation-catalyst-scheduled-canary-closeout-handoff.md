@@ -39,7 +39,7 @@ Closeout evidence:
 
 Prompt B closeout: PASS
 
-## Current active round
+## Completed round
 
 institutional-accumulation-catalyst-bounded-scheduled-canary-post-collection-freeze-audit-v1
 
@@ -149,7 +149,43 @@ Before work, fetch current main and read AGENTS.md, this canonical handoff, `dat
 
 After Phase 0a A completes, independently verify from fresh remote main that only the three authorized governance files changed; the linked legacy handoff, all original A/B prompt text, source-lineage preregistration, source data and workflows remain unchanged; the charter and routed handoff specify the same unambiguous phase order; task-routing has exactly one active project; task state names Phase 0a A complete/B pending; no source calls, data writes, workflow dispatch/rerun, or research/outcome opening occurred. If any item fails, repair only within this documentation-only contract and repeat verification. On PASS, record durable evidence, promote only the preregistered source-lineage v2 round if its original pair is recoverable and no owner-only gate remains; otherwise mark WAITING_OWNER with the exact missing decision. Do not execute the next A.
 
+## Phase 0a sequencing reconciliation — Prompt A completion
+
+Round: `institutional-accumulation-legacy-handoff-sequencing-reconciliation-v1`
+
+Status:
+- Prompt A: COMPLETE on this branch; awaiting durable merge to main
+- Original paired Prompt B: PREREGISTERED / PENDING
+
+The original Phase 0a Prompt A and Prompt B above were already present on main before this A began and remain unchanged. Source-lineage v2 pair is preserved at `data_research/institutional-flow/institutional-accumulation-source-lineage-repair-v2-preregistration.md`; the linked material-information preflight pair remains byte-for-byte preserved in `data_research/institutional-flow/institutional-accumulation-validation-handoff.md`.
+
+Sequencing decision, limited to the already preregistered documentation-only scope:
+1. Phase 0 post-collection freeze audit — A complete / B PASS.
+2. Phase 0a sequencing reconciliation — A complete / B pending.
+3. Source-lineage repair v2 — next implementation round after Phase 0a B PASS; use its existing frozen pair. It must preserve the v1 freeze and pinned source bytes, define a distinct v2 lineage/resolved-input view, compare frozen observations against both versions, and add push/PR CI path monitoring last.
+4. Existing material-information final preflight — retain its original A/B and historical active label in the linked handoff; route it only after source-lineage v2 closes, unless that B's evidence requires a separately owner-approved versioned roadmap change.
+
+The linked validation handoff is intentionally unchanged. Its `ACTIVE / NOT STARTED` label is preserved as the historical state recorded by that handoff; it does not create a second globally active phase. The routed canonical handoff and charter define the current ordered route. No prompt text, acceptance, source data, CI workflow, research artifact, or workflow execution was changed in this A.
+
+Evidence:
+- A started from remote main `eadd6151265167176ad2713ff1792652e71fb2e6`, where Phase 0 was durably closed by PR #94.
+- Unique active task remains `institutional-accumulation`; task-routing was read and left unchanged.
+- Source-lineage v2 preregistration blob `92fe52ad9317e32313bbb40536fef5caf8a71181` contains both existing Prompt A and Prompt B.
+- Linked legacy handoff blob `c64853198c95d1e23063b8d4cfb80a9110816e2e` contains the original material-information preflight pair and is left unchanged.
+- Scope is documentation-only; no source request, data write, workflow dispatch/rerun, or outcome/holdout opening occurred.
+
+### Current active round
+
+`institutional-accumulation-legacy-handoff-sequencing-reconciliation-v1`
+
+- Prompt A: COMPLETE (pending merge to remote main)
+- Prompt B: PREREGISTERED / PENDING
+- Next action after this checkpoint is merged: run the unchanged Phase 0a Prompt B from the original pair above.
+
 ## Owner-approved route and source-lineage registration (2026-11-11)
+
+- The following registration bullets are the state as recorded at the time of PR #93; later Phase 0 and Phase 0a closeouts below supersede their pending-state descriptions without changing the original registration or prompts.
+
 
 - Owner selected institutional-accumulation as the unique active global route. daily-gainers-market-opening-end-to-end is pending; its project state and original daily-gainers A/B are preserved.
 - The routed current round remains unchanged: institutional-accumulation-catalyst-bounded-scheduled-canary-post-collection-freeze-audit-v1, Prompt A COMPLETE, original Prompt B PREREGISTERED / PENDING. Its exact Prompt B above remains the immediate eligible action. This registration does not run or replace it.
