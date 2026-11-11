@@ -7,6 +7,14 @@ on:
     paths:
       - 'scripts/**'
       - 'tests/**'
+      - 'data_history_sma/**'
+      - 'data_research/institutional-flow/institutional-accumulation-development-sample-freeze-v1.json'
+      - 'data_research/institutional-flow/institutional-accumulation-development-sample-freeze-v2.json'
+      - 'data_research/institutional-flow/institutional-accumulation-source-lineage-v2.1.json'
+      - 'scripts/freeze_institutional_accumulation_development_sample.js'
+      - 'scripts/lib/institutional_accumulation_freeze_versions.js'
+      - 'scripts/build_institutional_accumulation_source_lineage_v2_1.js'
+      - 'tests/institutional_accumulation_development_sample.test.js'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/test-node-regression-suite.yml'
@@ -15,6 +23,14 @@ on:
     paths:
       - 'scripts/**'
       - 'tests/**'
+      - 'data_history_sma/**'
+      - 'data_research/institutional-flow/institutional-accumulation-development-sample-freeze-v1.json'
+      - 'data_research/institutional-flow/institutional-accumulation-development-sample-freeze-v2.json'
+      - 'data_research/institutional-flow/institutional-accumulation-source-lineage-v2.1.json'
+      - 'scripts/freeze_institutional_accumulation_development_sample.js'
+      - 'scripts/lib/institutional_accumulation_freeze_versions.js'
+      - 'scripts/build_institutional_accumulation_source_lineage_v2_1.js'
+      - 'tests/institutional_accumulation_development_sample.test.js'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/test-node-regression-suite.yml'
@@ -29,7 +45,7 @@ concurrency:
 jobs:
   test:
     name: Node regression tests
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     timeout-minutes: 30
 
     steps:
@@ -80,7 +96,7 @@ jobs:
     # schedule-timing-summary:v1
     name: 排程時間摘要
     if: github.event_name == 'schedule'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository for schedule summary
         uses: actions/checkout@v7

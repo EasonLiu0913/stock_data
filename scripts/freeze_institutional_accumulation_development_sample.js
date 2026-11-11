@@ -236,6 +236,21 @@ function hashFreezePayload(payload) {
   return sha256Buffer(Buffer.from(JSON.stringify(clone)));
 }
 
+function writeFreezeOnce(file, content) {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  try {
+    fs.writeFileSync(file, content, { encoding: 'utf8', flag: 'wx' });
+    return 'created';
+  } catch (error) {
+    if (error.code !== 'EEXIST') throw error;
+    const existing = fs.readFileSync(file, 'utf8');
+    if (existing !== content) {
+      throw new Error(`Refusing to replace an existing frozen artifact with different bytes: ${file}`);
+    }
+    return 'already-identical';
+  }
+}
+
 function buildFreeze(options = {}) {
   const root = path.resolve(options.root || ROOT);
   const cutoff = options.cutoff || DEFAULT_CUTOFF;
@@ -315,9 +330,8 @@ function buildFreeze(options = {}) {
 
 function main() {
   const payload = buildFreeze();
-  fs.mkdirSync(path.dirname(OUTPUT), { recursive: true });
-  fs.writeFileSync(OUTPUT, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
-  console.log(`Wrote ${path.relative(ROOT, OUTPUT)}`);
+  const result = writeFreezeOnce(OUTPUT, `${JSON.stringify(payload, null, 2)}\n`);
+  console.log(`${result === 'created' ? 'Wrote' : 'Verified existing'} ${path.relative(ROOT, OUTPUT)}`);
   console.log(JSON.stringify({
     freeze_id: payload.freeze_id,
     content_sha256: payload.content_sha256,
@@ -347,4 +361,5 @@ module.exports = {
   partitionFor,
   percentileRanks,
   selectAnchorSessions,
+  writeFreezeOnce,
 };
