@@ -70,8 +70,8 @@ function plan(startCompact,endCompact,force=false,generateActual=true) {
     const actualBlocked=generateActual && actual==='missing' && (!replay || !prediction);
     if (requiresForecast)for(const issue of issues)recoveries.set(`${issue.dataset}:${issue.date}`,issue);
     items.push({forecast_date:forecastDate,base_date:baseDate,forecast,actual,
-      build_forecast:requiresForecast && issues.length===0,
-      build_actual:generateActual && actual==='missing' && replay && prediction && issues.length===0
+      build_forecast:requiresForecast && issues.length===0 && (forecast.status!=='invalid' || force),
+      build_actual:generateActual && actual==='missing' && replay && prediction && issues.length===0 && !(forecast.status==='invalid'&&!force)
         && (forecast.status==='present' || requiresForecast),
       blocked:issues.length>0 || actualBlocked || (forecast.status==='invalid'&&!force),
       issues,
