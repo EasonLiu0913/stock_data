@@ -6,13 +6,13 @@
   "goal_contract_version": "goal-v3/institutional-accumulation-goal-v2",
   "ultimate_goal_status": "in_progress",
   "current_phase_id": "institutional-accumulation-material-information-final-preflight-v1",
-  "phase_status": "active_preregistered_pending_prompt_a",
+  "phase_status": "blocked",
   "round_id": "institutional-accumulation-material-information-final-preflight-v1",
-  "prompt_a_status": "PREREGISTERED_PENDING",
+  "prompt_a_status": "BLOCKED",
   "prompt_b_status": "PREREGISTERED_PENDING",
-  "current_round_prompt_a_status": "PREREGISTERED_PENDING",
+  "current_round_prompt_a_status": "BLOCKED",
   "current_round_prompt_b_status": "PREREGISTERED_PENDING",
-  "blocker": "No external blocker is recorded for the preregistered preflight. The next permitted action is a separate owner-issued promptA; this promotion checkpoint does not execute it.",
+  "blocker": "Frozen Prompt A requires Wave B=1, but current main already contains the matching 2026-09-02 row-shape preflight source/meta; planner therefore computes Wave B=0. The only registered workflow has no preflight-only mode and can proceed into Wave C. Owner must approve a versioned decision defining reuse/new attempt and a Wave-C-isolated runner before Prompt A can resume.",
   "planned_research": "Execute only the preregistered third and final fresh-runner MOPS material-information machine-contract preflight attempt. Prove Wave A=0 and Wave B=1/Wave C=0 before the single bounded attempt; checkpoint diagnostics; on ambiguous WAF/quality block persist attempt_count=3, retryable=false, terminal_state=manual_review; if PASS, do not run Wave C in this round. Preserve all protected outcomes, holdouts, and historical Phase 0a results.",
   "prior_attempt": {
     "historical_phase0a": "BLOCKED; original result and acceptance preserved",
@@ -21,7 +21,7 @@
   },
   "anti_loop": "Do not run promptA automatically. The next phase is eligible only on this promoted remote-main checkpoint and requires a separate owner-issued promptA. Do not rerun source collection, Wave A, dispatch/rerun workflows, access outcomes/holdouts, or run Wave C during the preflight round. Preserve Phase 0a BLOCKED permanently as historical evidence.",
   "evidence": {
-    "current_main": "0ae81a696b9c3b05a937b95bfc04071541dc49d8",
+    "current_main": "3c04db8d6dc458c1d03aae6b5d54c4c4c641e534",
     "routed_handoff_blob": "05c24040d038392e0be356613e9047a337af7c34",
     "v1_freeze_blob": "4215a84a110406714e200618d280b70d0d1e7f46",
     "v1_semantic_sha256": "66ddb3bbf99e40bb1babb9e25a5257612a61206d827e273e6fb9b45b9c35e25b",
@@ -73,13 +73,20 @@
     "promoted_prompt_pair_source": "data_research/institutional-flow/institutional-accumulation-validation-handoff.md",
     "phase0a_prompt_b": "BLOCKED; unchanged and historical",
     "promotion_checkpoint_status": "merged_pr_99",
-    "promotion_checkpoint_merge_commit": "0ae81a696b9c3b05a937b95bfc04071541dc49d8"
+    "promotion_checkpoint_merge_commit": "0ae81a696b9c3b05a937b95bfc04071541dc49d8",
+    "prompt_a_assessment_main": "3c04db8d6dc458c1d03aae6b5d54c4c4c641e534",
+    "prompt_a_assessment_planner_blob": "6b82e8aa172a02f8c6b73c7e88a97832072b9e6d",
+    "existing_row_shape_preflight_meta_blob": "a78c18df1a899272c1f3d5ff727e5167ab92f0e1",
+    "existing_row_shape_preflight_raw_blob": "4b90b6018e4eb32c619f9b92465bbcf506a3dbf4",
+    "existing_row_shape_preflight_commit": "94792f1775bdfa60bef67b15a89c6ecbed8b06da",
+    "current_preflight_ledger_blob": "2a14ed8164b1b3e8b044bbf066b5844d9028c6d8",
+    "current_collector_workflow_blob": "faea4585e6b9e33b887d6d75cc78ddc954b276eb"
   },
-  "research_progress_status": "READY_FOR_PROMPT_A",
-  "next_action": "promptA",
+  "research_progress_status": "BLOCKED",
+  "next_action": "versioned_owner_decision_for_existing_row_shape_preflight_and_preflight_only_runner",
   "automatic_continuation_permitted": false,
   "plan_changed": true,
-  "updated_at": "2026-11-12T00:43:06+08:00",
+  "updated_at": "2026-11-12T00:53:44+08:00",
   "completed_round": {
     "round_id": "institutional-accumulation-catalyst-bounded-scheduled-canary-post-collection-freeze-audit-v1",
     "prompt_a_status": "COMPLETE",
@@ -98,7 +105,8 @@
     "Fresh-main check: main fee6490bafaf2371e29ae1f4b5f3a3f27d7795fa; unique active task remains institutional-accumulation / goal-v3/institutional-accumulation-goal-v2.",
     "PR #98 is merged at ca57515958bb74c850f0280dbe9647c53ca27822; run #43054958973 succeeded and v2.1 Prompt B closeout is durably recorded.",
     "The linked material-information handoff remains unchanged at blob c64853198c95d1e23063b8d4cfb80a9110816e2e and contains the exact preregistered A/B pair.",
-    "This governance checkpoint promotes only institutional-accumulation-material-information-final-preflight-v1; Phase 0a Prompt B remains BLOCKED. No preflight Prompt A is executed in this checkpoint."
+    "This governance checkpoint promotes only institutional-accumulation-material-information-final-preflight-v1; Phase 0a Prompt B remains BLOCKED. No preflight Prompt A is executed in this checkpoint.",
+    "Prompt A invoked 2026-11-12. Frozen Wave B=1 precondition is not met: existing row-shape preflight source/meta on main makes current planner wave_b empty. Current collector workflow has no preflight-only mode and may execute Wave C after planner authorization. No request/dispatch/rerun or data mutation performed; versioned owner decision required."
   ],
-  "research_progress_reason": "The v2.1 closeout is PASS and PR #98 is merged. PR #99 records the explicit promotion of the unchanged material-information preflight A/B pair; it does not execute Prompt A. Phase 0a remains historically BLOCKED."
+  "research_progress_reason": "Prompt A was invoked but blocked before any bounded request. The existing row-shape preflight on current main makes planner Wave B=0, conflicting with the frozen Wave B=1 precondition; the only registered collector workflow lacks a preflight-only path and can proceed into Wave C. No dispatch, rerun, request, source mutation, or Wave C execution occurred. A versioned owner decision is required; Prompt B remains ineligible."
 }
