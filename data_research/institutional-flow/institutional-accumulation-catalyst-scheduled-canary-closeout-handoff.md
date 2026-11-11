@@ -220,3 +220,8 @@ Required owner action: approve a versioned CHANGE_PROPOSAL and paired round that
 ## Owner-approved versioned correction — 2026-11-11
 
 The original Phase 0a Prompt B closeout remains BLOCKED as recorded above; its frozen acceptance and result are unchanged. The owner authorized the versioned resolution “restore the original v1 freeze and list the regenerated content separately as v2.” The registered successor proposal and immutable pair are in `data_research/institutional-flow/institutional-accumulation-source-lineage-repair-v2.1-change-proposal.md` (proposal v2.1). It preserves the original v1 bytes from blob `4215a84a110406714e200618d280b70d0d1e7f46`, assigns the regenerated freeze blob `6c343ec4a3dfebf194222d37bf4ab2dd13ac4f96` to a separate v2 artifact, and treats latest source blob `e8991ea4a67d5cfe04095413dac2eaadaa974771` as later input, not a silent rebind. No implementation has started. The proposal becomes eligible only after its governance PR is merged and the pair is verified on fresh main; then a distinct owner `promptA` is required.
+
+
+## v2.1 proposal merge checkpoint — 2026-11-11
+
+PR #97 merged at `386ded3d1a1e7862bbc94789fd5361be16943faa`. The owner-approved proposal and its frozen Prompt A/B are now on `main` at `data_research/institutional-flow/institutional-accumulation-source-lineage-repair-v2.1-change-proposal.md`. Main still has the regenerated freeze at v1 path (blob `6c343ec4a3dfebf194222d37bf4ab2dd13ac4f96`) and current `data_history_sma/1213.json` blob `e8991ea4a67d5cfe04095413dac2eaadaa974771`; neither was modified by PR #97. Phase 0a Prompt B remains historically BLOCKED. The v2.1 Prompt A/B are preregistered and eligible, but A has not started; a separate owner-issued `promptA` command is required.
