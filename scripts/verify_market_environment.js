@@ -234,6 +234,17 @@ function main() {
   const forecastDate = compactDate(args.get('forecast-date') || process.env.FORECAST_TARGET_DATE, 'forecast date');
   const baseDate = compactDate(args.get('base-date') || process.env.FORECAST_BASE_DATE, 'base date');
   const allowHistorical = args.has('allow-historical-reconstruction');
+  const scope = args.get('scope') || 'full';
+  if (!['full', 'environment', 'stock-universe'].includes(scope)) {
+    throw new Error(`Unsupported verification scope: ${scope}`);
+  }
+  // Stock-universe readiness is independently checkable before a snapshot exists.
+  if (scope === 'stock-universe') {
+    validateStockUniverse(baseDate);
+    writeOutput('stock_universe_valid', 'true');
+    console.log(JSON.stringify({valid: true, scope, base_date: baseDate, stock_universe_minimum: 900, sentinel_stocks: SENTINEL_STOCKS}));
+    return;
+  }
   const file = path.join(ROOT, 'data_market_environment', forecastDate, 'market_environment.json');
   if (!fs.existsSync(file) || fs.statSync(file).size === 0) throw new Error(`Missing market environment snapshot: ${path.relative(ROOT, file)}`);
   const payload = readJson(file, {});
@@ -250,18 +261,12 @@ function main() {
     throw new Error('Historical reconstruction cannot be used as a live immutable snapshot without explicit allowance');
   }
 
-  // Keep the default full gate unchanged; scoped checks isolate upstream recovery.
-  const scope = args.get('scope') || 'full';
-  if (!['full', 'environment', 'stock-universe'].includes(scope)) {
-    throw new Error(`Unsupported verification scope: ${scope}`);
-  }
-  if (scope !== 'stock-universe') {
-    validateSnapshotMetrics(payload);
-    validateExternalMarket(payload, baseDate);
-    validateMarketRisk(payload, baseDate);
-    validateReferencedSources(payload, baseDate);
-  }
-  if (scope !== 'environment') validateStockUniverse(baseDate);
+  // Environment and full modes share identical source, freshness and hash checks.
+  validateSnapshotMetrics(payload);
+  validateExternalMarket(payload, baseDate);
+  validateMarketRisk(payload, baseDate);
+  validateReferencedSources(payload, baseDate);
+  if (scope === 'full') validateStockUniverse(baseDate);
 
   const today = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit',
