@@ -250,11 +250,18 @@ function main() {
     throw new Error('Historical reconstruction cannot be used as a live immutable snapshot without explicit allowance');
   }
 
-  validateSnapshotMetrics(payload);
-  validateExternalMarket(payload, baseDate);
-  validateMarketRisk(payload, baseDate);
-  validateReferencedSources(payload, baseDate);
-  validateStockUniverse(baseDate);
+  // Keep the default full gate unchanged; scoped checks isolate upstream recovery.
+  const scope = args.get('scope') || 'full';
+  if (!['full', 'environment', 'stock-universe'].includes(scope)) {
+    throw new Error(`Unsupported verification scope: ${scope}`);
+  }
+  if (scope !== 'stock-universe') {
+    validateSnapshotMetrics(payload);
+    validateExternalMarket(payload, baseDate);
+    validateMarketRisk(payload, baseDate);
+    validateReferencedSources(payload, baseDate);
+  }
+  if (scope !== 'environment') validateStockUniverse(baseDate);
 
   const today = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit',
