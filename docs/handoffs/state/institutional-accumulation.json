@@ -5,22 +5,22 @@
   "goal_id": "institutional-accumulation",
   "goal_contract_version": "goal-v3/institutional-accumulation-goal-v2",
   "ultimate_goal_status": "in_progress",
-  "current_phase_id": "institutional-accumulation-legacy-handoff-sequencing-reconciliation-v1",
-  "phase_status": "active_prompt_b_pending",
-  "round_id": "institutional-accumulation-legacy-handoff-sequencing-reconciliation-v1",
-  "prompt_a_status": "COMPLETE",
+  "current_phase_id": "institutional-accumulation-source-lineage-repair-v2.1",
+  "phase_status": "preregistered_pending_prompt_a",
+  "round_id": "institutional-accumulation-source-lineage-repair-v2.1",
+  "prompt_a_status": "PREREGISTERED_PENDING",
   "prompt_b_status": "PREREGISTERED_PENDING",
-  "current_round_prompt_a_status": "COMPLETE",
+  "current_round_prompt_a_status": "PREREGISTERED_PENDING",
   "current_round_prompt_b_status": "PREREGISTERED_PENDING",
-  "blocker": "Phase 0a Prompt A checkpoint is committed on the reconciliation branch but not yet durable on main; after merge, run the unchanged paired Prompt B. Do not start source-lineage v2 or legacy preflight in parallel.",
-  "planned_research": "Prompt B independently verifies that the three governance documents encode the same order, routing stays unique, and frozen prompt pairs, linked handoff, source data and workflows remain unchanged.",
+  "blocker": "The owner-approved v2.1 proposal and immutable A/B are prepared in a governance PR but are not yet on main. Do not execute A until the PR is merged and fresh-main verifies the proposal. The historic Phase 0a Prompt B remains BLOCKED and is not converted to PASS.",
+  "planned_research": "After the proposal is durable on main and owner invokes promptA, restore original v1 freeze bytes from the registered historical blob; preserve regenerated freeze as separately pinned v2; create lineage/comparison/regression artifacts; add aligned validation-only CI path filters last.",
   "prior_attempt": {
-    "classification": "Phase 0a Prompt A completed the authorized documentation-only sequencing reconciliation on branch; no source or workflow actions occurred."
+    "classification": "Phase 0a Prompt B remains BLOCKED on the overwritten-v1 evidence; owner authorized a versioned successor proposal, not retrospective PASS or immediate implementation."
   },
-  "anti_loop": "Do not execute source-lineage v2 A or material-information preflight A during this phase. Do not rerun source collection or change source/CI inputs. Prompt B is required after this A checkpoint is on main.",
+  "anti_loop": "Do not execute the new A from this PR branch. Require merge to main and a separate owner promptA. Do not modify source data, reopen outcomes, reinterpret Phase 0a B, or change frozen v2.1 criteria.",
   "evidence": {
-    "current_main": "eadd6151265167176ad2713ff1792652e71fb2e6",
-    "routed_handoff_blob": "079e9c5a3d1cfcd59f76ad4574b4cd7af5673398",
+    "current_main": "f660a8ce3154395dc120a919343c006da9a02bcf",
+    "routed_handoff_blob": "62185cf7429d9808c2818852c10de742c6acc830",
     "v1_freeze_blob": "4215a84a110406714e200618d280b70d0d1e7f46",
     "v1_semantic_sha256": "66ddb3bbf99e40bb1babb9e25a5257612a61206d827e273e6fb9b45b9c35e25b",
     "old_source_sha256": "b5951a9a69a3f915a7d69e07851631ec41e06a58c12321ce8008e044ac4097f3",
@@ -37,13 +37,34 @@
     "validation_workflow": ".github/workflows/test-node-regression-suite.yml",
     "old_source_commit": "01d79c2ed2d6b5b78d5875a06e319b1f20dd480a",
     "source_refresh_commit": "fdbe6e0bfaa193626aa1197bcba52e5be49e5236",
-    "source_commit_graph_verified": true
+    "source_commit_graph_verified": true,
+    "phase0a_pr95_merge": "b8743f40a3948e25c4b2ceadc70293c14f493999",
+    "phase0a_pr95_files": [
+      "data_research/institutional-flow/institutional-accumulation-catalyst-scheduled-canary-closeout-handoff.md",
+      "data_research/institutional-flow/institutional-accumulation-goal-v2-charter-roadmap.md",
+      "docs/handoffs/state/institutional-accumulation.json"
+    ],
+    "original_v1_freeze_blob": "4215a84a110406714e200618d280b70d0d1e7f46",
+    "current_v1_freeze_blob": "6c343ec4a3dfebf194222d37bf4ab2dd13ac4f96",
+    "freeze_mutation_commit": "7d618362fa7a9d446ab84f2be014753e48f5c944",
+    "source_data_1213_blob_unchanged": "74e5f719416999acdd7397af3c5196078bd2f992",
+    "source_lineage_prereg_blob": "92fe52ad9317e32313bbb40536fef5caf8a71181",
+    "linked_legacy_handoff_blob": "c64853198c95d1e23063b8d4cfb80a9110816e2e",
+    "ci_runner_pin_commit": "a31c0e476c75a703b52ee7eacfec610177cc5ea2",
+    "validation_workflow_current_blob": "5bc82be5ab1bdce1207850a80fcfe3872a09c7a3",
+    "current_regenerated_freeze_blob": "6c343ec4a3dfebf194222d37bf4ab2dd13ac4f96",
+    "v2_registered_source_commit": "fdbe6e0bfaa193626aa1197bcba52e5be49e5236",
+    "v2_registered_source_blob": "74e5f719416999acdd7397af3c5196078bd2f992",
+    "latest_main_source_blob": "e8991ea4a67d5cfe04095413dac2eaadaa974771",
+    "proposal_path": "data_research/institutional-flow/institutional-accumulation-source-lineage-repair-v2.1-change-proposal.md",
+    "phase0a_original_prompt_b": "BLOCKED; acceptance and historical result preserved",
+    "latest_main_after_branch_base": "e33b9f7e6651d62d56bb22f1012d6430909cd3a7"
   },
-  "research_progress_status": "PROGRESS",
-  "next_action": "promptB",
+  "research_progress_status": "PROPOSAL_READY",
+  "next_action": "merge_governance_pr_then_promptA",
   "automatic_continuation_permitted": false,
   "plan_changed": true,
-  "updated_at": "2026-11-11T09:14:00+08:00",
+  "updated_at": "2026-11-11T12:34:30+08:00",
   "completed_round": {
     "round_id": "institutional-accumulation-catalyst-bounded-scheduled-canary-post-collection-freeze-audit-v1",
     "prompt_a_status": "COMPLETE",
@@ -55,10 +76,10 @@
     "target_reached_zero_request_probe": true
   },
   "research_progress_evidence": [
-    "data_research/institutional-flow/institutional-accumulation-catalyst-scheduled-canary-closeout-handoff.md: Phase 0a completion checkpoint",
-    "data_research/institutional-flow/institutional-accumulation-goal-v2-charter-roadmap.md: ordered Phase 0a/1/2 rows",
-    "data_research/institutional-flow/institutional-accumulation-source-lineage-repair-v2-preregistration.md blob 92fe52ad9317e32313bbb40536fef5caf8a71181",
-    "data_research/institutional-flow/institutional-accumulation-validation-handoff.md blob c64853198c95d1e23063b8d4cfb80a9110816e2e"
+    "PR #95 merged at b8743f40a3948e25c4b2ceadc70293c14f493999; remote file list verifies exactly the three approved governance paths.",
+    "Source-lineage preregistration blob 92fe52ad9317e32313bbb40536fef5caf8a71181 and linked legacy handoff blob c64853198c95d1e23063b8d4cfb80a9110816e2e remain unchanged.",
+    "v1 freeze blob changed from 4215a84a110406714e200618d280b70d0d1e7f46 to 6c343ec4a3dfebf194222d37bf4ab2dd13ac4f96 in commit 7d618362fa7a9d446ab84f2be014753e48f5c944.",
+    "Owner-approved versioned successor proposal and paired A/B: data_research/institutional-flow/institutional-accumulation-source-lineage-repair-v2.1-change-proposal.md"
   ],
-  "research_progress_reason": "Resolved the duplicate-looking active label by documenting one canonical route and an explicit order, while preserving both downstream frozen pairs."
+  "research_progress_reason": "Owner selected exact recovery: restore original v1 freeze bytes and preserve the regenerated artifact as a separately pinned v2; a new versioned pair resolves the blocked prerequisite without rewriting its historical B result."
 }
