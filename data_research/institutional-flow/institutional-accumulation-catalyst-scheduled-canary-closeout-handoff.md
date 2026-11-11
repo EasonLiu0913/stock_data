@@ -327,3 +327,18 @@ Verify at minimum:
 
 On PASS update/commit the handoff, promote only the next explicitly preregistered round, do not execute it, end with `Prompt B closeout: PASS`, and stop.
 ```
+
+## Material-information final preflight Prompt A assessment — 2026-11-12
+
+**Prompt A was invoked but is BLOCKED before its bounded request. Prompt B is not eligible.** The preregistered A/B text remains unchanged.
+
+Fresh-main evidence at assessment time:
+
+- Main was `3c04db8d6dc458c1d03aae6b5d54c4c4c641e534`; unique active route remains `institutional-accumulation` / `goal-v3/institutional-accumulation-goal-v2`.
+- Current phase remains `institutional-accumulation-material-information-final-preflight-v1`. The frozen Prompt A precondition is exact: Wave A=0, Wave B=1, Wave C=0, legacy preflight attempt_count=2 and retryable=true.
+- Current planner `scripts/plan_institutional_accumulation_official_disclosure_collection.js` (blob `6b82e8aa172a02f8c6b73c7e88a97832072b9e6d`) queues Wave B only when the corrected API raw source or matching row-shape preflight metadata is missing, or the durable listing PASS is absent.
+- Those prerequisites are already durable on main: corrected API metadata `data_research/institutional-flow/official-disclosure-raw/mops-material-information/corrected-api-preflight/source-meta.json` (blob `a78c18df1a899272c1f3d5ff727e5167ab92f0e1`) records methodology `institutional-accumulation-material-information-row-shape-detail-contract-preflight-v1`, HTTP/application 200, coherent 58-row structure, and listing contract PASS. The raw response exists at the matching `.../corrected-api-preflight/source.json` (blob `4b90b6018e4eb32c619f9b92465bbcf506a3dbf4`). The metadata was committed by `94792f1775bdfa60bef67b15a89c6ecbed8b06da` on 2026-09-02 as `data: checkpoint accumulation MOPS row-shape preflight`.
+- Therefore, without deleting or rewriting prior evidence, current rowShapePreflightNeeded evaluates false and the frozen required Wave B=1 precondition cannot be met by the current planner state. The separate `preflight.json` remains blob `2a14ed8164b1b3e8b044bbf066b5844d9028c6d8`; its legacy contract remains attempt 2 / retryable true, and its corrected API listing/detail contracts are already PASS.
+- Current workflow `.github/workflows/collect-institutional-accumulation-official-disclosure.yml` (blob `faea4585e6b9e33b887d6d75cc78ddc954b276eb`) has no preflight-only input/job. A dispatch runs planner and then may enter Wave C listing/detail batches when durable gates authorize collection. It cannot safely implement this Prompt A's “if PASS, do not execute Wave C” boundary as currently wired. No workflow dispatch, job rerun, request, source write, or Wave C action was performed in this Prompt A assessment.
+
+This is a frozen-spec / current-state mismatch, not permission to erase prior artifacts, force Wave B back into the queue, edit Prompt A/B, or execute the full collection workflow. The phase stays incomplete and resumable. A versioned owner decision must define how the already durable 2026-09-02 row-shape preflight relates to the newly promoted “third and final” attempt, and authorize a preflight-only execution path (or an evidence-reuse path) with an explicit Wave C stop. Until that versioned decision is on main, do not dispatch/rerun the collector workflow. Preserve all prior commits, failed results, source artifacts, and the frozen Prompt B.
