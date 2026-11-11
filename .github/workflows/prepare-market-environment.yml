@@ -77,67 +77,109 @@ jobs:
           echo "forecast_date=$FORECAST_TARGET_DATE" >> "$GITHUB_OUTPUT"
           echo "base_date=$FORECAST_BASE_DATE" >> "$GITHUB_OUTPUT"
 
-      - name: Diagnose required base-date upstream sources
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "## Base-date upstream readiness" >> "$GITHUB_STEP_SUMMARY"
-          for spec in \
-            "price_sma:data_fubon/fubon_${FORECAST_BASE_DATE}_sma.json" \
-            "foreign_futures:data_taifex_major_institutional_traders_futures_contracts/${FORECAST_BASE_DATE}_taifex_major_institutional_traders_futures_contracts.json"; do
-            label="${spec%%:*}"
-            source="${spec#*:}"
-            if [ -s "$source" ]; then
-              echo "- $label: present (`$source`)" >> "$GITHUB_STEP_SUMMARY"
-            else
-              echo "- $label: missing (`$source`)" >> "$GITHUB_STEP_SUMMARY"
-              echo "::warning::$label missing for base date $FORECAST_BASE_DATE: $source"
-            fi
-          done
-          node -e 'try { require("./scripts/verify_market_environment").validateStockUniverse(process.env.FORECAST_BASE_DATE); console.log("Base-date stock universe: valid"); } catch (error) { console.log("Base-date stock universe requires recovery: " + error.message); }'
-
-      - name: Recover missing or invalid base-date Fubon price SMA
+      - name: Refresh base-date upstream data and dispatch independent recoveries
+        id: upstream
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           EVENT_SCHEDULE: ${{ github.event.schedule || '' }}
         run: |
           set -euo pipefail
-          source="data_fubon/fubon_${FORECAST_BASE_DATE}_sma.json"
-          check_sma() {
-            node -e 'require("./scripts/verify_market_environment").validateStockUniverse(process.env.FORECAST_BASE_DATE)'
-          }
-          if check_sma; then
-            echo "Exact-date Fubon price SMA stock universe is valid."
+          # Read the freshest committed sources before deciding which recoveries are needed.
+          git fetch -q origin main
+          git reset --hard origin/main
+          base="$FORECAST_BASE_DATE"
+          us_date="$(node -e 'process.stdout.write(require("./scripts/generate_market_environment").expectedUsMarketDate(process.env.FORECAST_BASE_DATE))')"
+          echo "## Upstream source check — base $base / US $us_date" >> "$GITHUB_STEP_SUMMARY"
+          missing=()
+          if ! node scripts/verify_market_environment.js --base-date "$base" --forecast-date "$FORECAST_TARGET_DATE" --scope stock-universe; then
+            missing+=(sma)
+          fi
+          twse="data_twse_mi_index/${base}_twse_mi_index.json"
+          if ! node - "$twse" <<'NODE'
+          const fs=require('fs');
+          const file=process.argv[2];
+          try {
+            const payload=JSON.parse(fs.readFileSync(file,'utf8'));
+            const {loadTwseHistory}=require('./scripts/market_environment_lib');
+            const base=process.env.FORECAST_BASE_DATE;
+            if(!loadTwseHistory(base).some(row=>row.date===base && Number.isFinite(row.close))) process.exit(1);
+          } catch (error) { console.error('TWSE source not ready:',error.message); process.exit(1); }
+          NODE
+          then missing+=(twse); fi
+          futures="data_taifex_major_institutional_traders_futures_contracts/${base}_taifex_major_institutional_traders_futures_contracts.json"
+          if ! node - "$futures" <<'NODE'
+          const fs=require('fs');
+          const file=process.argv[2];
+          try {
+            JSON.parse(fs.readFileSync(file,'utf8'));
+            const {loadFuturesHistory}=require('./scripts/market_environment_lib');
+            if(!loadFuturesHistory(process.env.FORECAST_BASE_DATE).some(row=>row.date===process.env.FORECAST_BASE_DATE && Number.isFinite(row.net_contracts))) process.exit(1);
+          } catch(error) { console.error('TAIFEX source not ready:',error.message); process.exit(1); }
+          NODE
+          then missing+=(futures); fi
+          # External-market and market-risk are co-produced by the same upstream workflow.
+          if ! node - "$us_date" <<'NODE'
+          const fs=require('fs');
+          const path=require('path');
+          const lib=require('./scripts/market_environment_lib');
+          const expected=process.argv[2], base=process.env.FORECAST_BASE_DATE;
+          try {
+            const ext=lib.latestDatedFileInDirectories(path.join(lib.ROOT,'data_external_market'),base,'external_market_indicators.json');
+            const risk=lib.latestDatedFileInDirectories(path.join(lib.ROOT,'data_market_risk'),base,'market_risk_snapshot.json');
+            if(!ext||!risk) throw Error('missing external market or market risk snapshot');
+            const check=lib.primaryExternalValidation(ext.payload,expected);
+            if(!check.complete || check.actual_date!==expected || check.collection_date!==expected) throw Error('external primary session not ready');
+            if(!Number.isFinite(Number(risk.payload?.market_risk_score))) throw Error('invalid market risk score');
+          }catch(error){console.error('External market/risk source not ready:',error.message);process.exit(1);}
+          NODE
+          then missing+=(external); fi
+
+          if [ "${#missing[@]}" -eq 0 ]; then
+            echo "All required upstream datasets passed readiness checks."
+            echo "- Upstream: ready" >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-
-          # Dispatch only on the first scheduled attempt (or for manual runs).
-          # A later scheduled attempt can reuse the recovery already in flight.
-          if [ "$GITHUB_EVENT_NAME" != "schedule" ] || [ "$EVENT_SCHEDULE" = "55 22 * * 1-5" ]; then
-            # Use the verified native workflow contract, not runtime name matching.
-            # Align its minimum completeness threshold with validateStockUniverse.
-            echo "::notice::Dispatching Fubon SMA repair for base date $FORECAST_BASE_DATE"
-            gh workflow run backfill-fubon-sma-range.yml --ref main \
-              -f start_date="$FORECAST_BASE_DATE" \
-              -f end_date="$FORECAST_BASE_DATE" \
-              -f stock_batch_size=100 \
-              -f minimum_records=900
+          echo "- Missing or invalid: ${missing[*]}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- This [03] run: FAIL (new scheduled runs will recheck; no automatic [03] dispatch)" >> "$GITHUB_STEP_SUMMARY"
+          # Only the first scheduled occurrence dispatches repairs. Other scheduled
+          # attempts independently recheck main and fail if still missing.
+          if [ "$GITHUB_EVENT_NAME" = "schedule" ] && [ "$EVENT_SCHEDULE" != "55 22 * * 1-5" ]; then
+            echo "- Recovery: deferred to first scheduled dispatch; no duplicate triggered" >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::Upstream incomplete: ${missing[*]}; waiting for the next scheduled [03] check."
+            exit 1
           fi
 
-          for attempt in $(seq 1 40); do
-            git fetch -q origin main
-            if git cat-file -e "origin/main:$source" 2>/dev/null; then
-              git reset --hard origin/main
-              if check_sma; then
-                echo "Recovered and validated exact-date Fubon SMA from main: $source"
-                exit 0
-              fi
+          dispatch_failed=0
+          for dataset in "${missing[@]}"; do
+            case "$dataset" in
+              sma)
+                workflow="backfill-fubon-sma-range.yml"
+                args=(-f "start_date=$base" -f "end_date=$base" -f "stock_batch_size=100" -f "minimum_records=900")
+                ;;
+              twse)
+                workflow="crawl-twse-mi-index.yml"
+                args=(-f "date=$base" -f "type=ALL")
+                ;;
+              futures)
+                workflow="crawl-taifex-major-institutional-traders-futures-contracts.yml"
+                args=(-f "date=$base")
+                ;;
+              external)
+                workflow="crawl-external-market-indicators.yml"
+                args=(-f "date=$us_date")
+                ;;
+            esac
+            echo "Dispatch requested: $dataset => $workflow (base=$base, US=$us_date)"
+            if gh workflow run "$workflow" --ref main "${args[@]}"; then
+              echo "- $dataset: dispatched $workflow" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "- $dataset: dispatch FAILED $workflow" >> "$GITHUB_STEP_SUMMARY"
+              echo "::error::Recovery dispatch failed for $dataset"
+              dispatch_failed=1
             fi
-            echo "Waiting for valid Fubon SMA $FORECAST_BASE_DATE on main ($attempt/40)"
-            sleep 15
           done
-          echo "::error::Valid exact-date Fubon SMA was not committed to main after bounded recovery: $source"
+          echo "::error::Missing upstream datasets: ${missing[*]}; [03] must fail regardless of repair dispatch status (dispatch_failed=$dispatch_failed)."
           exit 1
 
       - name: Validate existing snapshot before retry
@@ -175,46 +217,6 @@ jobs:
           git fetch origin main
           git checkout origin/main -- data_external_market data_market_risk data_taifex_major_institutional_traders_futures_contracts
           echo "Refreshed external-market, market-risk and TAIFEX futures inputs from current origin/main."
-
-      - name: Recover missing base-date TAIFEX futures source
-        if: steps.existing.outputs.skip != 'true'
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          EVENT_SCHEDULE: ${{ github.event.schedule || '' }}
-        run: |
-          set -euo pipefail
-          source="data_taifex_major_institutional_traders_futures_contracts/${FORECAST_BASE_DATE}_taifex_major_institutional_traders_futures_contracts.json"
-          if [ -s "$source" ]; then
-            echo "TAIFEX base-date source present: $source"
-            exit 0
-          fi
-
-          # Only the first scheduled run dispatches a recovery, avoiding three
-          # redundant TAIFEX crawler runs every morning. Manual runs may retry.
-          if [ "$GITHUB_EVENT_NAME" != "schedule" ] || [ "$EVENT_SCHEDULE" = "55 22 * * 1-5" ]; then
-            echo "::notice::Missing $source; dispatching date-scoped TAIFEX source recovery"
-            gh workflow run crawl-taifex-major-institutional-traders-futures-contracts.yml \
-              --ref main -f date="$FORECAST_BASE_DATE"
-          else
-            echo "::notice::TAIFEX source missing; checking whether the earlier recovery has completed"
-          fi
-
-          for attempt in $(seq 1 20); do
-            git fetch -q origin main
-            if git cat-file -e "origin/main:$source" 2>/dev/null; then
-              # Fast-forward before generating, so the recovered source is tracked
-              # rather than left untracked and blocking the clean-worktree push gate.
-              git reset --hard origin/main
-              test -s "$source"
-              echo "Recovered exact-date TAIFEX input from main: $source"
-              exit 0
-            fi
-            echo "TAIFEX $FORECAST_BASE_DATE not yet committed to main ($attempt/20)"
-            sleep 15
-          done
-          echo "::error::Required TAIFEX input $source is absent from main after bounded recovery. Check the [01 台股資料] TAIFEX crawler job and its official source; never substitute a prior trading date."
-          exit 1
 
       - name: Generate immutable shadow environment snapshot
         if: steps.existing.outputs.skip != 'true'
