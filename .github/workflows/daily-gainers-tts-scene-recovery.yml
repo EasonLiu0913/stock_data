@@ -255,8 +255,8 @@ jobs:
               )
           matrix = {"include": [{"scene_id": sid} for sid in queue] or [{"scene_id": 0}]}
           with open(sys.argv[2], "a", encoding="utf-8") as output:
-              output.write(f"has_work={'true' if queue else 'false'}\\n")
-              output.write("matrix=" + json.dumps(matrix, separators=(",", ":")) + "\\n")
+              output.write(f"has_work={'true' if queue else 'false'}\n")
+              output.write("matrix=" + json.dumps(matrix, separators=(",", ":")) + "\n")
           print(json.dumps({"scene_count": queue_size, "scene_ids": queue, "matrix_limit": matrix_limit}))
           PY
           mkdir -p "$RUNNER_TEMP/tts-plan"
