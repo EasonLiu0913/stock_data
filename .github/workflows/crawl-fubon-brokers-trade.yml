@@ -102,9 +102,13 @@ jobs:
             "process.stdout.write(String(new Date(process.argv[1] + 'T00:00:00Z').getUTCDay()))" \
             "$dashed")
 
-          is_holiday=$(jq -r --arg target "$slashed" \
-            '[.[][]] | index($target) != null' \
-            data_history_sma/non_trading_days.json)
+          is_holiday=$(node -e '
+            const fs = require("node:fs");
+            const holidays = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+            process.stdout.write(String(Object.values(holidays).some(
+              dates => Array.isArray(dates) && dates.includes(process.argv[2])
+            )));
+          ' data_history_sma/non_trading_days.json "$slashed")
 
           if [ "$weekday" -eq 0 ] || [ "$weekday" -eq 6 ] || [ "$is_holiday" = "true" ]; then
             echo "should_run=false" >> "$GITHUB_OUTPUT"
