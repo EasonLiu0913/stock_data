@@ -32,7 +32,7 @@ The deliverable is a reproducible research evidence dossier with source provenan
 
 The Phase 0a reconciliation A checkpoint completed on branch `codex/institutional-sequencing-reconciliation-prompta-20261111` from main `eadd6151265167176ad2713ff1792652e71fb2e6`. The A/B result is awaiting merge and Prompt B closeout. This ordered route preserves the material-information preflight's original pair and does not modify the linked handoff.
 
-The routed canonical handoff is authoritative for bare promptA / promptB selection. The linked validation handoff's separate active label is preserved as historical evidence and creates a sequencing conflict that must be reconciled before any next phase is promoted. Project activation does not execute a prompt.
+The routed canonical handoff is authoritative for bare promptA / promptB selection. Phase 0a Prompt A has documented how the linked validation handoff's historical `ACTIVE / NOT STARTED` label relates to this route; its original handoff and prompt pair remain preserved. Phase 0a Prompt B must close out that reconciliation before source-lineage v2 is promoted. Project activation does not execute a prompt.
 
 ## Acceptance for the ultimate goal
 
