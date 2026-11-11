@@ -29,6 +29,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: backfill-market-environment
@@ -47,21 +48,34 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Resolve trading dates
-        id: dates
+      - name: Plan trading-date gaps and upstream requirements
+        id: plan
+        shell: bash
         env:
           START_DATE: ${{ inputs.start_date }}
           END_DATE: ${{ inputs.end_date }}
+          FORCE: ${{ inputs.force }}
+          GENERATE_ACTUAL: ${{ inputs.generate_actual }}
         run: |
-          node - <<'NODE' > /tmp/environment-dates.txt
-          const {normalizeIsoDate,isTradingDate,loadHolidaySet,addDays}=require('./scripts/resolve_forecast_dates');
-          const start=normalizeIsoDate(process.env.START_DATE),end=normalizeIsoDate(process.env.END_DATE),holidays=loadHolidaySet();
-          if(!start||!end||start>end) throw new Error('Invalid date range');
-          for(let date=start;date<=end;date=addDays(date,1)) if(isTradingDate(date,holidays)) console.log(date.replaceAll('-',''));
+          set -euo pipefail
+          node scripts/plan_market_environment_recovery.js "$START_DATE" "$END_DATE" "$FORCE" "$GENERATE_ACTUAL" > "$RUNNER_TEMP/market-environment-plan.json"
+          node - "$RUNNER_TEMP/market-environment-plan.json" <<'NODE'
+          const p=require(process.argv[2]);
+          const rows=p.items;
+          const missingForecast=rows.filter(x=>x.forecast.status!=='present').map(x=>x.forecast_date);
+          const missingActual=rows.filter(x=>x.actual==='missing').map(x=>x.forecast_date);
+          const blocked=rows.filter(x=>x.blocked).map(x=>x.forecast_date);
+          const lines=['## [06] Market environment historical gap inventory',
+            '- Requested: '+p.range.start+' ~ '+p.range.end,
+            '- Trading dates: '+p.selected_trading_dates,
+            '- Missing or invalid forecasts ('+missingForecast.length+'): '+(missingForecast.join(', ')||'none'),
+            '- Missing actuals ('+missingActual.length+'): '+(missingActual.join(', ')||'none'),
+            '- Blocked dates ('+blocked.length+'): '+(blocked.join(', ')||'none'),
+            '- Independent upstream recoveries needed: '+p.recoveries.length,
+            '- Historical reconstruction is NOT a verified live pre-market snapshot'];
+          require('fs').appendFileSync(process.env.GITHUB_STEP_SUMMARY,lines.join('\\n')+'\\n');
+          console.log(lines.join('\\n'));
           NODE
-          count=$(wc -l < /tmp/environment-dates.txt | tr -d ' ')
-          echo "count=$count" >> "$GITHUB_OUTPUT"
-          echo "Selected $count Taiwan trading dates"
 
       - name: Run market environment and formal strategy tests
         run: |
@@ -73,44 +87,113 @@ jobs:
             tests/formal_market_strategy_tags.test.js \
             tests/prediction_dashboard_group_sync.test.js
 
-      - name: Build historical snapshots and sync dashboards
+      - name: Request date-scoped upstream recovery without waiting
+        if: inputs.dry_run != true
         shell: bash
         env:
-          DRY_RUN: ${{ inputs.dry_run }}
-          FORCE: ${{ inputs.force }}
-          GENERATE_ACTUAL: ${{ inputs.generate_actual }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          while read -r forecast_date; do
-            [ -n "$forecast_date" ] || continue
-            node scripts/resolve_forecast_dates.js --target-date "$forecast_date" --github-env > /tmp/one-date.env
-            set -a
-            source /tmp/one-date.env
-            set +a
-            args=(--forecast-date "$FORECAST_TARGET_DATE" --base-date "$FORECAST_BASE_DATE")
-            if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
-            if [ "$FORCE" = "true" ]; then args+=(--force); fi
-            node scripts/generate_market_environment.js "${args[@]}"
-
-            if [ "$DRY_RUN" != "true" ]; then
-              node scripts/reconstruct_historical_market_environment.js \
-                --forecast-date "$FORECAST_TARGET_DATE" \
-                --base-date "$FORECAST_BASE_DATE"
-
-              # Readiness must exist before strategy tagging. Rebuild the selected
-              # prediction date now so summary/group files embed the canonical
-              # market_rebound_readiness instead of retaining the unavailable fallback.
-              node scripts/backfill_prediction_dashboard_fields.js \
-                --date "$FORECAST_TARGET_DATE"
+          node - "$RUNNER_TEMP/market-environment-plan.json" > "$RUNNER_TEMP/market-environment-recoveries.tsv" <<'NODE'
+          const plan=require(process.argv[2]);
+          for(const r of plan.recoveries) console.log([r.dataset,r.date].join('\\t'));
+          NODE
+          count=0
+          failed=0
+          while IFS=$'\\t' read -r dataset date; do
+            [ -n "$dataset" ] || continue
+            # Bound fan-out per manual backfill. Remaining gaps stay in the plan.
+            if [ "$count" -ge 12 ]; then
+              echo "- Recovery queued for later invocation: $dataset $date" >> "$GITHUB_STEP_SUMMARY"
+              continue
             fi
-
-            if [ "$DRY_RUN" != "true" ] && [ "$GENERATE_ACTUAL" = "true" ] \
-              && [ -s "data_predictions/$FORECAST_TARGET_DATE/replay-summary.json" ] \
-              && [ -s "data_predictions/$FORECAST_TARGET_DATE/replay-dashboard.json" ]; then
-              node scripts/generate_actual_market_environment.js --date "$FORECAST_TARGET_DATE"
-              node scripts/evaluate_formal_strategy_replay.js --date "$FORECAST_TARGET_DATE"
+            case "$dataset" in
+              sma)
+                workflow="backfill-fubon-sma-range.yml"
+                args=(-f "start_date=$date" -f "end_date=$date" -f stock_batch_size=100 -f minimum_records=900)
+                ;;
+              twse)
+                workflow="crawl-twse-mi-index.yml"
+                args=(-f "date=$date" -f type=ALL)
+                ;;
+              futures)
+                workflow="crawl-taifex-major-institutional-traders-futures-contracts.yml"
+                args=(-f "date=$date")
+                ;;
+              external)
+                workflow="crawl-external-market-indicators.yml"
+                args=(-f "date=$date")
+                ;;
+              *)
+                echo "::error::Unsupported recovery dataset $dataset"
+                failed=$((failed+1))
+                continue
+                ;;
+            esac
+            count=$((count+1))
+            if gh workflow run "$workflow" --ref main "${args[@]}"; then
+              echo "- Requested recovery: $dataset date=$date workflow=$workflow" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "::error::Failed to dispatch $workflow for $date"
+              echo "- FAILED recovery request: $dataset date=$date workflow=$workflow" >> "$GITHUB_STEP_SUMMARY"
+              failed=$((failed+1))
             fi
-          done < /tmp/environment-dates.txt
+          done < "$RUNNER_TEMP/market-environment-recoveries.tsv"
+          echo "dispatch_failed=$failed" >> "$GITHUB_ENV"
+          echo "Date-scoped repair dispatches requested: $count; dispatch errors: $failed"
+
+      - name: Build only ready missing dates and record per-date outcomes
+        if: inputs.dry_run != true
+        id: build
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - "$RUNNER_TEMP/market-environment-plan.json" > "$RUNNER_TEMP/market-environment-work.tsv" <<'NODE'
+          const p=require(process.argv[2]);
+          for(const x of p.items)console.log([x.forecast_date,x.base_date,x.build_forecast?'1':'0',x.build_actual?'1':'0'].join('\\t'));
+          NODE
+          failures=0
+          successes=0
+          while IFS=$'\\t' read -r date base make_forecast make_actual; do
+            [ -n "$date" ] || continue
+            if [ "$make_forecast" = 1 ]; then
+              if {
+                args=(--forecast-date "$date" --base-date "$base" --force --strict)
+                node scripts/generate_market_environment.js "${args[@]}"
+                node scripts/reconstruct_historical_market_environment.js --forecast-date "$date" --base-date "$base"
+                node - "$date" "$base" <<'NODE'
+          const [date,base]=process.argv.slice(2);
+          const {snapshotStatus}=require('./scripts/plan_market_environment_recovery');
+          const snapshot=snapshotStatus(date,base);
+          if(snapshot.status!=='present')throw Error('Historical snapshot failed integrity/date/hash check: '+JSON.stringify(snapshot));
+          console.log(JSON.stringify({date,valid:true,historical:!!snapshot.historical_reconstruction}));
+          NODE
+                node scripts/backfill_prediction_dashboard_fields.js --date "$date"
+              }; then
+                successes=$((successes+1))
+                echo "- Forecast rebuilt: $date" >> "$GITHUB_STEP_SUMMARY"
+              else
+                failures=$((failures+1))
+                echo "- Forecast FAILED: $date" >> "$GITHUB_STEP_SUMMARY"
+                continue
+              fi
+            fi
+            if [ "$make_actual" = 1 ]; then
+              if {
+                node scripts/generate_actual_market_environment.js --date "$date"
+                node scripts/evaluate_formal_strategy_replay.js --date "$date"
+              }; then
+                successes=$((successes+1))
+                echo "- Actual rebuilt: $date" >> "$GITHUB_STEP_SUMMARY"
+              else
+                failures=$((failures+1))
+                echo "- Actual FAILED: $date" >> "$GITHUB_STEP_SUMMARY"
+              fi
+            fi
+          done < "$RUNNER_TEMP/market-environment-work.tsv"
+          echo "build_failed=$failures" >> "$GITHUB_ENV"
+          echo "build_successful=$successes" >> "$GITHUB_ENV"
+          echo "Date-scoped builds: $successes succeeded, $failures failed"
 
       - name: Rebuild environment-segmented relative leadership analysis
         if: inputs.dry_run != true
@@ -147,6 +230,24 @@ jobs:
             sleep 5
           done
           exit 1
+
+      - name: Enforce incomplete-history backfill gate
+        if: always() && inputs.dry_run != true
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - "$RUNNER_TEMP/market-environment-plan.json" <<'NODE'
+          const p=require(process.argv[2]);
+          const errors=p.items.filter(x=>x.blocked).map(x=>x.forecast_date);
+          if(errors.length){
+            console.error('BLOCKED historical dates (upstream source/replay/invalid existing):',errors.join(','));
+            process.exitCode=1;
+          }
+          NODE
+          if [ "${build_failed:-0}" != 0 ] || [ "${dispatch_failed:-0}" != 0 ]; then
+            echo "::error::Date-scoped build/dispatch failures: build=${build_failed:-0} dispatch=${dispatch_failed:-0}"
+            exit 1
+          fi
 
   schedule-timing-summary:
     # schedule-timing-summary:v1
