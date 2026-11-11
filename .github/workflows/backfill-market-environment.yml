@@ -193,7 +193,12 @@ jobs:
             fi
             if [ "$make_actual" = 1 ]; then
               if node scripts/generate_actual_market_environment.js --date "$date" \
-                && node scripts/evaluate_formal_strategy_replay.js --date "$date"; then
+                && node scripts/evaluate_formal_strategy_replay.js --date "$date" \
+                && node -e '
+                  const date=process.argv[1];
+                  const {actualStatus}=require("./scripts/plan_market_environment_recovery");
+                  if(actualStatus(date)!=="present")throw Error("Actual snapshot is missing or invalid: "+date);
+                ' "$date"; then
                 successes=$((successes+1))
                 echo "- Actual rebuilt: $date" >> "$GITHUB_STEP_SUMMARY"
               else
