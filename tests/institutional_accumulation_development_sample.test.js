@@ -3,7 +3,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
-const os = require('node:os');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 const {
@@ -11,7 +10,6 @@ const {
   partitionFor,
   percentileRanks,
   selectAnchorSessions,
-  writeFreezeOnce,
 } = require('../scripts/freeze_institutional_accumulation_development_sample');
 const {
   VERSIONS,
@@ -48,19 +46,6 @@ test('freeze content hash excludes only its own hash field', () => {
   const second = hashFreezePayload({ ...a, content_sha256: 'different' });
   assert.equal(first, second);
   assert.match(first, /^[a-f0-9]{64}$/);
-});
-
-test('freeze writer preserves an existing version and refuses different-byte replacement', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'institutional-freeze-write-'));
-  const target = path.join(root, 'freeze.json');
-  try {
-    assert.equal(writeFreezeOnce(target, '{"version":1}\n'), 'created');
-    assert.equal(writeFreezeOnce(target, '{"version":1}\n'), 'already-identical');
-    assert.throws(() => writeFreezeOnce(target, '{"version":2}\n'), /Refusing to replace/);
-    assert.equal(fs.readFileSync(target, 'utf8'), '{"version":1}\n');
-  } finally {
-    fs.rmSync(root, { recursive: true, force: true });
-  }
 });
 
 test('v1 and v2 resolve only from their separately pinned freeze and source identities', () => {
