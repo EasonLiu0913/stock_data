@@ -254,3 +254,20 @@ No source-network request/write, workflow dispatch/rerun, outcome artifact write
 - No source-network fetch/write, workflow dispatch/rerun, Pages deployment, outcomes/holdouts opening, association/catalyst interpretation, production or strategy change, merge, or YouTube action occurred.
 
 Next permitted action: an explicit owner-issued `promptB` starts independent closeout for this same round. No automatic continuation or promotion is authorized.
+
+
+
+## v2.1 Prompt B closeout — 2026-11-12
+
+**Prompt B PASS. Stop here. Do not merge automatically, promote another phase, or begin another Prompt A.** The historical Phase 0a Prompt B remains BLOCKED; this closeout does not relabel or replace that result.
+
+- Active project/goal: `institutional-accumulation` / `goal-v3/institutional-accumulation-goal-v2`. Phase/round: `institutional-accumulation-source-lineage-repair-v2.1`.
+- Fresh remote main at closeout: `9aa2cdd5ed189727663319f2428cf2cdc67f8ccc`. It is an unrelated Fubon broker-data update. The latest `data_history_sma/1213.json` blob remains `e8991ea4a67d5cfe04095413dac2eaadaa974771`; the PR base remains `05868fb2210ede5a3356b416098966b0ffb14703`.
+- PR #98 remains open/unmerged. Corrected implementation head: `ace644dcbcfe421ba9f77e54b213288f9582a462`. B bounded corrections restored the freeze writer to the exact base blob `53287665c3205de3de376ba57fb9360e0115f3a2` (the PR file patch is empty) and restored both workflow runner pins from `ubuntu-latest` to `ubuntu-24.04`; correction commits are `912ffbd16ceac3684eb5093c21a5c5e36229b1af` and `ace644dcbcfe421ba9f77e54b213288f9582a462`.
+- Independent remote readback: v1 freeze blob `4215a84a110406714e200618d280b70d0d1e7f46`; v2 freeze blob `6c343ec4a3dfebf194222d37bf4ab2dd13ac4f96`; lineage manifest blob `2613628c273b05e620e84ec57bd909cff60088a3`. The manifest regression verifies both pinned identities, the later source observation, 96 development anchors / 3,360 observation comparisons / 0 state changes / 0 value changes / 3 provenance changes, and excludes protected/holdout comparisons. The corrected full suite also passed the registered v1 semantic SHA check.
+- Corrected Node Regression Suite: run #43052441050, job #130634656843, pull_request event on head `ace644d...`, SUCCESS; 1,261 passed, 0 failed, 0 skipped. Required history fetch, syntax check, and tracked-tree cleanliness steps passed. The pinned-source, separate v1/v2 resolution, fail-closed substitution, deterministic lineage-manifest regeneration, and development-only comparison tests passed.
+- Scheduled Workflow Registry Contract run #43052441265 succeeded. Public Page Registry CI run #43052441010 succeeded as validation-only; no deployment occurred.
+- Preserve unrelated Node 24 audit failure run #43052440913 / job #130632912058. Its log identifies only `.github/workflows/backfill-market-environment.yml:93` (`actions/upload-artifact@v4`); that workflow blob is identical on the PR base and latest main (`bc4572bcb29fa19b6eb38a6bc0a9b49a4d562b6e`). It is outside this frozen source-lineage acceptance and was not changed.
+- The exact preregistered B checks passed: source and frozen identities remain distinct; push/PR paths are aligned and include data, both freezes, manifest, and related regression tests; full `npm test` is retained; no data fetch/write, dispatch/rerun, outcomes/holdouts, association/catalyst interpretation, protected-case access, strategy/production change, Pages deployment, or YouTube action occurred.
+- Plan changed: yes. Only the bounded Prompt B corrections above were made. No phase promotion or automatic continuation is permitted. Next action requires a separate owner instruction; do not infer that this PASS authorizes merge or the next phase.
+
