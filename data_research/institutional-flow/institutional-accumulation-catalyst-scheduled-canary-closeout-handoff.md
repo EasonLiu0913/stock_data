@@ -271,3 +271,59 @@ Next permitted action: an explicit owner-issued `promptB` starts independent clo
 - The exact preregistered B checks passed: source and frozen identities remain distinct; push/PR paths are aligned and include data, both freezes, manifest, and related regression tests; full `npm test` is retained; no data fetch/write, dispatch/rerun, outcomes/holdouts, association/catalyst interpretation, protected-case access, strategy/production change, Pages deployment, or YouTube action occurred.
 - Plan changed: yes. Only the bounded Prompt B corrections above were made. No phase promotion or automatic continuation is permitted. Next action requires a separate owner instruction; do not infer that this PASS authorizes merge or the next phase.
 
+
+
+## Owner-authorized versioned phase-promotion checkpoint — 2026-11-12
+
+This amendment records the explicit next-phase promotion after the v2.1 source-lineage closeout. It supersedes only the effective phase ordering/state above; historical Phase 0a and v2.1 records, original artifacts, and frozen prompt acceptances remain unchanged.
+
+- Phase 0a `institutional-accumulation-legacy-handoff-sequencing-reconciliation-v1` remains historically **Prompt A COMPLETE / Prompt B BLOCKED**. This result is not relabeled or replaced.
+- Phase 1 executable successor `institutional-accumulation-source-lineage-repair-v2.1` is **Prompt A COMPLETE / Prompt B PASS**. PR #98 merged at `ca57515958bb74c850f0280dbe9647c53ca27822`; independent closeout run #43054958973 (job #130643346241) passed 1,261/1,261, 0 failed, 0 skipped. The separate Node 24 audit failure remains classified as unrelated per the v2.1 closeout.
+- The preserved next phase `institutional-accumulation-material-information-final-preflight-v1` is now explicitly **ACTIVE / Prompt A preregistered / Prompt B preregistered**. Its exact original A/B pair is reproduced below from the unchanged linked handoff blob `c64853198c95d1e23063b8d4cfb80a9110816e2e`; no acceptance text is changed.
+- The linked legacy handoff remains unchanged at that blob. Phase 0a remains a historical blocked result, and no source-lineage v2 or earlier pair is rewritten.
+- Next action is a separate owner-issued `promptA`. This checkpoint does not execute it. No automatic continuation, source request, workflow dispatch/rerun, Wave C, outcome/holdout access, strategy promotion, production change, or publication is authorized.
+
+## Prompt A — Material-information final preflight
+
+```text
+Continue the Institutional Accumulation / Catalyst Pre-positioning research project only if `institutional-accumulation-official-disclosure-source-collection-v1` has durable Prompt B PASS and has explicitly promoted round `institutional-accumulation-material-information-final-preflight-v1`.
+
+Before work:
+1. fetch current remote `main`;
+2. read repository-root `AGENTS.md`, `docs/project-philosophy.md`, `docs/roadmap/current-phase.md`, this canonical handoff, `data_research/institutional-flow/institutional-accumulation-official-disclosure-source-collection-preregistration-v1.md`, `data_research/institutional-flow/official-disclosure-raw/mops-material-information/preflight.json`, `scripts/plan_institutional_accumulation_official_disclosure_collection.js`, `scripts/preflight_institutional_accumulation_mops_material_information.js`, `tests/institutional_accumulation_official_disclosure_collection.test.js`, and `docs/agent-prompts/task-routing.json`;
+3. recover this exact Prompt A + Prompt B pair from durable pre-Prompt-A history.
+
+Execute only the third and final material-information preflight attempt:
+- first prove current planner is outcome-blind, `Wave A=0`, `Wave B=1`, `Wave C=0`, `preflight_attempt_count=2`, `preflight_retryable=true`;
+- run the existing bounded preflight once on one fresh runner, with the existing request cap of 3 and `2-5s` per-request jitter;
+- checkpoint `data_research/institutional-flow/official-disclosure-raw/mops-material-information/preflight.json` durably with race-safe push behavior;
+- if the attempt is another ambiguous security/WAF/shrunken response, require `attempt_count=3`, `retryable=false`, `terminal_state=manual_review`; it must not become source-empty;
+- if the machine contract PASSes, persist PASS diagnostics but do not execute Wave C in this round;
+- do not refetch Wave A; do not read outcomes/holdouts/protected `2454`; do not create catalyst features, associations, thresholds, models, strategies, or production behavior; do not modify Withdrawal state.
+
+Prompt A completion requires the final preflight state and diagnostics to exist on current remote `main`, the planner to reflect that durable state correctly, the canonical handoff to record Prompt A complete / Prompt B pending, and the same preregistered Prompt B below to remain recoverable.
+
+When complete, report `Prompt A complete — ready for Prompt B` and stop.
+```
+
+## Prompt B — Material-information final preflight closeout
+
+```text
+Perform mandatory closeout for round `institutional-accumulation-material-information-final-preflight-v1` only after its Prompt A has completed.
+
+Fetch current remote `main`; read `AGENTS.md`, this canonical handoff, the source-collection preregistration, current `preflight.json`, planner, preflight implementation, tests, relevant workflow/run evidence, and task routing. Recover this exact Prompt B from durable pre-Prompt-A history.
+
+Verify at minimum:
+1. protected Phase 2/outcome/association/holdout/2454/Withdrawal state is unchanged;
+2. pre-run state was exactly attempt 2 + retryable and Wave A was not refetched;
+3. exactly one final fresh-runner preflight attempt was executed and request count stayed within the preregistered cap;
+4. HTTP 200/shrunken/WAF ambiguity was never treated as source-empty;
+5. if blocked again, durable state is exactly attempt 3 / retryable false / manual_review and planner no longer auto-queues Wave B;
+6. if PASS, source method/body, pagination/end condition, detail identity, explicit empty semantics, quality markers and WAF distinction are all proven durably;
+7. Wave C did not run in this round regardless of PASS/BLOCKED;
+8. every required diagnostic/writer artifact exists on current remote main;
+9. no outcomes/holdouts/catalyst association/model/production behavior were introduced;
+10. canonical handoff records the result and preregisters the appropriate next paired round before promotion.
+
+On PASS update/commit the handoff, promote only the next explicitly preregistered round, do not execute it, end with `Prompt B closeout: PASS`, and stop.
+```
