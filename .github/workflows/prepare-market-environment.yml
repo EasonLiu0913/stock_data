@@ -282,7 +282,10 @@ jobs:
             echo ""
             echo "- Forecast date: \`$FORECAST_TARGET_DATE\`"
             echo "- Base trade date: \`$FORECAST_BASE_DATE\`"
-            if [ "${{ steps.existing.outputs.skip }}" = "true" ]; then
+            if [ "${{ steps.upstream.conclusion }}" = "failure" ]; then
+              echo "- Result: FAIL — required upstream data missing or invalid; independent repair workflows requested where permitted."
+              echo "- Continuation: only the existing scheduled [03] runs recheck; this run will not be resumed."
+            elif [ "${{ steps.existing.outputs.skip }}" = "true" ]; then
               echo "- Result: existing snapshot passed full integrity validation; generation skipped."
             else
               echo "- Result: existing snapshot was not reusable; regeneration path executed."
