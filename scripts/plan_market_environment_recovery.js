@@ -30,6 +30,15 @@ function snapshotStatus(date, baseDate) {
     return {status:'present',historical_reconstruction: Boolean(payload.historical_reconstruction)};
   } catch(error) {return {status:'invalid',reason:error.message};}
 }
+function actualStatus(date) {
+  const rel=`data_market_environment/${date}/actual_market_environment.json`;
+  if(!exists(rel))return 'missing';
+  try {
+    const payload=readJson(path.join(ROOT,rel),null);
+    return payload?.replay_date===date && typeof payload?.actual_environment?.code==='string'
+      && payload?.source_files?.replay_summary ? 'present' : 'invalid';
+  }catch {return 'invalid';}
+}
 function sourceReadiness(baseDate) {
   const issues = [];
   try {validateStockUniverse(baseDate);} catch(error) {issues.push({dataset:'sma',date:baseDate,reason:error.message});}
@@ -42,7 +51,7 @@ function sourceReadiness(baseDate) {
   const risk=latestDatedFileInDirectories(path.join(ROOT,'data_market_risk'),baseDate,'market_risk_snapshot.json');
   const primary=external ? primaryExternalValidation(external.payload,usDate) : null;
   if (!external || !risk || !primary?.complete || primary.actual_date!==usDate
-    || primary.collection_date!==usDate || !Number.isFinite(Number(risk?.payload?.market_risk_score))) {
+    || primary.collection_date!==usDate || (risk?.payload?.market_risk_score == null || !Number.isFinite(Number(risk.payload.market_risk_score)))) {
     issues.push({dataset:'external',date:usDate,reason:'exact US market indicators or market-risk snapshot incomplete'});
   }
   return issues;
@@ -61,19 +70,19 @@ function plan(startCompact,endCompact,force=false,generateActual=true) {
     const baseDate=previousTradingDate(date,holidays).replaceAll('-','');
     const forecast=snapshotStatus(forecastDate,baseDate);
     const actualRel=`data_market_environment/${forecastDate}/actual_market_environment.json`;
-    const actual=exists(actualRel)?'present':'missing';
+    const actual=actualStatus(forecastDate);
     const requiresForecast=force || forecast.status!=='present';
     const issues=requiresForecast?sourceReadiness(baseDate):[];
     const replay=exists(`data_predictions/${forecastDate}/replay-summary.json`)
       && exists(`data_predictions/${forecastDate}/replay-dashboard.json`);
     const prediction=exists(`data_predictions/${forecastDate}/summary.json`);
-    const actualBlocked=generateActual && actual==='missing' && (!replay || !prediction);
+    const actualBlocked=generateActual && actual!=='present' && (!replay || !prediction);
     if (requiresForecast)for(const issue of issues)recoveries.set(`${issue.dataset}:${issue.date}`,issue);
     items.push({forecast_date:forecastDate,base_date:baseDate,forecast,actual,
       build_forecast:requiresForecast && issues.length===0 && (forecast.status!=='invalid' || force),
-      build_actual:generateActual && actual==='missing' && replay && prediction && issues.length===0 && !(forecast.status==='invalid'&&!force)
+      build_actual:generateActual && actual==='missing' && replay && prediction && issues.length===0 && !(forecast.status==='invalid'&&!force) && !(actual==='invalid'&&!force)
         && (forecast.status==='present' || requiresForecast),
-      blocked:issues.length>0 || actualBlocked || (forecast.status==='invalid'&&!force),
+      blocked:issues.length>0 || actualBlocked || (forecast.status==='invalid'&&!force) || (actual==='invalid'&&!force&&generateActual),
       issues,
       actual_issue:actualBlocked?'missing replay-summary, replay-dashboard or prediction summary':null,
       invalid_existing:forecast.status==='invalid'&&!force});
@@ -87,4 +96,4 @@ if(require.main===module){
     process.stdout.write(JSON.stringify(plan(start,end,force==='true',actual!=='false'),null,2)+'\n');
   }catch(error){console.error(error.stack||error.message);process.exitCode=1;}
 }
-module.exports={plan,snapshotStatus,sourceReadiness};
+module.exports={plan,snapshotStatus,actualStatus,sourceReadiness};
