@@ -25,10 +25,12 @@ The deliverable is a reproducible research evidence dossier with source provenan
 | Order | Phase | State | Gate |
 |---|---|---|---|
 | 0 | institutional-accumulation-catalyst-bounded-scheduled-canary-post-collection-freeze-audit-v1 | COMPLETE — Prompt B PASS | Zero-source, outcome-blind freeze audit closed; original acceptance preserved. |
-| 0a | institutional-accumulation-legacy-handoff-sequencing-reconciliation-v1 | ACTIVE — Prompt A not started; paired B preregistered | Documentation-only reconciliation. Preserve linked legacy preflight pair and source-lineage v2 pair; resolve order before either A runs. |
-| 1 | institutional-accumulation-source-lineage-repair-v2 | Preregistered, not promoted / not A-eligible | Only after Phase 0 B PASS and an explicit durable phase-promotion/reconciliation checkpoint. A must preserve v1, define old-to-new source lineage, compare the frozen sample's resolved observations, and add CI monitoring last. |
-| 2 | institutional-accumulation-material-information-final-preflight-v1 | Existing pair preserved; order unresolved until Phase 0a reconciliation | Do not alter the original pair or infer that this registration has superseded it. |
+| 0a | institutional-accumulation-legacy-handoff-sequencing-reconciliation-v1 | Prompt A COMPLETE on branch; Prompt B pending durable merge/closeout | Documentation-only reconciliation completed. The existing source-lineage v2 pair is next; the preserved material-information preflight pair follows its closeout unless a separately owner-approved roadmap change is required. |
+| 1 | institutional-accumulation-source-lineage-repair-v2 | Preregistered; next after Phase 0a B PASS; A not started | Use the existing frozen pair. Preserve v1, define old-to-new source lineage and separately versioned resolved observations, compare the frozen sample, then add CI monitoring last. |
+| 2 | institutional-accumulation-material-information-final-preflight-v1 | Existing pair preserved; sequenced after source-lineage v2 closeout; not active | Preserve its original A/B and the linked handoff's historic status. Do not execute in parallel. Revisit ordering only if source-lineage B evidence requires a separately owner-approved versioned roadmap decision. |
 | Later | Further catalyst interpretation or promotion | Not registered by this charter revision | Requires its own evidence-based phase and frozen A/B; no automatic promotion. |
+
+The Phase 0a reconciliation A checkpoint completed on branch `codex/institutional-sequencing-reconciliation-prompta-20261111` from main `eadd6151265167176ad2713ff1792652e71fb2e6`. The A/B result is awaiting merge and Prompt B closeout. This ordered route preserves the material-information preflight's original pair and does not modify the linked handoff.
 
 The routed canonical handoff is authoritative for bare promptA / promptB selection. The linked validation handoff's separate active label is preserved as historical evidence and creates a sequencing conflict that must be reconciled before any next phase is promoted. Project activation does not execute a prompt.
 
