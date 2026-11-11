@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   parser-regression:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Checkout parser and tests
@@ -44,7 +44,7 @@ jobs:
   synthesize:
     if: github.event_name == 'workflow_dispatch'
     needs: parser-regression
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - name: Checkout the frozen test plan

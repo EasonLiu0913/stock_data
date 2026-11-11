@@ -23,7 +23,7 @@ env:
 jobs:
   schedule_gate:
     if: github.event_name == 'schedule'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
       collect: ${{ steps.prepare.outputs.collect }}
@@ -94,7 +94,7 @@ jobs:
       max-parallel: 1
       matrix:
         stock: ['1102', '1104', '1216']
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 8
     steps:
       - name: Checkout current main bounded canary inputs
@@ -290,7 +290,7 @@ jobs:
   finalize_scheduled_occurrence:
     needs: [schedule_gate, canary]
     if: ${{ always() && github.event_name == 'schedule' && needs.schedule_gate.outputs.collect == 'true' && needs.canary.result == 'success' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Checkout latest scheduled state and stock observability
@@ -345,7 +345,7 @@ jobs:
     # schedule-timing-summary:v1
     name: 排程時間摘要
     if: github.event_name == 'schedule'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository for schedule summary
         uses: actions/checkout@v7

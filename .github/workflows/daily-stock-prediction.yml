@@ -38,7 +38,7 @@ concurrency:
 jobs:
   generate_v1:
     name: 1. 產生或沿用 V1 預測
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       target_date: ${{ steps.dates.outputs.target_date }}
       environment_hash: ${{ steps.final_state.outputs.environment_hash }}
@@ -308,7 +308,7 @@ jobs:
   generate_v2:
     name: 2. 產生或沿用 V2 預測
     needs: generate_v1
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       v2_generated: ${{ steps.source.outputs.run }}
     steps:

@@ -83,7 +83,7 @@ concurrency:
 
 jobs:
   plan:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       source: ${{ steps.resolve.outputs.source }}
       matrix: ${{ steps.plan.outputs.matrix }}
@@ -236,7 +236,7 @@ jobs:
       fail-fast: false
       max-parallel: 1
       matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 355
     name: ${{ matrix.source }} batch ${{ matrix.batch_index }}/${{ matrix.batch_count }} (${{ matrix.first_date }} ~ ${{ matrix.last_date }})
     steps:
@@ -458,7 +458,7 @@ jobs:
       github.event_name != 'pull_request' &&
       needs.plan.outputs.has_work == 'true' &&
       (github.event_name == 'schedule' || inputs.refresh_dashboard == true)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Report batch outcome
         run: |

@@ -35,7 +35,7 @@ concurrency:
 jobs:
   route-and-daily-refresh:
     name: Route TWSE refresh
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       target_date: ${{ steps.route.outputs.target_date }}
       start_date: ${{ steps.route.outputs.start_date }}
@@ -218,7 +218,7 @@ jobs:
       fail-fast: false
       matrix:
         month: ${{ fromJSON(needs.route-and-daily-refresh.outputs.matrix) }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout latest main on fresh runner
         uses: actions/checkout@v7
@@ -301,7 +301,7 @@ jobs:
     name: TWSE refresh gate
     needs: [route-and-daily-refresh, physical-month-batches]
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Validate routed refresh
         shell: bash

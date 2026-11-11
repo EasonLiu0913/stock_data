@@ -26,7 +26,7 @@ env:
 jobs:
   plan:
     name: Plan physical batches
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       tdcc_matrix: ${{ steps.plan.outputs.tdcc_matrix }}
     steps:
@@ -114,7 +114,7 @@ jobs:
   tdcc-batch:
     name: TDCC fresh runner ${{ matrix.batch }} / ${{ matrix.stock || 'noop' }}
     needs: plan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 35
     strategy:
       fail-fast: false
@@ -184,7 +184,7 @@ jobs:
     name: Re-plan Broker physical batches
     needs: [plan, tdcc-batch]
     if: always() && needs.plan.result == 'success' && (needs.tdcc-batch.result == 'success' || needs.tdcc-batch.result == 'skipped')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       broker_matrix: ${{ steps.broker.outputs.broker_matrix }}
     steps:
@@ -260,7 +260,7 @@ jobs:
     name: Broker fresh runner ${{ matrix.batch }}
     needs: broker-plan
     if: always() && needs.broker-plan.result == 'success'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     strategy:
       fail-fast: false
@@ -336,7 +336,7 @@ jobs:
     name: Refresh frozen coverage state
     needs: [broker-plan, broker-batch]
     if: always() && needs.broker-plan.result == 'success' && (needs.broker-batch.result == 'success' || needs.broker-batch.result == 'skipped')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout final coverage slice
         uses: actions/checkout@v7
@@ -401,7 +401,7 @@ jobs:
     # schedule-timing-summary:v1
     name: 排程時間摘要
     if: github.event_name == 'schedule'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository for schedule summary
         uses: actions/checkout@v7

@@ -20,7 +20,7 @@ env:
 jobs:
   plan:
     name: Freeze five legacy incomplete-row dates
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       tasks: ${{ steps.plan.outputs.tasks }}
       task_count: ${{ steps.plan.outputs.task_count }}
@@ -60,7 +60,7 @@ jobs:
   probe:
     name: Fresh runner / five exact-source dates
     needs: plan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - name: Checkout fresh physical batch slice
@@ -107,7 +107,7 @@ jobs:
   finalize:
     name: Aggregate outcome-blind legacy evidence
     needs: probe
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout probe evidence
         uses: actions/checkout@v7
@@ -156,7 +156,7 @@ jobs:
     # schedule-timing-summary:v1
     name: 排程時間摘要
     if: github.event_name == 'schedule'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository for schedule summary
         uses: actions/checkout@v7

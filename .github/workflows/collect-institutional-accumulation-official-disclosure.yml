@@ -19,7 +19,7 @@ env:
 
 jobs:
   test-and-plan:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       listings: ${{ steps.plan.outputs.listings }}
       listing_count: ${{ steps.plan.outputs.listing_count }}
@@ -60,7 +60,7 @@ jobs:
       fail-fast: false
       max-parallel: 1
       matrix: ${{ fromJSON(needs.test-and-plan.outputs.listings) }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
         with:
@@ -107,7 +107,7 @@ jobs:
   plan-details-1:
     needs: [test-and-plan, listing-batches]
     if: always() && needs.test-and-plan.result == 'success'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       details: ${{ steps.plan.outputs.details }}
       detail_count: ${{ steps.plan.outputs.detail_count }}
@@ -138,7 +138,7 @@ jobs:
       fail-fast: false
       max-parallel: 1
       matrix: ${{ fromJSON(needs.plan-details-1.outputs.details) }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps: &detail_steps
       - uses: actions/checkout@v7
         with:
@@ -185,7 +185,7 @@ jobs:
   plan-details-2:
     needs: [plan-details-1, detail-batches-1]
     if: always() && needs.plan-details-1.result == 'success'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       details: ${{ steps.plan.outputs.details }}
       detail_count: ${{ steps.plan.outputs.detail_count }}
@@ -216,13 +216,13 @@ jobs:
       fail-fast: false
       max-parallel: 1
       matrix: ${{ fromJSON(needs.plan-details-2.outputs.details) }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps: *detail_steps
 
   plan-details-3:
     needs: [plan-details-2, detail-batches-2]
     if: always() && needs.plan-details-2.result == 'success'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       details: ${{ steps.plan.outputs.details }}
       detail_count: ${{ steps.plan.outputs.detail_count }}
@@ -253,13 +253,13 @@ jobs:
       fail-fast: false
       max-parallel: 1
       matrix: ${{ fromJSON(needs.plan-details-3.outputs.details) }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps: *detail_steps
 
   final-reconcile:
     needs: [test-and-plan, listing-batches, plan-details-1, detail-batches-1, plan-details-2, detail-batches-2, plan-details-3, detail-batches-3]
     if: always() && needs.test-and-plan.result == 'success'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
         with:
@@ -292,7 +292,7 @@ jobs:
     # schedule-timing-summary:v1
     name: 排程時間摘要
     if: github.event_name == 'schedule'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository for schedule summary
         uses: actions/checkout@v7

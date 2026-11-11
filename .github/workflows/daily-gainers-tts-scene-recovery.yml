@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   prepare:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     outputs:
       target_date: ${{ steps.resolve.outputs.target_date }}
@@ -266,7 +266,7 @@ jobs:
   synthesize:
     needs: prepare
     if: needs.prepare.outputs.has_work == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     strategy:
       fail-fast: false
@@ -373,7 +373,7 @@ jobs:
   sync-status:
     needs: [prepare, synthesize]
     if: always() && needs.prepare.result == 'success' && needs.prepare.outputs.target_date != ''
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     env:
       DATE: ${{ needs.prepare.outputs.target_date }}
@@ -443,7 +443,7 @@ jobs:
     # schedule-timing-summary:v1
     name: 排程時間摘要
     if: github.event_name == 'schedule'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository for schedule summary
         uses: actions/checkout@v7

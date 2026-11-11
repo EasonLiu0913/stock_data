@@ -70,7 +70,7 @@ concurrency:
 
 jobs:
   validate-inputs:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       mode: ${{ steps.resolve.outputs.mode }}
       start_date: ${{ steps.resolve.outputs.start_date }}
@@ -141,7 +141,7 @@ jobs:
   plan-range:
     needs: validate-inputs
     if: needs.validate-inputs.outputs.mode == 'range'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.plan.outputs.matrix }}
       has_work: ${{ steps.plan.outputs.has_work }}

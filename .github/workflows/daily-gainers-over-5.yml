@@ -44,7 +44,7 @@ concurrency:
 jobs:
   generate:
     name: 產生每日漲幅 5% 以上清單
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       target_date: ${{ steps.generate.outputs.target_date }}
       stock_count: ${{ steps.generate.outputs.stock_count }}
@@ -243,7 +243,7 @@ jobs:
     name: 檢查既有原因分析 coverage
     needs: generate
     if: needs.generate.result == 'success' && needs.generate.outputs.target_date != ''
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout latest main
         uses: actions/checkout@v7

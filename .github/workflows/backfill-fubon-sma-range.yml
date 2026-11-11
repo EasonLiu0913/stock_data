@@ -38,7 +38,7 @@ concurrency:
 
 jobs:
   plan:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.plan.outputs.matrix }}
       has_work: ${{ steps.plan.outputs.has_work }}
@@ -137,7 +137,7 @@ jobs:
   rebuild-daily:
     needs: [plan, crawl-history]
     if: always() && needs.plan.outputs.has_work == 'true' && (needs.crawl-history.result == 'success' || needs.crawl-history.result == 'skipped')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
         with:
@@ -191,7 +191,7 @@ jobs:
   complete:
     needs: [plan, crawl-history, rebuild-daily]
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - run: |
           echo "plan=${{ needs.plan.result }}"
@@ -204,7 +204,7 @@ jobs:
     # schedule-timing-summary:v1
     name: 排程時間摘要
     if: github.event_name == 'schedule'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository for schedule summary
         uses: actions/checkout@v7

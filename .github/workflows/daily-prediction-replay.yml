@@ -42,7 +42,7 @@ concurrency:
 jobs:
   preflight:
     name: 檢查覆盤是否已存在
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       date: ${{ steps.check.outputs.date }}
       should_run: ${{ steps.check.outputs.should_run }}
@@ -115,7 +115,7 @@ jobs:
     name: 產生 V1／V2 覆盤、環境驗證與比較
     needs: preflight
     if: needs.preflight.outputs.should_run == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
         with:
