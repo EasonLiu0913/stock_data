@@ -77,6 +77,92 @@ jobs:
           echo "forecast_date=$FORECAST_TARGET_DATE" >> "$GITHUB_OUTPUT"
           echo "base_date=$FORECAST_BASE_DATE" >> "$GITHUB_OUTPUT"
 
+      - name: Diagnose required base-date upstream sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "## Base-date upstream readiness" >> "$GITHUB_STEP_SUMMARY"
+          for spec in \
+            "price_sma:data_fubon/fubon_${FORECAST_BASE_DATE}_sma.json" \
+            "foreign_futures:data_taifex_major_institutional_traders_futures_contracts/${FORECAST_BASE_DATE}_taifex_major_institutional_traders_futures_contracts.json"; do
+            label="${spec%%:*}"
+            source="${spec#*:}"
+            if [ -s "$source" ]; then
+              echo "- $label: present (`$source`)" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "- $label: missing (`$source`)" >> "$GITHUB_STEP_SUMMARY"
+              echo "::warning::$label missing for base date $FORECAST_BASE_DATE: $source"
+            fi
+          done
+          node -e 'try { require("./scripts/verify_market_environment").validateStockUniverse(process.env.FORECAST_BASE_DATE); console.log("Base-date stock universe: valid"); } catch (error) { console.log("Base-date stock universe requires recovery: " + error.message); }'
+
+      - name: Recover missing or invalid base-date Fubon price SMA
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_SCHEDULE: ${{ github.event.schedule || '' }}
+        run: |
+          set -euo pipefail
+          source="data_fubon/fubon_${FORECAST_BASE_DATE}_sma.json"
+          check_sma() {
+            node -e 'require("./scripts/verify_market_environment").validateStockUniverse(process.env.FORECAST_BASE_DATE)'
+          }
+          if check_sma; then
+            echo "Exact-date Fubon price SMA stock universe is valid."
+            exit 0
+          fi
+
+          # Dispatch only on the first scheduled attempt (or for manual runs).
+          # A later scheduled attempt can reuse the recovery already in flight.
+          if [ "$GITHUB_EVENT_NAME" != "schedule" ] || [ "$EVENT_SCHEDULE" = "55 22 * * 1-5" ]; then
+            workflow_path="$(gh workflow list --all --json name,path | node -e '
+              let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{
+                const matches=JSON.parse(s).filter(w=>/富邦/.test(w.name)&&/SMA/i.test(w.name)&&/區間|回填/.test(w.name));
+                if(matches.length!==1)process.exit(2);
+                process.stdout.write(matches[0].path);
+              });') " || {
+              echo "::error::Cannot uniquely identify the existing Fubon SMA date-range recovery workflow."
+              exit 1
+            }
+            gh workflow view "$workflow_path" --yaml > /tmp/fubon-recovery-workflow.yml
+            # Respect the existing recovery workflow's declared date inputs.
+            # Never guess arbitrary required inputs or trigger an unbounded backfill.
+            mapfile -t fields < <(ruby -ryaml -e '
+              d=YAML.load_file(ARGV[0]); event=d["on"] || d[true] || {};
+              inputs=(event["workflow_dispatch"] || {})["inputs"] || {};
+              supported=%w[date target_date trade_date base_date start_date end_date from_date to_date];
+              names=inputs.keys.map(&:to_s);
+              required=inputs.select{|k,v| v.is_a?(Hash) && (v["required"]==true)}.keys.map(&:to_s);
+              abort "Unsupported required dispatch inputs: #{(required-supported).join(",")}" unless (required-supported).empty?;
+              selected=names & supported;
+              abort "No recognized date-scoped dispatch inputs" if selected.empty?;
+              puts selected;
+            ' /tmp/fubon-recovery-workflow.yml) || exit 1
+            if [ "${#fields[@]}" -eq 0 ]; then
+              echo "::error::Fubon recovery workflow has no safe recognized date inputs."
+              exit 1
+            fi
+            args=()
+            for field in "${fields[@]}"; do args+=(-f "$field=$FORECAST_BASE_DATE"); done
+            echo "::notice::Dispatching Fubon price SMA date-scoped recovery for $FORECAST_BASE_DATE via $workflow_path"
+            gh workflow run "$workflow_path" --ref main "${args[@]}"
+          fi
+
+          for attempt in $(seq 1 40); do
+            git fetch -q origin main
+            if git cat-file -e "origin/main:$source" 2>/dev/null; then
+              git reset --hard origin/main
+              if check_sma; then
+                echo "Recovered and validated exact-date Fubon SMA from main: $source"
+                exit 0
+              fi
+            fi
+            echo "Waiting for valid Fubon SMA $FORECAST_BASE_DATE on main ($attempt/40)"
+            sleep 15
+          done
+          echo "::error::Valid exact-date Fubon SMA was not committed to main after bounded recovery: $source"
+          exit 1
+
       - name: Validate existing snapshot before retry
         id: existing
         shell: bash
@@ -174,6 +260,9 @@ jobs:
           if [ "$FORECAST_TARGET_DATE" -lt "$(TZ='Asia/Taipei' date '+%Y%m%d')" ]; then
             args+=(--allow-historical-reconstruction)
           fi
+          node scripts/verify_market_environment.js "${args[@]}" --scope environment
+          node scripts/verify_market_environment.js "${args[@]}" --scope stock-universe
+          # Preserve the original full quality gate as the final acceptance check.
           node scripts/verify_market_environment.js "${args[@]}"
 
       - name: Install market environment banner
