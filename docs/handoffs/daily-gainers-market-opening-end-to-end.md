@@ -2989,3 +2989,20 @@ Prompt A remains **IN PROGRESS**; Prompt B is not eligible. This is a bounded re
 - The unfinished v1 FIFO-selector repair remains preserved at branch `codex/fix-fish-tts-fifo-completed-date`, commit `65988bd122712882e25fa04f7a45161e33a4b962`; v2 Prompt A must independently inspect/carry forward its eligible work and must not overwrite it. The v1 in-progress record remains historical; after this registration merges, v2 governs prospective work.
 - No Fish request, workflow dispatch, Render, Pages, YouTube/upload/publication, release-lock change, or checkpoint deletion was performed in this registration. YouTube publication lock remains closed.
 - Next: merge the registration PR only under normal repository checks/policy. Then require a separate explicit `promptA` turn to start v2. Do not run Prompt B before v2 Prompt A is complete; do not rewrite v1 or auto-promote any later phase.
+
+
+## Owner route switch — daily video reactivated (2026-11-12)
+
+The owner explicitly selected `daily-gainers-market-opening-end-to-end` as the unique active project. The institutional-accumulation route is set to pending and its phase/A/B state is preserved. This activation does not execute Prompt A.
+
+### Current registered phase and evidence
+- Current phase: `MVP10-A-FISH-TTS-PERSISTENCE-R1-ALL-SCENES-V2`; goal remains `goal-v3/MVP-10DAY-v1`.
+- PR #91 is merged at `864a9592d3f07663a89feb1c06b811caf8dde211). The immutable v2 pair is `data_research/m5/change-proposals/MVP10-A-FISH-TTS-PERSISTENCE-PAIR-v2.md`; its proposal is `data_research/m5/change-proposals/MVP10-A-FISH-TTS-PERSISTENCE-CHANGE-PROPOSAL-v2.md`.
+- Prompt A is not started and Prompt B is not eligible. A separate owner-issued `promptA` is required after this activation checkpoint is on main.
+- Run #19 / `42836332036` was a `workflow_dispatch` for `20261104`, not a natural schedule event. Its durable checkpoint commit `17e69d0a5d96b6a831f50e28bf4284a505909b7e` has 17 ordered scenes: scenes 1–3 successful and 4–17 pending. Reuse the matching three; do not synthesize them again.
+- The v1 FIFO completed-date selector repair remains an outstanding carry-forward item on `codex/fix-fish-tts-fifo-completed-date`; Prompt A must inspect it against fresh main and the v2 frozen criteria.
+- The institutional preflight issue in open, unmerged PR #101 is not a dependency of this daily-video route. Keep that project pending; do not merge or execute its workflow as part of video work.
+
+### Activation boundary
+This checkpoint only changes the unique active route and reconciles the video Task State with the already merged v2 registration. It does not alter any frozen acceptance or prior v1/R2 result and does not run [08 TTS], Fish API, Render, Pages, YouTube, or upload workflows. YouTube publication lock remains closed.
+
