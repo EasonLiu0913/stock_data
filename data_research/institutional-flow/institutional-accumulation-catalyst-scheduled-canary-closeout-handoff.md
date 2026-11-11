@@ -239,3 +239,18 @@ The earlier v2.1 merge checkpoint's statement that implementation had not starte
 - Corrected PR CI has not run yet. Prompt A remains in progress until the corrected PR head's full regression job succeeds and remote artifacts/checks are verified.
 
 No source-network request/write, workflow dispatch/rerun, outcome artifact write, holdout/protected-case access, association/catalyst interpretation, production change, or publication action occurred in this repair step.
+
+
+## v2.1 Prompt A completion checkpoint — 2026-11-11
+
+**Prompt A COMPLETE — ready for Prompt B.** Preserve and run only the already preregistered v2.1 Prompt B; do not alter its text or acceptance. Phase 0a Prompt B remains historically BLOCKED and unchanged.
+
+- PR #98 remains open and unmerged. Implementation/fix commit: `55cf2e3fcacd865f6d63741ab0130ac5aeb1801f`; tested head before this documentation checkpoint: same SHA. The PR base and current `main` both remain `05868fb2210ede5a3356b416098966b0ffb14703`.
+- Corrected full Node Regression Suite: run #43048723303, job `130619674581`, pull_request event; SUCCESS, `1262/1262` passed, 0 failed, 0 skipped. The v1 pinned-source regression and deterministic lineage-manifest regeneration both passed. Checkout, required history fetch, syntax check, and clean-tree verification passed.
+- Scheduled Workflow Registry Contract run #43048723520 and Public Page Registry CI run #43048723373 also succeeded. The latter was a validation check; no deployment was invoked.
+- Preserve the earlier Node Regression Suite failure run #43046092864 / job `130610288264` as historical FAIL; it is not relabeled or deleted.
+- The separate Node 24 audit run #43048723395 / job `130619673550` still fails on pre-existing `.github/workflows/backfill-market-environment.yml:93` (`actions/upload-artifact@v4`). That file is unchanged on current main and outside this frozen source-lineage A; keep this check classified separately and do not expand this PR to fix it. PR mergeability state was `unstable`; this phase does not authorize merging.
+- Remote PR branch readback confirms v1 freeze blob `4215a84a110406714e200618d280b70d0d1e7f46`, v2 freeze blob `6c343ec4a3dfebf194222d37bf4ab2dd13ac4f96`, source-lineage manifest blob `2613628c273b05e620e84ec57bd909cff60088a3`, and this canonical handoff checkpoint. The later source observation remains separate and unchanged.
+- No source-network fetch/write, workflow dispatch/rerun, Pages deployment, outcomes/holdouts opening, association/catalyst interpretation, production or strategy change, merge, or YouTube action occurred.
+
+Next permitted action: an explicit owner-issued `promptB` starts independent closeout for this same round. No automatic continuation or promotion is authorized.
