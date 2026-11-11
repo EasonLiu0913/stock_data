@@ -5,6 +5,7 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const { getDailyPrice } = require('./lib/stock_price_provider');
+const { SOURCE_PATH, resolveFreezeVersion } = require('./lib/institutional_accumulation_freeze_versions');
 
 const ROOT = path.resolve(__dirname, '..');
 const FREEZE_PATH = 'data_research/institutional-flow/institutional-accumulation-development-sample-freeze-v1.json';
@@ -36,8 +37,15 @@ function verifyFrozenManifest(payload, root = ROOT) {
   if (semantic !== EXPECTED_FREEZE_SHA256) throw new Error(`freeze semantic hash mismatch: ${semantic}`);
   if (payload.protected_motivation_stock_excluded !== PROTECTED_STOCK) throw new Error('protected 2454 exclusion contract changed');
   if (!payload.source_file_sha256 || typeof payload.source_file_sha256 !== 'object') throw new Error('frozen source-file hashes missing');
+  // v1 is resolved against its committed source identity, never against a later working-tree backfill.
+  const pinnedV1 = resolveFreezeVersion('v1', { root });
   const changed = [];
   for (const [relative, expected] of Object.entries(payload.source_file_sha256)) {
+    if (relative === SOURCE_PATH) {
+      const actual = crypto.createHash('sha256').update(pinnedV1.sourceBytes).digest('hex');
+      if (actual !== expected) changed.push(`${relative}:${actual}`);
+      continue;
+    }
     const file = path.join(root, relative);
     if (!fs.existsSync(file)) {
       changed.push(`${relative}:missing`);
