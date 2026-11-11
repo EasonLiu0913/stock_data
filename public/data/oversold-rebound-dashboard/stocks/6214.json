@@ -11,11 +11,11 @@
   "primary_outcome": {
     "key": "intraday_rebound_5d_10pct",
     "label": "5 個交易日內盤中最大反彈至少 10%",
-    "total_events": 2,
+    "total_events": 3,
     "verified_events": 2,
     "successful_events": 0,
     "unsuccessful_events": 2,
-    "unverified_events": 0,
+    "unverified_events": 1,
     "hit_rate": 0
   },
   "candidate_patterns": [],
@@ -951,30 +951,30 @@
   ],
   "feature_coverage": {
     "foreign": {
-      "event_count": 2,
+      "event_count": 3,
       "coverage_pct": 100
     },
     "investment_trust": {
-      "event_count": 1,
-      "coverage_pct": 50
+      "event_count": 2,
+      "coverage_pct": 66.67
     },
     "dealer": {
-      "event_count": 2,
+      "event_count": 3,
       "coverage_pct": 100
     },
     "margin": {
-      "event_count": 2,
+      "event_count": 3,
       "coverage_pct": 100
     },
     "broker": {
-      "event_count": 2,
+      "event_count": 3,
       "coverage_pct": 100
     }
   },
   "history": {
     "first_date": "20260203",
-    "last_date": "20260908",
-    "trading_days": 143
+    "last_date": "20261109",
+    "trading_days": 180
   },
   "events": [
     {
@@ -1086,6 +1086,62 @@
       "feature_availability": {
         "foreign": true,
         "investment_trust": false,
+        "margin": true,
+        "broker": true
+      }
+    },
+    {
+      "event_id": "6214-20261104-03",
+      "signal_date": "20261104",
+      "deepest_signal_date": "20261105",
+      "episode_end_date": "20261109",
+      "observation_count": 3,
+      "trigger_ids": [
+        "return_3d_lte",
+        "return_5d_lte"
+      ],
+      "result": "unverified",
+      "signal": {
+        "close": 182,
+        "severity": 3.8544,
+        "return_3d": -9.4527,
+        "return_5d": -9.2269,
+        "return_10d": -7.3791,
+        "drawdown_20d": -10.7843,
+        "drawdown_60d": -10.7843,
+        "rsi14": 34.67,
+        "gap_sma20": -7.1665,
+        "volume_ratio_5d": 0.9188,
+        "volume_ratio_20d": 1.4294
+      },
+      "deepest_signal": {
+        "close": 176.5,
+        "severity": 5.0916,
+        "return_5d": -12.6238,
+        "drawdown_20d": -13.4804,
+        "rsi14": 25.93
+      },
+      "outcome_from_signal": {
+        "future_return_1d": -3.022,
+        "future_return_3d": -1.6484,
+        "future_return_5d": null,
+        "future_return_10d": null,
+        "max_return_3d": 10.4396,
+        "max_return_5d": 10.4396,
+        "max_return_10d": 10.4396,
+        "max_adverse_5d": -12.0879,
+        "days_to_close_rebound_5pct": 2,
+        "days_to_intraday_rebound_5pct": 2,
+        "verified": false
+      },
+      "outcome_from_deepest_signal": {
+        "future_return_5d": null,
+        "max_return_5d": 13.881,
+        "max_adverse_5d": -9.3484
+      },
+      "feature_availability": {
+        "foreign": true,
+        "investment_trust": true,
         "margin": true,
         "broker": true
       }

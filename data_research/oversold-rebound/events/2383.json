@@ -5,10 +5,10 @@
   "stock_name": "台光電",
   "history": {
     "first_date": "20260203",
-    "last_date": "20260908",
-    "trading_days": 142
+    "last_date": "20261109",
+    "trading_days": 181
   },
-  "event_count": 9,
+  "event_count": 11,
   "events": [
     {
       "event_id": "2383-20260304-01",
@@ -2905,11 +2905,15 @@
       "stock_code": "2383",
       "stock_name": "台光電",
       "signal_date": "20260828",
-      "episode_end_date": "20260908",
-      "deepest_signal_date": "20260903",
-      "observation_count": 7,
+      "episode_end_date": "20260929",
+      "deepest_signal_date": "20260917",
+      "observation_count": 20,
       "trigger_ids": [
-        "drawdown_20d_lte"
+        "drawdown_20d_lte",
+        "drawdown_60d_lte",
+        "return_3d_lte",
+        "return_5d_lte",
+        "rsi14_lte"
       ],
       "signal": {
         "series_index": 134,
@@ -2955,47 +2959,67 @@
         "severity": 3.0662
       },
       "deepest_signal": {
-        "series_index": 138,
-        "date": "20260903",
-        "close": 5290,
+        "series_index": 148,
+        "date": "20260917",
+        "close": 4695,
         "triggers": [
           {
+            "id": "return_3d_lte",
+            "value": -12.1609,
+            "threshold": -8
+          },
+          {
+            "id": "return_5d_lte",
+            "value": -12.6512,
+            "threshold": -10
+          },
+          {
             "id": "drawdown_20d_lte",
-            "value": -18.238,
+            "value": -21.9451,
             "threshold": -15
+          },
+          {
+            "id": "drawdown_60d_lte",
+            "value": -27.4343,
+            "threshold": -20
+          },
+          {
+            "id": "rsi14_lte",
+            "value": 24.92,
+            "threshold": 25
           }
         ],
         "is_oversold": true,
         "price_volume": {
-          "open": 5500,
-          "high": 5550,
-          "low": 5290,
-          "close": 5290,
-          "volume_lots": 1640,
-          "return_1d": -2.8466,
-          "return_3d": -3.5552,
-          "return_5d": -3.8182,
-          "return_10d": -11.6124,
-          "return_20d": -0.2828,
-          "drawdown_20d": -18.238,
-          "drawdown_60d": -18.238,
-          "rsi14": 33.77,
-          "sma5": 5470,
-          "sma20": 5676,
-          "sma60": 5310.75,
-          "gap_sma5": -3.2907,
-          "gap_sma20": -6.8006,
-          "gap_sma60": -0.3907,
-          "average_volume_5d_lots": 1762.6,
-          "average_volume_20d_lots": 2080.05,
-          "volume_ratio_5d": 0.9304,
-          "volume_ratio_20d": 0.7884,
-          "intraday_return": -3.8182,
-          "intraday_range_pct": 4.9149,
-          "consecutive_down_days": 2,
-          "volatility_20d": 3.9212
+          "open": 5135,
+          "high": 5255,
+          "low": 4635,
+          "close": 4695,
+          "volume_lots": 5811,
+          "return_1d": -7.6696,
+          "return_3d": -12.1609,
+          "return_5d": -12.6512,
+          "return_10d": -11.2476,
+          "return_20d": -21.5539,
+          "drawdown_20d": -21.9451,
+          "drawdown_60d": -27.4343,
+          "rsi14": 24.92,
+          "sma5": 5121,
+          "sma20": 5402.75,
+          "sma60": 5305.83,
+          "gap_sma5": -8.3187,
+          "gap_sma20": -13.0998,
+          "gap_sma60": -11.5124,
+          "average_volume_5d_lots": 2268.4,
+          "average_volume_20d_lots": 1965,
+          "volume_ratio_5d": 2.5617,
+          "volume_ratio_20d": 2.9573,
+          "intraday_return": -8.5686,
+          "intraday_range_pct": 13.2055,
+          "consecutive_down_days": 5,
+          "volatility_20d": 3.3458
         },
-        "severity": 3.7281
+        "severity": 6.373
       },
       "outcome_from_signal": {
         "base_date": "20260828",
@@ -3009,9 +3033,9 @@
         "future_return_5d": -1.3661,
         "max_return_5d": 4.4627,
         "max_adverse_5d": -4.2805,
-        "future_return_10d": null,
+        "future_return_10d": -2.2769,
         "max_return_10d": 4.4627,
-        "max_adverse_10d": -4.2805,
+        "max_adverse_10d": -5.1002,
         "days_to_close_rebound_5pct": null,
         "days_to_intraday_rebound_5pct": null,
         "labels": {
@@ -3020,7 +3044,7 @@
           "close_rebound_3d_10pct": false,
           "close_rebound_5d_8pct": false,
           "close_rebound_5d_10pct": false,
-          "close_rebound_10d_15pct": null,
+          "close_rebound_10d_15pct": false,
           "intraday_rebound_3d_5pct": false,
           "intraday_rebound_5d_10pct": false
         },
@@ -3028,52 +3052,55 @@
           "completed_horizons": [
             1,
             3,
-            5
+            5,
+            10
           ],
-          "max_completed_horizon": 5,
+          "max_completed_horizon": 10,
           "has_complete_1d": true,
           "has_complete_3d": true,
           "has_complete_5d": true,
-          "has_complete_10d": false
+          "has_complete_10d": true
         }
       },
       "outcome_from_deepest_signal": {
-        "base_date": "20260903",
-        "base_close": 5290,
-        "future_return_1d": 2.3629,
-        "max_return_1d": 4.2533,
-        "max_adverse_1d": -0.6616,
-        "future_return_3d": 0.9452,
-        "max_return_3d": 5.482,
-        "max_adverse_3d": -0.6616,
-        "future_return_5d": null,
-        "max_return_5d": 5.482,
-        "max_adverse_5d": -0.6616,
-        "future_return_10d": null,
-        "max_return_10d": 5.482,
-        "max_adverse_10d": -0.6616,
-        "days_to_close_rebound_5pct": null,
-        "days_to_intraday_rebound_5pct": 2,
+        "base_date": "20260917",
+        "base_close": 4695,
+        "future_return_1d": 4.1534,
+        "max_return_1d": 6.4963,
+        "max_adverse_1d": 2.4494,
+        "future_return_3d": 3.5144,
+        "max_return_3d": 8.6262,
+        "max_adverse_3d": 2.1299,
+        "future_return_5d": 7.5612,
+        "max_return_5d": 10.1171,
+        "max_adverse_5d": 2.1299,
+        "future_return_10d": 21.4058,
+        "max_return_10d": 21.4058,
+        "max_adverse_10d": 2.1299,
+        "days_to_close_rebound_5pct": 4,
+        "days_to_intraday_rebound_5pct": 1,
         "labels": {
           "close_rebound_1d_5pct": false,
           "close_rebound_3d_5pct": false,
           "close_rebound_3d_10pct": false,
-          "close_rebound_5d_8pct": null,
-          "close_rebound_5d_10pct": null,
-          "close_rebound_10d_15pct": null,
+          "close_rebound_5d_8pct": false,
+          "close_rebound_5d_10pct": false,
+          "close_rebound_10d_15pct": true,
           "intraday_rebound_3d_5pct": true,
-          "intraday_rebound_5d_10pct": null
+          "intraday_rebound_5d_10pct": true
         },
         "verification": {
           "completed_horizons": [
             1,
-            3
+            3,
+            5,
+            10
           ],
-          "max_completed_horizon": 3,
+          "max_completed_horizon": 10,
           "has_complete_1d": true,
           "has_complete_3d": true,
-          "has_complete_5d": false,
-          "has_complete_10d": false
+          "has_complete_5d": true,
+          "has_complete_10d": true
         }
       },
       "features": {
@@ -3251,6 +3278,745 @@
         "available_feature_groups": 5,
         "total_feature_groups": 6,
         "completeness_pct": 83.33
+      }
+    },
+    {
+      "event_id": "2383-20260930-10",
+      "stock_code": "2383",
+      "stock_name": "台光電",
+      "signal_date": "20260930",
+      "episode_end_date": "20261001",
+      "deepest_signal_date": "20260930",
+      "observation_count": 2,
+      "trigger_ids": [
+        "drawdown_60d_lte"
+      ],
+      "signal": {
+        "series_index": 155,
+        "date": "20260930",
+        "close": 4935,
+        "triggers": [
+          {
+            "id": "drawdown_60d_lte",
+            "value": -23.7249,
+            "threshold": -20
+          }
+        ],
+        "is_oversold": true,
+        "price_volume": {
+          "open": 4990,
+          "high": 5030,
+          "low": 4935,
+          "close": 4935,
+          "volume_lots": 1549,
+          "return_1d": 0.3049,
+          "return_3d": -1.6932,
+          "return_5d": 0.8172,
+          "return_10d": -7.6707,
+          "return_20d": -10.0273,
+          "drawdown_20d": -13.9494,
+          "drawdown_60d": -23.7249,
+          "rsi14": 34.24,
+          "sma5": 4957,
+          "sma20": 5177.5,
+          "sma60": 5231.92,
+          "gap_sma5": -0.4438,
+          "gap_sma20": -4.6837,
+          "gap_sma60": -5.6752,
+          "average_volume_5d_lots": 2092.4,
+          "average_volume_20d_lots": 2019.55,
+          "volume_ratio_5d": 0.7403,
+          "volume_ratio_20d": 0.767,
+          "intraday_return": -1.1022,
+          "intraday_range_pct": 1.925,
+          "consecutive_down_days": 0,
+          "volatility_20d": 2.7657
+        },
+        "severity": 2.8392
+      },
+      "deepest_signal": {
+        "series_index": 155,
+        "date": "20260930",
+        "close": 4935,
+        "triggers": [
+          {
+            "id": "drawdown_60d_lte",
+            "value": -23.7249,
+            "threshold": -20
+          }
+        ],
+        "is_oversold": true,
+        "price_volume": {
+          "open": 4990,
+          "high": 5030,
+          "low": 4935,
+          "close": 4935,
+          "volume_lots": 1549,
+          "return_1d": 0.3049,
+          "return_3d": -1.6932,
+          "return_5d": 0.8172,
+          "return_10d": -7.6707,
+          "return_20d": -10.0273,
+          "drawdown_20d": -13.9494,
+          "drawdown_60d": -23.7249,
+          "rsi14": 34.24,
+          "sma5": 4957,
+          "sma20": 5177.5,
+          "sma60": 5231.92,
+          "gap_sma5": -0.4438,
+          "gap_sma20": -4.6837,
+          "gap_sma60": -5.6752,
+          "average_volume_5d_lots": 2092.4,
+          "average_volume_20d_lots": 2019.55,
+          "volume_ratio_5d": 0.7403,
+          "volume_ratio_20d": 0.767,
+          "intraday_return": -1.1022,
+          "intraday_range_pct": 1.925,
+          "consecutive_down_days": 0,
+          "volatility_20d": 2.7657
+        },
+        "severity": 2.8392
+      },
+      "outcome_from_signal": {
+        "base_date": "20260930",
+        "base_close": 4935,
+        "future_return_1d": 0.8105,
+        "max_return_1d": 0.8105,
+        "max_adverse_1d": -1.6211,
+        "future_return_3d": 15.5015,
+        "max_return_3d": 15.5015,
+        "max_adverse_3d": -1.6211,
+        "future_return_5d": 20.5674,
+        "max_return_5d": 28.1662,
+        "max_adverse_5d": -1.6211,
+        "future_return_10d": 3.7487,
+        "max_return_10d": 28.1662,
+        "max_adverse_10d": -1.6211,
+        "days_to_close_rebound_5pct": 2,
+        "days_to_intraday_rebound_5pct": 2,
+        "labels": {
+          "close_rebound_1d_5pct": false,
+          "close_rebound_3d_5pct": true,
+          "close_rebound_3d_10pct": true,
+          "close_rebound_5d_8pct": true,
+          "close_rebound_5d_10pct": true,
+          "close_rebound_10d_15pct": false,
+          "intraday_rebound_3d_5pct": true,
+          "intraday_rebound_5d_10pct": true
+        },
+        "verification": {
+          "completed_horizons": [
+            1,
+            3,
+            5,
+            10
+          ],
+          "max_completed_horizon": 10,
+          "has_complete_1d": true,
+          "has_complete_3d": true,
+          "has_complete_5d": true,
+          "has_complete_10d": true
+        }
+      },
+      "outcome_from_deepest_signal": {
+        "base_date": "20260930",
+        "base_close": 4935,
+        "future_return_1d": 0.8105,
+        "max_return_1d": 0.8105,
+        "max_adverse_1d": -1.6211,
+        "future_return_3d": 15.5015,
+        "max_return_3d": 15.5015,
+        "max_adverse_3d": -1.6211,
+        "future_return_5d": 20.5674,
+        "max_return_5d": 28.1662,
+        "max_adverse_5d": -1.6211,
+        "future_return_10d": 3.7487,
+        "max_return_10d": 28.1662,
+        "max_adverse_10d": -1.6211,
+        "days_to_close_rebound_5pct": 2,
+        "days_to_intraday_rebound_5pct": 2,
+        "labels": {
+          "close_rebound_1d_5pct": false,
+          "close_rebound_3d_5pct": true,
+          "close_rebound_3d_10pct": true,
+          "close_rebound_5d_8pct": true,
+          "close_rebound_5d_10pct": true,
+          "close_rebound_10d_15pct": false,
+          "intraday_rebound_3d_5pct": true,
+          "intraday_rebound_5d_10pct": true
+        },
+        "verification": {
+          "completed_horizons": [
+            1,
+            3,
+            5,
+            10
+          ],
+          "max_completed_horizon": 10,
+          "has_complete_1d": true,
+          "has_complete_3d": true,
+          "has_complete_5d": true,
+          "has_complete_10d": true
+        }
+      },
+      "features": {
+        "price_volume": {
+          "open": 4990,
+          "high": 5030,
+          "low": 4935,
+          "close": 4935,
+          "volume_lots": 1549,
+          "return_1d": 0.3049,
+          "return_3d": -1.6932,
+          "return_5d": 0.8172,
+          "return_10d": -7.6707,
+          "return_20d": -10.0273,
+          "drawdown_20d": -13.9494,
+          "drawdown_60d": -23.7249,
+          "rsi14": 34.24,
+          "sma5": 4957,
+          "sma20": 5177.5,
+          "sma60": 5231.92,
+          "gap_sma5": -0.4438,
+          "gap_sma20": -4.6837,
+          "gap_sma60": -5.6752,
+          "average_volume_5d_lots": 2092.4,
+          "average_volume_20d_lots": 2019.55,
+          "volume_ratio_5d": 0.7403,
+          "volume_ratio_20d": 0.767,
+          "intraday_return": -1.1022,
+          "intraday_range_pct": 1.925,
+          "consecutive_down_days": 0,
+          "volatility_20d": 2.7657
+        },
+        "institutional": {
+          "foreign": {
+            "current_net_shares": -161913,
+            "current_net_lots": -161.913,
+            "current_net_to_volume_pct": -10.4527,
+            "turned_to_buy": false,
+            "net_1d_shares": -161913,
+            "net_3d_shares": -416528,
+            "net_5d_shares": -273125,
+            "net_10d_shares": 578638
+          },
+          "investment_trust": {
+            "current_net_shares": 163000,
+            "current_net_lots": 163,
+            "current_net_to_volume_pct": 10.5229,
+            "turned_to_buy": true,
+            "net_1d_shares": 163000,
+            "net_3d_shares": -429675,
+            "net_5d_shares": -628903,
+            "net_10d_shares": -2751621
+          },
+          "dealer": {
+            "current_net_shares": -3895,
+            "current_net_lots": -3.895,
+            "current_net_to_volume_pct": -0.2515,
+            "turned_to_buy": false,
+            "net_1d_shares": -3895,
+            "net_3d_shares": 63942,
+            "net_5d_shares": 144006,
+            "net_10d_shares": 510440
+          }
+        },
+        "margin": {
+          "stock_name": "台光電",
+          "margin_balance": 2503,
+          "margin_change": 9,
+          "short_balance": 14,
+          "short_change": 7,
+          "margin_buy": 40,
+          "margin_sell": 31,
+          "short_buy": 1,
+          "short_sell": 8,
+          "offset": 1,
+          "margin_change_3d": 169,
+          "short_change_3d": 12,
+          "margin_change_5d": 196,
+          "short_change_5d": -11,
+          "margin_change_10d": 427,
+          "short_change_10d": 12,
+          "source_unit_note": "保留來源原始單位；在確認與成交量單位一致前不計算占比。"
+        },
+        "broker": {
+          "totals_net_lots": -21,
+          "total_net_buy_lots": 280,
+          "total_net_sell_lots": 301,
+          "top5_buy_net_lots": 201,
+          "top5_sell_net_lots": 246,
+          "top5_net_concentration_lots": -45,
+          "top_buyers": [
+            {
+              "broker_name": "元大證券",
+              "broker_id": "9800",
+              "branch_id": "9800",
+              "net_buy_lots": 72,
+              "share_percent": 4.65
+            },
+            {
+              "broker_name": "台新",
+              "broker_id": "9B00",
+              "branch_id": "0039004200300030",
+              "net_buy_lots": 43,
+              "share_percent": 2.78
+            },
+            {
+              "broker_name": "摩根大通",
+              "broker_id": "8440",
+              "branch_id": "8440",
+              "net_buy_lots": 33,
+              "share_percent": 2.13
+            },
+            {
+              "broker_name": "永豐金證券",
+              "broker_id": "9A00",
+              "branch_id": "0039004100300030",
+              "net_buy_lots": 29,
+              "share_percent": 1.87
+            },
+            {
+              "broker_name": "兆豐證券",
+              "broker_id": "7000",
+              "branch_id": "7000",
+              "net_buy_lots": 24,
+              "share_percent": 1.55
+            }
+          ],
+          "top_sellers": [
+            {
+              "broker_name": "台灣摩根士丹利",
+              "broker_id": "1470",
+              "branch_id": "1470",
+              "net_sell_lots": 119,
+              "share_percent": 7.68
+            },
+            {
+              "broker_name": "新加坡商瑞銀",
+              "broker_id": "1650",
+              "branch_id": "1650",
+              "net_sell_lots": 42,
+              "share_percent": 2.71
+            },
+            {
+              "broker_name": "香港上海匯豐",
+              "broker_id": "8960",
+              "branch_id": "8960",
+              "net_sell_lots": 41,
+              "share_percent": 2.65
+            },
+            {
+              "broker_name": "花旗環球",
+              "broker_id": "1590",
+              "branch_id": "1590",
+              "net_sell_lots": 29,
+              "share_percent": 1.87
+            },
+            {
+              "broker_name": "康和",
+              "broker_id": "8450",
+              "branch_id": "8450",
+              "net_sell_lots": 15,
+              "share_percent": 0.97
+            }
+          ]
+        },
+        "market_optional": null
+      },
+      "data_availability": {
+        "price_volume": true,
+        "foreign": true,
+        "investment_trust": true,
+        "dealer": true,
+        "margin": true,
+        "broker": true,
+        "available_feature_groups": 6,
+        "total_feature_groups": 6,
+        "completeness_pct": 100
+      }
+    },
+    {
+      "event_id": "2383-20261014-11",
+      "stock_code": "2383",
+      "stock_name": "台光電",
+      "signal_date": "20261014",
+      "episode_end_date": "20261109",
+      "deepest_signal_date": "20261106",
+      "observation_count": 17,
+      "trigger_ids": [
+        "return_3d_lte",
+        "return_5d_lte",
+        "drawdown_20d_lte",
+        "drawdown_60d_lte",
+        "return_10d_lte",
+        "rsi14_lte"
+      ],
+      "signal": {
+        "series_index": 164,
+        "date": "20261014",
+        "close": 5520,
+        "triggers": [
+          {
+            "id": "return_3d_lte",
+            "value": -8,
+            "threshold": -8
+          }
+        ],
+        "is_oversold": true,
+        "price_volume": {
+          "open": 5545,
+          "high": 5645,
+          "low": 5510,
+          "close": 5520,
+          "volume_lots": 2326,
+          "return_1d": -0.4509,
+          "return_3d": -8,
+          "return_5d": -7.9233,
+          "return_10d": 12.1951,
+          "return_20d": 2.8891,
+          "drawdown_20d": -12.7273,
+          "drawdown_60d": -14.6832,
+          "rsi14": 63.56,
+          "sma5": 5833,
+          "sma20": 5291.5,
+          "sma60": 5316.17,
+          "gap_sma5": -5.366,
+          "gap_sma20": 4.3182,
+          "gap_sma60": 3.8342,
+          "average_volume_5d_lots": 2873.2,
+          "average_volume_20d_lots": 2561.65,
+          "volume_ratio_5d": 0.8096,
+          "volume_ratio_20d": 0.908,
+          "intraday_return": -0.4509,
+          "intraday_range_pct": 2.4457,
+          "consecutive_down_days": 2,
+          "volatility_20d": 4.2475
+        },
+        "severity": 3.375
+      },
+      "deepest_signal": {
+        "series_index": 179,
+        "date": "20261106",
+        "close": 3820,
+        "triggers": [
+          {
+            "id": "return_3d_lte",
+            "value": -13.083,
+            "threshold": -8
+          },
+          {
+            "id": "return_5d_lte",
+            "value": -18.2888,
+            "threshold": -10
+          },
+          {
+            "id": "return_10d_lte",
+            "value": -23.4469,
+            "threshold": -15
+          },
+          {
+            "id": "drawdown_20d_lte",
+            "value": -39.6047,
+            "threshold": -15
+          },
+          {
+            "id": "drawdown_60d_lte",
+            "value": -40.9583,
+            "threshold": -20
+          },
+          {
+            "id": "rsi14_lte",
+            "value": 24.71,
+            "threshold": 25
+          }
+        ],
+        "is_oversold": true,
+        "price_volume": {
+          "open": 3690,
+          "high": 3920,
+          "low": 3690,
+          "close": 3820,
+          "volume_lots": 6276,
+          "return_1d": -6.8293,
+          "return_3d": -13.083,
+          "return_5d": -18.2888,
+          "return_10d": -23.4469,
+          "return_20d": -36.2802,
+          "drawdown_20d": -39.6047,
+          "drawdown_60d": -40.9583,
+          "rsi14": 24.71,
+          "sma5": 4315,
+          "sma20": 5030.75,
+          "sma60": 5298.75,
+          "gap_sma5": -11.4716,
+          "gap_sma20": -24.067,
+          "gap_sma60": -27.9075,
+          "average_volume_5d_lots": 4635.4,
+          "average_volume_20d_lots": 3644.5,
+          "volume_ratio_5d": 1.3539,
+          "volume_ratio_20d": 1.722,
+          "intraday_return": 3.523,
+          "intraday_range_pct": 6.0209,
+          "consecutive_down_days": 2,
+          "volatility_20d": 4.5032
+        },
+        "severity": 9.7272
+      },
+      "outcome_from_signal": {
+        "base_date": "20261014",
+        "base_close": 5520,
+        "future_return_1d": -7.2464,
+        "max_return_1d": -3.442,
+        "max_adverse_1d": -9.7826,
+        "future_return_3d": -7.1558,
+        "max_return_3d": -3.442,
+        "max_adverse_3d": -10.2355,
+        "future_return_5d": -9.6014,
+        "max_return_5d": -3.442,
+        "max_adverse_5d": -10.6884,
+        "future_return_10d": -15.308,
+        "max_return_10d": -0.6341,
+        "max_adverse_10d": -17.3913,
+        "days_to_close_rebound_5pct": null,
+        "days_to_intraday_rebound_5pct": null,
+        "labels": {
+          "close_rebound_1d_5pct": false,
+          "close_rebound_3d_5pct": false,
+          "close_rebound_3d_10pct": false,
+          "close_rebound_5d_8pct": false,
+          "close_rebound_5d_10pct": false,
+          "close_rebound_10d_15pct": false,
+          "intraday_rebound_3d_5pct": false,
+          "intraday_rebound_5d_10pct": false
+        },
+        "verification": {
+          "completed_horizons": [
+            1,
+            3,
+            5,
+            10
+          ],
+          "max_completed_horizon": 10,
+          "has_complete_1d": true,
+          "has_complete_3d": true,
+          "has_complete_5d": true,
+          "has_complete_10d": true
+        }
+      },
+      "outcome_from_deepest_signal": {
+        "base_date": "20261106",
+        "base_close": 3820,
+        "future_return_1d": 6.5445,
+        "max_return_1d": 9.1623,
+        "max_adverse_1d": -0.9162,
+        "future_return_3d": null,
+        "max_return_3d": 9.1623,
+        "max_adverse_3d": -0.9162,
+        "future_return_5d": null,
+        "max_return_5d": 9.1623,
+        "max_adverse_5d": -0.9162,
+        "future_return_10d": null,
+        "max_return_10d": 9.1623,
+        "max_adverse_10d": -0.9162,
+        "days_to_close_rebound_5pct": 1,
+        "days_to_intraday_rebound_5pct": 1,
+        "labels": {
+          "close_rebound_1d_5pct": true,
+          "close_rebound_3d_5pct": null,
+          "close_rebound_3d_10pct": null,
+          "close_rebound_5d_8pct": null,
+          "close_rebound_5d_10pct": null,
+          "close_rebound_10d_15pct": null,
+          "intraday_rebound_3d_5pct": null,
+          "intraday_rebound_5d_10pct": null
+        },
+        "verification": {
+          "completed_horizons": [
+            1
+          ],
+          "max_completed_horizon": 1,
+          "has_complete_1d": true,
+          "has_complete_3d": false,
+          "has_complete_5d": false,
+          "has_complete_10d": false
+        }
+      },
+      "features": {
+        "price_volume": {
+          "open": 5545,
+          "high": 5645,
+          "low": 5510,
+          "close": 5520,
+          "volume_lots": 2326,
+          "return_1d": -0.4509,
+          "return_3d": -8,
+          "return_5d": -7.9233,
+          "return_10d": 12.1951,
+          "return_20d": 2.8891,
+          "drawdown_20d": -12.7273,
+          "drawdown_60d": -14.6832,
+          "rsi14": 63.56,
+          "sma5": 5833,
+          "sma20": 5291.5,
+          "sma60": 5316.17,
+          "gap_sma5": -5.366,
+          "gap_sma20": 4.3182,
+          "gap_sma60": 3.8342,
+          "average_volume_5d_lots": 2873.2,
+          "average_volume_20d_lots": 2561.65,
+          "volume_ratio_5d": 0.8096,
+          "volume_ratio_20d": 0.908,
+          "intraday_return": -0.4509,
+          "intraday_range_pct": 2.4457,
+          "consecutive_down_days": 2,
+          "volatility_20d": 4.2475
+        },
+        "institutional": {
+          "foreign": {
+            "current_net_shares": -106930,
+            "current_net_lots": -106.93,
+            "current_net_to_volume_pct": -4.5972,
+            "turned_to_buy": false,
+            "net_1d_shares": -106930,
+            "net_3d_shares": -1039855,
+            "net_5d_shares": -668164,
+            "net_10d_shares": -474835
+          },
+          "investment_trust": {
+            "current_net_shares": 140047,
+            "current_net_lots": 140.047,
+            "current_net_to_volume_pct": 6.0209,
+            "turned_to_buy": true,
+            "net_1d_shares": 140047,
+            "net_3d_shares": 107143,
+            "net_5d_shares": 205250,
+            "net_10d_shares": 1011848
+          },
+          "dealer": {
+            "current_net_shares": -26073,
+            "current_net_lots": -26.073,
+            "current_net_to_volume_pct": -1.1209,
+            "turned_to_buy": false,
+            "net_1d_shares": -26073,
+            "net_3d_shares": 129331,
+            "net_5d_shares": 127421,
+            "net_10d_shares": 270888
+          }
+        },
+        "margin": {
+          "stock_name": "台光電",
+          "margin_balance": 2789,
+          "margin_change": 43,
+          "short_balance": 3,
+          "short_change": -3,
+          "margin_buy": 128,
+          "margin_sell": 84,
+          "short_buy": 3,
+          "short_sell": 0,
+          "offset": 0,
+          "margin_change_3d": 372,
+          "short_change_3d": -6,
+          "margin_change_5d": 304,
+          "short_change_5d": -7,
+          "margin_change_10d": 295,
+          "short_change_10d": -4,
+          "source_unit_note": "保留來源原始單位；在確認與成交量單位一致前不計算占比。"
+        },
+        "broker": {
+          "totals_net_lots": -167,
+          "total_net_buy_lots": 539,
+          "total_net_sell_lots": 706,
+          "top5_buy_net_lots": 391,
+          "top5_sell_net_lots": 524,
+          "top5_net_concentration_lots": -133,
+          "top_buyers": [
+            {
+              "broker_name": "台灣摩根士丹利",
+              "broker_id": "1470",
+              "branch_id": "1470",
+              "net_buy_lots": 120,
+              "share_percent": 5.16
+            },
+            {
+              "broker_name": "華南永昌",
+              "broker_id": "9300",
+              "branch_id": "9300",
+              "net_buy_lots": 74,
+              "share_percent": 3.18
+            },
+            {
+              "broker_name": "美商高盛",
+              "broker_id": "1480",
+              "branch_id": "1480",
+              "net_buy_lots": 73,
+              "share_percent": 3.14
+            },
+            {
+              "broker_name": "新加坡商瑞銀",
+              "broker_id": "1650",
+              "branch_id": "1650",
+              "net_buy_lots": 67,
+              "share_percent": 2.88
+            },
+            {
+              "broker_name": "港商野村",
+              "broker_id": "1560",
+              "branch_id": "1560",
+              "net_buy_lots": 57,
+              "share_percent": 2.45
+            }
+          ],
+          "top_sellers": [
+            {
+              "broker_name": "美林",
+              "broker_id": "1440",
+              "branch_id": "1440",
+              "net_sell_lots": 194,
+              "share_percent": 8.34
+            },
+            {
+              "broker_name": "國泰證券",
+              "broker_id": "8880",
+              "branch_id": "8880",
+              "net_sell_lots": 122,
+              "share_percent": 5.25
+            },
+            {
+              "broker_name": "永豐金-匯立",
+              "broker_id": "9A00",
+              "branch_id": "0039004100380031",
+              "net_sell_lots": 112,
+              "share_percent": 4.82
+            },
+            {
+              "broker_name": "永豐金證券",
+              "broker_id": "9A00",
+              "branch_id": "0039004100300030",
+              "net_sell_lots": 48,
+              "share_percent": 2.06
+            },
+            {
+              "broker_name": "港商麥格理",
+              "broker_id": "1360",
+              "branch_id": "1360",
+              "net_sell_lots": 48,
+              "share_percent": 2.06
+            }
+          ]
+        },
+        "market_optional": null
+      },
+      "data_availability": {
+        "price_volume": true,
+        "foreign": true,
+        "investment_trust": true,
+        "dealer": true,
+        "margin": true,
+        "broker": true,
+        "available_feature_groups": 6,
+        "total_feature_groups": 6,
+        "completeness_pct": 100
       }
     }
   ]
