@@ -2997,7 +2997,7 @@ The owner explicitly selected `daily-gainers-market-opening-end-to-end` as the u
 
 ### Current registered phase and evidence
 - Current phase: `MVP10-A-FISH-TTS-PERSISTENCE-R1-ALL-SCENES-V2`; goal remains `goal-v3/MVP-10DAY-v1`.
-- PR #91 is merged at `864a9592d3f07663a89feb1c06b811caf8dde211). The immutable v2 pair is `data_research/m5/change-proposals/MVP10-A-FISH-TTS-PERSISTENCE-PAIR-v2.md`; its proposal is `data_research/m5/change-proposals/MVP10-A-FISH-TTS-PERSISTENCE-CHANGE-PROPOSAL-v2.md`.
+- PR #91 is merged at `864a9592d3f07663a89feb1c06b811caf8dde211`. The immutable v2 pair is `data_research/m5/change-proposals/MVP10-A-FISH-TTS-PERSISTENCE-PAIR-v2.md`; its proposal is `data_research/m5/change-proposals/MVP10-A-FISH-TTS-PERSISTENCE-CHANGE-PROPOSAL-v2.md`.
 - Prompt A is not started and Prompt B is not eligible. A separate owner-issued `promptA` is required after this activation checkpoint is on main.
 - Run #19 / `42836332036` was a `workflow_dispatch` for `20261104`, not a natural schedule event. Its durable checkpoint commit `17e69d0a5d96b6a831f50e28bf4284a505909b7e` has 17 ordered scenes: scenes 1–3 successful and 4–17 pending. Reuse the matching three; do not synthesize them again.
 - The v1 FIFO completed-date selector repair remains an outstanding carry-forward item on `codex/fix-fish-tts-fifo-completed-date`; Prompt A must inspect it against fresh main and the v2 frozen criteria.
@@ -3006,3 +3006,28 @@ The owner explicitly selected `daily-gainers-market-opening-end-to-end` as the u
 ### Activation boundary
 This checkpoint only changes the unique active route and reconciles the video Task State with the already merged v2 registration. It does not alter any frozen acceptance or prior v1/R2 result and does not run [08 TTS], Fish API, Render, Pages, YouTube, or upload workflows. YouTube publication lock remains closed.
 
+
+
+## Fish TTS all-scenes v2 — Prompt A implementation progress (2026-11-12)
+
+**Prompt A: IN PROGRESS. Prompt B: NOT ELIGIBLE.** This work follows the immutable v2 pair at `data_research/m5/change-proposals/MVP10-A-FISH-TTS-PERSISTENCE-PAIR-v2.md`. Base main was `4d6c81ec64898c22e53927d79abd9ec2806eb8e7`; implementation is on `codex/fish-all-scenes-prompta-20261112`. The overall video goal remains incomplete.
+
+### Startup and selector carry-forward
+
+- Fresh-main routing selected `daily-gainers-market-opening-end-to-end`, goal `goal-v3/MVP-10DAY-v1`; v2 is the current registered phase after PR #91 merge `864a9592d3f07663a89feb1c06b811caf8dde211`.
+- Audited old selector branch `codex/fix-fish-tts-fifo-completed-date`: it is 3 commits ahead and 206 behind current main. Its script/test blobs match main; the changed workflow is stale relative to current runner pin. Do not merge or rebase that branch wholesale.
+- The selector behavior is already present on current main workflow `.github/workflows/daily-gainers-tts-scene-recovery.yml`: scheduled dates are enumerated in order; a date is skipped only after its frozen plan and remote checkpoint validate for date/script/provider identity and complete audio/WordBoundary coverage; explicit `target_date` remains pinned. Existing regression `test_fifo_resolver_skips_only_dates_with_valid_complete_checkpoints` covers that contract. No selector code change is needed in this v2 round.
+
+### V2 queue root cause and bounded repair
+
+- Main script blob `1912557c16c4c366abae0cc6eabb1138721e9ef6` declared `plan --limit` defaulting to 3 and sliced `missing_scenes(manifest)`; workflow blob `e2eecbff1c1fb51c3ac7e855421050873a63bcc6` passed `--limit 3`. That is the exact truncation preventing the registered v2 full missing-scene queue.
+- Prompt A removes the planner option/slice and workflow argument, preserving deterministic order and matching-success exclusion.
+- The workflow now rejects a complete queue above GitHub's documented 256-job matrix limit before writing the matrix or starting synthesis, with the exact queue size in the failure. This limit comes from the [GitHub Actions workflow syntax documentation](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax); it does not truncate the planner queue.
+- The added regression builds eight scenes, checkpoints a matching success, then invokes the planner CLI and expects every remaining scene in order. Workflow contract assertions require no local `--limit`, preserve `max-parallel: 1` and `fail-fast: false`, and verify the explicit platform-limit fail-closed diagnostic.
+
+### Current validation / remaining Prompt A work
+
+- Implementation commits on the working branch: planner uncapping `c2923ba11bf24b17928eb908cdf22f3f86141801`; queue implementation and repair follow on the same branch. Focused PR checks have not yet completed; no local test result is claimed.
+- Run #19 / `42836332036` remains historical workflow_dispatch evidence for `20261104`: 17 scenes, 1–3 successful, 4–17 pending. Its three successes must be reused if their current identity and hashes still match. Do not treat the successful run as proof that the remaining scenes are complete.
+- No Fish request, workflow dispatch, Render, Pages, YouTube/upload/publication, release-lock change, or checkpoint deletion has occurred in this Prompt A progress checkpoint. YouTube publication lock remains closed.
+- Next in this A: open a narrow PR; verify required CI, repair only in-scope failures, and merge only under repository checks/policy. After merge, recheck current main, date/FIFO/source gates and checkpoint. The current GitHub connector has no workflow-dispatch operation, so any live TTS recovery requires a supported owner-triggered Actions UI path; do not claim the run started. Render-only remains gated by complete-audio and the registered date-scoped Render authorization. Prompt A remains open until its frozen live recovery, reuse, render/artifact checks and durable handoff evidence are actually satisfied.

@@ -202,7 +202,7 @@ jobs:
             git push origin HEAD:main
           fi
 
-      - name: Initialize durable date checkpoint and build bounded queue
+      - name: Initialize checkpoint and queue every missing scene
         if: steps.resolve.outputs.target_date != ''
         id: queue
         shell: bash
@@ -242,15 +242,22 @@ jobs:
           fi
           python scripts/daily_gainers_tts_checkpoint.py plan \
             --manifest "$checkpoint/tts-audio/$DATE/manifest.json" \
-            --checkpoint-dir "$checkpoint/tts-audio/$DATE" --limit 3 > "$RUNNER_TEMP/queue.json"
+            --checkpoint-dir "$checkpoint/tts-audio/$DATE" > "$RUNNER_TEMP/queue.json"
           python - "$RUNNER_TEMP/queue.json" "$GITHUB_OUTPUT" <<'PY'
           import json, sys
           queue = json.load(open(sys.argv[1], encoding="utf-8"))["scene_ids"]
+          queue_size = len(queue)
+          matrix_limit = 256
+          if queue_size > matrix_limit:
+              raise SystemExit(
+                  f"GitHub Actions matrix limit exceeded before synthesis: "
+                  f"queue_size={queue_size} limit={matrix_limit}"
+              )
           matrix = {"include": [{"scene_id": sid} for sid in queue] or [{"scene_id": 0}]}
           with open(sys.argv[2], "a", encoding="utf-8") as output:
               output.write(f"has_work={'true' if queue else 'false'}\n")
               output.write("matrix=" + json.dumps(matrix, separators=(",", ":")) + "\n")
-          print(json.dumps({"scene_ids": queue}))
+          print(json.dumps({"scene_count": queue_size, "scene_ids": queue, "matrix_limit": matrix_limit}))
           PY
           mkdir -p "$RUNNER_TEMP/tts-plan"
           cp "$RUNNER_TEMP/frozen-plan.json" "$RUNNER_TEMP/tts-plan/plan.json"
