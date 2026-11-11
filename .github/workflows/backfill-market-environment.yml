@@ -63,7 +63,7 @@ jobs:
           const p=require(process.argv[2]);
           const rows=p.items;
           const missingForecast=rows.filter(x=>x.forecast.status!=='present').map(x=>x.forecast_date);
-          const missingActual=rows.filter(x=>x.actual==='missing').map(x=>x.forecast_date);
+          const missingActual=rows.filter(x=>x.actual!=='present').map(x=>x.forecast_date);
           const blocked=rows.filter(x=>x.blocked).map(x=>x.forecast_date);
           const lines=['## [06] Market environment historical gap inventory',
             '- Requested: '+p.range.start+' ~ '+p.range.end,
@@ -79,6 +79,7 @@ jobs:
 
       - name: Run market environment and formal strategy tests
         run: |
+          node --check scripts/plan_market_environment_recovery.js
           node --check scripts/backfill_prediction_dashboard_fields.js
           node --test \
             tests/market_environment.test.js \
@@ -86,6 +87,14 @@ jobs:
             tests/prediction_dashboard_backfill.test.js \
             tests/formal_market_strategy_tags.test.js \
             tests/prediction_dashboard_group_sync.test.js
+
+      - name: Upload historical gap inventory
+        if: always() && steps.plan.conclusion == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: market-environment-gaps-${{ github.run_id }}
+          path: ${{ runner.temp }}/market-environment-plan.json
+          retention-days: 14
 
       - name: Request date-scoped upstream recovery without waiting
         if: inputs.dry_run != true
@@ -177,6 +186,7 @@ jobs:
                 # Do not commit a partial or invalid snapshot for this date.
                 git restore --worktree -- "data_market_environment/$date" 2>/dev/null || true
                 git clean -fd -- "data_market_environment/$date" >/dev/null
+                git restore --worktree -- "data_predictions/$date" 2>/dev/null || true
                 node -e 'require("./scripts/market_environment_lib").refreshEnvironmentIndexes()'
                 continue
               fi
@@ -191,6 +201,7 @@ jobs:
                 echo "- Actual FAILED: $date" >> "$GITHUB_STEP_SUMMARY"
                 git restore --worktree -- "data_market_environment/$date/actual_market_environment.json" 2>/dev/null || true
                 git clean -fd -- "data_market_environment/$date/actual_market_environment.json" >/dev/null
+                git restore --worktree -- "data_predictions/$date/replay-summary.json" 2>/dev/null || true
                 node -e 'require("./scripts/market_environment_lib").refreshEnvironmentIndexes()'
               fi
             fi
