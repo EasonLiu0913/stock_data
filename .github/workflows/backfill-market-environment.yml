@@ -73,8 +73,8 @@ jobs:
             '- Blocked dates ('+blocked.length+'): '+(blocked.join(', ')||'none'),
             '- Independent upstream recoveries needed: '+p.recoveries.length,
             '- Historical reconstruction is NOT a verified live pre-market snapshot'];
-          require('fs').appendFileSync(process.env.GITHUB_STEP_SUMMARY,lines.join('\\n')+'\\n');
-          console.log(lines.join('\\n'));
+          require('fs').appendFileSync(process.env.GITHUB_STEP_SUMMARY,lines.join('\n')+'\n');
+          console.log(lines.join('\n'));
           NODE
 
       - name: Run market environment and formal strategy tests
@@ -96,11 +96,11 @@ jobs:
           set -euo pipefail
           node - "$RUNNER_TEMP/market-environment-plan.json" > "$RUNNER_TEMP/market-environment-recoveries.tsv" <<'NODE'
           const plan=require(process.argv[2]);
-          for(const r of plan.recoveries) console.log([r.dataset,r.date].join('\\t'));
+          for(const r of plan.recoveries) console.log([r.dataset,r.date].join('\t'));
           NODE
           count=0
           failed=0
-          while IFS=$'\\t' read -r dataset date; do
+          while IFS=$'\t' read -r dataset date; do
             [ -n "$dataset" ] || continue
             # Bound fan-out per manual backfill. Remaining gaps stay in the plan.
             if [ "$count" -ge 12 ]; then
@@ -150,44 +150,48 @@ jobs:
           set -euo pipefail
           node - "$RUNNER_TEMP/market-environment-plan.json" > "$RUNNER_TEMP/market-environment-work.tsv" <<'NODE'
           const p=require(process.argv[2]);
-          for(const x of p.items)console.log([x.forecast_date,x.base_date,x.build_forecast?'1':'0',x.build_actual?'1':'0'].join('\\t'));
+          for(const x of p.items)console.log([x.forecast_date,x.base_date,x.build_forecast?'1':'0',x.build_actual?'1':'0'].join('\t'));
           NODE
           failures=0
           successes=0
-          while IFS=$'\\t' read -r date base make_forecast make_actual; do
+          while IFS=$'\t' read -r date base make_forecast make_actual; do
             [ -n "$date" ] || continue
             if [ "$make_forecast" = 1 ]; then
-              if {
-                args=(--forecast-date "$date" --base-date "$base" --force --strict)
-                node scripts/generate_market_environment.js "${args[@]}"
-                node scripts/reconstruct_historical_market_environment.js --forecast-date "$date" --base-date "$base"
-                node - "$date" "$base" <<'NODE'
-          const [date,base]=process.argv.slice(2);
-          const {snapshotStatus}=require('./scripts/plan_market_environment_recovery');
-          const snapshot=snapshotStatus(date,base);
-          if(snapshot.status!=='present')throw Error('Historical snapshot failed integrity/date/hash check: '+JSON.stringify(snapshot));
-          console.log(JSON.stringify({date,valid:true,historical:!!snapshot.historical_reconstruction}));
-          NODE
-                node scripts/backfill_prediction_dashboard_fields.js --date "$date"
-              }; then
+              # Strictly chain each command: a failed generator must never be
+              # hidden by a later successful command inside an if block.
+              if node scripts/generate_market_environment.js --forecast-date "$date" --base-date "$base" --force --strict \
+                && node scripts/reconstruct_historical_market_environment.js --forecast-date "$date" --base-date "$base" \
+                && node -e '
+                  const [date,base]=process.argv.slice(1);
+                  const {snapshotStatus}=require("./scripts/plan_market_environment_recovery");
+                  const snapshot=snapshotStatus(date,base);
+                  if(snapshot.status!=="present")throw Error("Historical snapshot failed integrity/date/hash: "+JSON.stringify(snapshot));
+                  console.log(JSON.stringify({date,valid:true,historical:!!snapshot.historical_reconstruction}));
+                ' "$date" "$base" \
+                && node scripts/backfill_prediction_dashboard_fields.js --date "$date"; then
                 successes=$((successes+1))
                 echo "- Forecast rebuilt: $date" >> "$GITHUB_STEP_SUMMARY"
               else
                 failures=$((failures+1))
                 echo "- Forecast FAILED: $date" >> "$GITHUB_STEP_SUMMARY"
+                # Do not commit a partial or invalid snapshot for this date.
+                git restore --worktree -- "data_market_environment/$date" 2>/dev/null || true
+                git clean -fd -- "data_market_environment/$date" >/dev/null
+                node -e 'require("./scripts/market_environment_lib").refreshEnvironmentIndexes()'
                 continue
               fi
             fi
             if [ "$make_actual" = 1 ]; then
-              if {
-                node scripts/generate_actual_market_environment.js --date "$date"
-                node scripts/evaluate_formal_strategy_replay.js --date "$date"
-              }; then
+              if node scripts/generate_actual_market_environment.js --date "$date" \
+                && node scripts/evaluate_formal_strategy_replay.js --date "$date"; then
                 successes=$((successes+1))
                 echo "- Actual rebuilt: $date" >> "$GITHUB_STEP_SUMMARY"
               else
                 failures=$((failures+1))
                 echo "- Actual FAILED: $date" >> "$GITHUB_STEP_SUMMARY"
+                git restore --worktree -- "data_market_environment/$date/actual_market_environment.json" 2>/dev/null || true
+                git clean -fd -- "data_market_environment/$date/actual_market_environment.json" >/dev/null
+                node -e 'require("./scripts/market_environment_lib").refreshEnvironmentIndexes()'
               fi
             fi
           done < "$RUNNER_TEMP/market-environment-work.tsv"
