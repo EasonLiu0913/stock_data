@@ -48,3 +48,15 @@ The routed canonical handoff is authoritative for bare promptA / promptB selecti
 ## Owner-approved versioned roadmap amendment — 2026-11-11
 
 The owner approved the versioned correction proposal `data_research/institutional-flow/institutional-accumulation-source-lineage-repair-v2.1-change-proposal.md`. This amendment supersedes only the previously planned executable ordering after the blocked Phase 0a closeout: Phase 0a remains historically BLOCKED (never PASS) → `institutional-accumulation-source-lineage-repair-v2.1` A/B (restore exact original v1 freeze bytes; retain the regenerated content as a separate source-pinned v2 artifact; complete lineage/tests and CI monitoring in the frozen order) → only then consider the preserved material-information preflight. The earlier source-lineage v2 preregistration and paired text remain unchanged as historical evidence and are superseded as an executable round by the v2.1 pair. This proposal does not execute A, change research acceptance, or authorize outcomes/holdout access, source writes, production, or publication.
+
+
+## Owner-authorized versioned phase-promotion amendment — 2026-11-12
+
+Following the v2.1 closeout, the effective ordered route is now:
+
+1. Phase 0 post-collection freeze audit — COMPLETE / Prompt B PASS.
+2. Phase 0a sequencing reconciliation — Prompt A COMPLETE / Prompt B historically BLOCKED; preserve this result unchanged.
+3. Source-lineage repair v2.1 — Prompt A COMPLETE / Prompt B PASS (PR #98 merge `ca57515958bb74c850f0280dbe9647c53ca27822`; closeout run #43054958973, job #130643346241, 1,261 passed / 0 failed / 0 skipped).
+4. `institutional-accumulation-material-information-final-preflight-v1` — explicitly PROMOTED as the sole active phase, with its existing Prompt A and paired Prompt B preregistered unchanged in `data_research/institutional-flow/institutional-accumulation-validation-handoff.md` (verified unchanged blob `c64853198c95d1e23063b8d4cfb80a9110816e2e`).
+
+This is an additive, versioned route-state amendment. It does not revise the source-lineage v2.1 criteria, historical Phase 0a BLOCKED result, or the preflight A/B acceptance. Only a separate owner-issued `promptA` may begin the promoted preflight. No automatic continuation, Wave C, source mutation, workflow dispatch/rerun, outcomes/holdouts access, strategy/production change, or publication is authorized.
