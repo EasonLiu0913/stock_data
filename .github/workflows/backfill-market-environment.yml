@@ -176,8 +176,17 @@ jobs:
                   const snapshot=snapshotStatus(date,base);
                   if(snapshot.status!=="present")throw Error("Historical snapshot failed integrity/date/hash: "+JSON.stringify(snapshot));
                   console.log(JSON.stringify({date,valid:true,historical:!!snapshot.historical_reconstruction}));
-                ' "$date" "$base" \
-                && node scripts/backfill_prediction_dashboard_fields.js --date "$date"; then
+                ' "$date" "$base"; then
+                # Prediction dashboards are independent optional downstream outputs.
+                # Missing prediction directories must not invalidate a verified snapshot.
+                if [ -d "data_predictions/$date" ]; then
+                  if ! node scripts/backfill_prediction_dashboard_fields.js --date "$date"; then
+                    echo "::warning::Dashboard sync failed for $date; preserving verified environment snapshot."
+                    echo "- Dashboard sync warning: $date" >> "$GITHUB_STEP_SUMMARY"
+                  fi
+                else
+                  echo "- Dashboard sync skipped (no prediction directory): $date" >> "$GITHUB_STEP_SUMMARY"
+                fi
                 successes=$((successes+1))
                 echo "- Forecast rebuilt: $date" >> "$GITHUB_STEP_SUMMARY"
               else
