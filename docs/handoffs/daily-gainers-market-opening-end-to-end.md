@@ -2993,7 +2993,7 @@ Prompt A remains **IN PROGRESS**; Prompt B is not eligible. This is a bounded re
 
 ## Owner route switch — daily video reactivated (2026-11-12)
 
-The owner explicitly selected `daily-gainers-market-opening-end-to-end) as the unique active project. The institutional-accumulation route is set to pending and its phase/A/B state is preserved. This activation does not execute Prompt A.
+The owner explicitly selected `daily-gainers-market-opening-end-to-end` as the unique active project. The institutional-accumulation route is set to pending and its phase/A/B state is preserved. This activation does not execute Prompt A.
 
 ### Current registered phase and evidence
 - Current phase: `MVP10-A-FISH-TTS-PERSISTENCE-R1-ALL-SCENES-V2`; goal remains `goal-v3/MVP-10DAY-v1`.
