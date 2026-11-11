@@ -69,7 +69,6 @@ function plan(startCompact,endCompact,force=false,generateActual=true) {
     const forecastDate=date.replaceAll('-','');
     const baseDate=previousTradingDate(date,holidays).replaceAll('-','');
     const forecast=snapshotStatus(forecastDate,baseDate);
-    const actualRel=`data_market_environment/${forecastDate}/actual_market_environment.json`;
     const actual=actualStatus(forecastDate);
     const requiresForecast=force || forecast.status!=='present';
     const issues=requiresForecast?sourceReadiness(baseDate):[];
@@ -80,7 +79,7 @@ function plan(startCompact,endCompact,force=false,generateActual=true) {
     if (requiresForecast)for(const issue of issues)recoveries.set(`${issue.dataset}:${issue.date}`,issue);
     items.push({forecast_date:forecastDate,base_date:baseDate,forecast,actual,
       build_forecast:requiresForecast && issues.length===0 && (forecast.status!=='invalid' || force),
-      build_actual:generateActual && actual==='missing' && replay && prediction && issues.length===0 && !(forecast.status==='invalid'&&!force) && !(actual==='invalid'&&!force)
+      build_actual:generateActual && actual!=='present' && replay && prediction && issues.length===0 && !(forecast.status==='invalid'&&!force) && !(actual==='invalid'&&!force)
         && (forecast.status==='present' || requiresForecast),
       blocked:issues.length>0 || actualBlocked || (forecast.status==='invalid'&&!force) || (actual==='invalid'&&!force&&generateActual),
       issues,
