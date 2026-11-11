@@ -225,3 +225,17 @@ The original Phase 0a Prompt B closeout remains BLOCKED as recorded above; its f
 ## v2.1 proposal merge checkpoint — 2026-11-11
 
 PR #97 merged at `386ded3d1a1e7862bbc94789fd5361be16943faa`. The owner-approved proposal and its frozen Prompt A/B are now on `main` at `data_research/institutional-flow/institutional-accumulation-source-lineage-repair-v2.1-change-proposal.md`. Main still has the regenerated freeze at v1 path (blob `6c343ec4a3dfebf194222d37bf4ab2dd13ac4f96`) and current `data_history_sma/1213.json` blob `e8991ea4a67d5cfe04095413dac2eaadaa974771`; neither was modified by PR #97. Phase 0a Prompt B remains historically BLOCKED. The v2.1 Prompt A/B are preregistered and eligible, but A has not started; a separate owner-issued `promptA` command is required.
+
+
+## v2.1 Prompt A implementation checkpoint — 2026-11-11
+
+The earlier v2.1 merge checkpoint's statement that implementation had not started is superseded by this section. Phase 0a Prompt B remains historically BLOCKED and unchanged. The active round remains `institutional-accumulation-source-lineage-repair-v2.1`; Prompt A is in progress and Prompt B is not eligible yet.
+
+- PR #98 is open on branch `codex/institutional-freeze-v2.1-prompta-20261111`, based on current main `05868fb2210ede5a3356b416098966b0ffb14703`; initial implementation head is `04812709629f15a337153058b46c32993312e797`.
+- Preserved original required-check failure: Node Regression Suite run #799, job `130610288264`, failed on three existing tests at `verifyFrozenManifest`. The first invalid assumption was comparing v1's pinned `data_history_sma/1213.json` hash `b5951a9a69a3f915a7d69e07851631ec41e06a58c12321ce8008e044ac4097f3` to the later working-tree source hash `8af39f77620932d41507171b2b2b5c533107fd2f152b28b7aabb5f30f7b799da`.
+- The bounded repair resolves v1 through `scripts/lib/institutional_accumulation_freeze_versions.js::resolveFreezeVersion` and validates the source-path hash against the bytes at the registered historical source commit/blob; other frozen source paths retain their existing working-tree checks. This preserves fail-closed identity and does not alter v1 or v2 artifacts.
+- The v1 validator test is now explicitly named for pinned-source behavior. Both push and pull_request path filters explicitly include `scripts/open_institutional_accumulation_development_outcomes.js` and `tests/institutional_accumulation_development_outcomes.test.js`; the full `npm test` gate remains unchanged.
+- Bounded local verification after the validator change: the two related test files reported 13 passed, 0 failed, 1 skipped because this stale local checkout lacks the registered observed-main commit needed for deterministic lineage regeneration. `git diff --check` and Node syntax checks pass. No generated outcome file was written.
+- Corrected PR CI has not run yet. Prompt A remains in progress until the corrected PR head's full regression job succeeds and remote artifacts/checks are verified.
+
+No source-network request/write, workflow dispatch/rerun, outcome artifact write, holdout/protected-case access, association/catalyst interpretation, production change, or publication action occurred in this repair step.

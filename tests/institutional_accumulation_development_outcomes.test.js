@@ -21,7 +21,7 @@ function loadFreeze() {
   return JSON.parse(fs.readFileSync(FREEZE_FILE, 'utf8'));
 }
 
-test('Phase 2 freeze identity and all referenced source bytes remain immutable', () => {
+test('v1 freeze verifies against its pinned source bytes after later source refreshes', () => {
   const payload = loadFreeze();
   assert.equal(payload.content_sha256, EXPECTED_FREEZE_SHA256);
   assert.equal(semanticFreezeHash(payload), EXPECTED_FREEZE_SHA256);
