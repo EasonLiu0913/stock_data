@@ -3180,3 +3180,14 @@ Prompt A implementation and focused validation are complete on the PR branch; Pr
 - PR #110 is still open and unmerged. Do not merge without confirming final-head required checks and repository merge policy. No Render-only, Fish synthesis, Pages, YouTube, publication, release-lock, or checkpoint-delete action has occurred.
 
 Next: confirm checks for the final PR head; merge only under the repository policy. After merge, verify current main and the registered 20261104 inputs/checkpoint. Then either use a supported, authorized date-scoped Render-only dispatch once, or stop at WAITING_WORKFLOW and ask the owner to run `.github/workflows/daily-gainers-date-render-only.yml` on `main` with `date=20261104`. Prompt A stays open until the registered real Render artifact gate is satisfied.
+
+## MVP10-A-R2-FISH-RENDER-DURATION-MIN-5M-R1 — PR #110 merged (2026-11-12 05:00 UTC)
+
+PR #110 merged to `main` at `51535708775e803dabbab9e5f2add61751c07712` after required checks passed on final PR head `8c89582a64ed12614553d7dc5c89a4e902b3418e`: Node Regression run #43157252612/job #130979959324 and Registry/Safety run #43157252686/job #130979943636. The Node suite passed 1,262/1,262 with a clean tracked tree.
+
+- Main readback confirms renderer blob `570f480df0a2eb9351274ace4e61edc8a23e6ff7`, M5 preflight blob `e596d14add0684ba8795f0ce9f20400fea14c79f`, duration test blob `58f03b58e36e39ad8cbefa2fa226b0b7e4f29c4f`, and preflight contract test blob `11777a52827f3d17e156ae30a66e06b457378771`.
+- Corrected rule remains finite measured final MP4 duration >=300 seconds, no upper bound. Actual spoken opening remains 60–90 seconds. Historical run #43147301096 remains FAIL under its original 300–600 second rule; no old result or artifact was rewritten.
+- Prompt A remains in progress at WAITING_WORKFLOW; Prompt B is not eligible. This GitHub connector has no workflow_dispatch operation. The owner must run `.github/workflows/daily-gainers-date-render-only.yml` on `main` with date `20261104`, then a new promptA can inspect the real run/artifacts. Do not substitute a job rerun for dispatch.
+- No Render, Fish synthesis, Pages, YouTube, publication, release-lock change, or checkpoint deletion was initiated. Publication lock remains closed.
+
+Next action: owner runs the exact date-scoped Render-only workflow/date above; then resume Prompt A to verify the resulting jobs, MP4/SRT/QA/thumbnail/provenance artifacts and unchanged input/checkpoint identities.
