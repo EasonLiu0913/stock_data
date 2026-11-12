@@ -1,3 +1,25 @@
+## Prompt B independent closeout PASS — Render-only successor — 2026-11-12 13:41 UTC
+
+**Prompt B PASS** for `MVP10-A-R2-FISH-RENDER-DURATION-MIN-5M-RENDER-ONLY-CLOSEOUT-R1`. This closes only this Render-only closeout round. It does not rewrite the predecessor pair, change duration or media acceptance, authorize publication, or complete the overall daily-video goal.
+
+### Independent evidence on main before this checkpoint
+
+- Main: `b243c01e34ccd41b963d563db6f7ae8c63d6386a`; route was uniquely active on `daily-gainers-market-opening-end-to-end`, goal `goal-v3/MVP-10DAY-v1`.
+- Successor change proposal blob `02e1801800aeeb68181f88b8712e844cd29b1d63` and frozen A/B pair blob `1423254d0b043dc1e95a72fe50025609ab9136ef` remain unchanged. The sole successor delta is that missing private-upload authorization does not block this Render-only evidence closeout. YouTube upload, scheduling, public release, release-lock changes, Pages, synthesis and checkpoint deletion remain forbidden.
+- Predecessor duration pair blob `95af5b79df736797048036a62aa0ad520d420e35` and proposal blob `f27927471425872a8d7fb2c9d6f65edadde35a11` remain unchanged. Its `WAITING_PERMISSION` result is historical and preserved. Historical Render run #43147301096 remains `failure` on original head `6682c06c2e04d78ea863b2969563524599bd0a40`.
+- Run [#43158687674](https://github.com/EasonLiu0913/stock_data/actions/runs/43158687674), job #130984522584, is `workflow_dispatch`, target `20261104`, head `51535708775e803dabbab9e5f2add61751c07712`, conclusion `success`. All operational steps passed; checkpoint restore explicitly states no TTS requests. Workflow has `contents: read` only and no YouTube/upload/Pages action.
+- Artifact #13917708845 has SHA-256 `57ff438c8f4b7c9a6e2394cfbef96663cefe937e10f8e2476610cf1d82d082bb`, size 27,950,333 bytes. The owner-provided ZIP matches that digest, passes ZIP integrity and all 6 embedded checksums.
+- Its 17-scene plan exactly matches frozen plan blob `8e34905ce476c0b189340b5c193bb5513a614478` after removing only `generated_at`. The 17/17 checkpoint at branch `tts-audio-pending-20261104`, commit `8f79344b537b6900fc382a42f85142153c9d9128`, manifest blob `df2fc0a7ae7cf98d41df8ca42860fa16907b9e30`, matches the same date/script SHA/Fish voice, model, rate and pipeline; every MP3 SHA and WordBoundary array matches the artifact manifest.
+- Final MP4 SHA-256 `d8c331f0e6dbb2035aa3b24c9b30472a9d7454785f80352143b6a5d6513fa444`. QA timeline is 636.831224 sec; independent `ffprobe` reads 636.833333 sec. Both satisfy the frozen >=300-second rule with no maximum. Scene 1 opening is 64.443991 sec, within 60–90 sec. SRT SHA-256 `e2a2c3be50c00661d720da309c5bae41837c5c887d07bc722d09cd9a5b9edca8`, 161 cues; burned-caption proof ties both hashes and reports 636.833333 sec. Dashboard manifest lists 17 scenes and 44 stocks. Thumbnail QA is PASS, non-mock. Regression runs #43156153408 (Node Regression) and #43156153185 (Registry/Safety) are successful on the blobs recorded in Task State.
+- Owner's manual visual QA PASS for artifact #13917708845 at 2026-11-12 12:18:40 UTC remains separate evidence. Machine-generated visual flags `PASS_STATIC_AND_PIXEL_DELTA_VISUAL_REVIEW_PENDING` and `BURN_EXECUTED_VISUAL_QA_PENDING` were not rewritten. The archive has no standalone `provenance.json`; the run/head, frozen plan, script SHA, checkpoint commit/manifest, artifact digest and embedded media hashes form the traceable provenance chain required by this pair.
+- Private-upload authorization remains absent; all YouTube permissions remain false. No upload, schedule, public release, release-lock change, Pages deployment, new TTS request, checkpoint deletion, or other forbidden action occurred.
+
+### Route after this closeout
+
+This PASS closes only the separately registered Render-only successor. It does not promote or execute all-scenes V2. The owner-approved ordering remains: resume `MVP10-A-R2-INCLUSIVE-ELIGIBILITY`, then use the Render-only threshold evidence as applicable, then pursue genuine >3-missing-scene live evidence. The existing R2 pair remains `data_research/m5/change-proposals/MVP10-A-INCLUSIVE-ELIGIBILITY-PAIR-R2-v1.md`; its Prompt A is resumable from the saved WAITING_TTS checkpoint and Prompt B is not eligible. All-scenes V2 remains deferred under its original pair. No automatic continuation.
+
+---
+
 ## Prompt A complete — versioned Render-only closeout — 2026-11-12 13:32 UTC
 
 Prompt A for `MVP10-A-R2-FISH-RENDER-DURATION-MIN-5M-RENDER-ONLY-CLOSEOUT-R1` is complete. This was a read-only reconciliation of existing output; no Render workflow, TTS synthesis, YouTube action, Pages deploy, release-lock change, or checkpoint deletion was performed. Prompt B is now eligible and must be invoked separately.
