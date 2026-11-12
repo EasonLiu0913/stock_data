@@ -6,9 +6,9 @@
   "goal_id": "goal-v3/MVP-10DAY-v1",
   "ultimate_goal_status": "not_complete",
   "current_phase_id": "MVP10-A-R2-FISH-RENDER-DURATION-MIN-5M-R1",
-  "phase_status": "in_progress_waiting_pr_checks",
+  "phase_status": "in_progress_waiting_corrected_pr_checks",
   "round_id": "MVP10-A-R2-FISH-RENDER-DURATION-MIN-5M-R1",
-  "prompt_a_status": "in_progress_waiting_pr_checks",
+  "prompt_a_status": "in_progress_waiting_corrected_pr_checks",
   "prompt_b_status": "not_eligible",
   "owner_approved_on": "2026-11-09",
   "change_proposal": "data_research/m5/change-proposals/MVP10-A-R2-RENDER-DURATION-MINIMUM-CHANGE-v1.md",
@@ -68,7 +68,7 @@
     "Current main 83a74edda8965aa96dd1286d8d882147691f785d differs from the run's head only by later oversold-rebound margin data files: 20261015, 20261016, and data_twse_margin_balance/files.json; TTS implementation and date checkpoint inputs are unaffected."
   ],
   "research_progress_reason": "Owner approved the cross-phase order: resume registered inclusive eligibility R2, then satisfy the TTS phase Render-only threshold, then seek genuine >3-missing-scene live evidence. The original pairs remain immutable. All-scenes Fish checkpoint is 17/17; run #25 was a no-op. R2 Prompt A is resumable, not complete. Frozen R2 Prompt B may stop at its separate private-upload WAITING_PERMISSION gate; YouTube actions are prohibited.",
-  "next_action": "Owner triggers the native date-scoped Render-only workflow at .github/workflows/daily-gainers-date-render-only.yml on main with date=20261104; then a fresh promptA resumes artifact inspection. Do not run Prompt B.",
+  "next_action": "Wait for Node Regression run 43156079604 on corrected PR head 5c524c125052dfb4bdd052d9868dfaf47050c3f6; if it passes and all checks remain green, merge PR #110, verify current main, then continue the registered Render-only gate if dispatch/input gates permit. No background continuation.",
   "automatic_continuation_permitted": false,
   "plan_changed": true,
   "publication_authorized": false,
@@ -76,7 +76,7 @@
   "youtube_scheduling_authorized": false,
   "public_release_authorized": false,
   "render_authorized_in_repair_phase": false,
-  "updated_at": "2026-11-12T04:21:34Z",
+  "updated_at": "2026-11-12T04:37:10Z",
   "prompt_b_failure_evidence": [
     "R1 frozen Prompt B criterion 5 required verifying no prohibited workflow was triggered.",
     "Render-only push-trigger runs: 42401534137 (20261102), 42401534168 (20261103); both failed before render and produced no artifacts.",
@@ -1302,8 +1302,34 @@
         "300 passes",
         "NaN fails closed"
       ],
-      "validation": "not yet run; PR checks pending",
-      "new_render_run": null
+      "validation": "Initial PR head 63b9eee CI run 43154531509 failed only because M5 preflight hard-coded the superseded 300-600 renderer contract (1261/1262 pass). Bounded fix updated preflight to exercise production predicate at 299.999, 300, and 636.831224; corrected-head run 43156079604 is in progress, Registry/Safety 43156079602 passed.",
+      "new_render_run": null,
+      "corrected_preflight": {
+        "path": "scripts/preflight_daily_gainers_m5_private_preview.js",
+        "before_blob": "67332a0914c217ec8f8aadc0a2eb5face6cad9f9",
+        "after_blob": "e596d14add0684ba8795f0ce9f20400fea14c79f",
+        "test_path": "tests/preflight_daily_gainers_m5_private_preview.test.js",
+        "test_before_blob": "b7016fa73bd78c38cd5fdf9d2787e9a56c4862b0",
+        "test_after_blob": "11777a52827f3d17e156ae30a66e06b457378771",
+        "commits": [
+          "ec53f6b98819587473651e799772ffe54d911e24",
+          "44bac3bb484f035c54dab39b58158be071c5a516"
+        ],
+        "contract": "production predicate accepts finite duration >=300 with no maximum; market opening [60,90] unchanged"
+      },
+      "corrected_head_checks": {
+        "head_sha": "5c524c125052dfb4bdd052d9868dfaf47050c3f6",
+        "node_run": {
+          "id": 43156079604,
+          "job_id": 130976219093,
+          "status": "in_progress"
+        },
+        "registry_run": {
+          "id": 43156079602,
+          "job_id": 130976202829,
+          "status": "success"
+        }
+      }
     }
   }
 }
