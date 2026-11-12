@@ -3167,3 +3167,16 @@ Prompt A remains in progress; Prompt B is not eligible. The first PR check run c
 - A new Node Regression run for the corrected head is required. Registry/Safety run #43154531454 already passed on the earlier head; the current PR must still have all required checks green before merge. No merge, Render, Fish synthesis, Pages, YouTube, publication, release-lock change, or checkpoint deletion has occurred.
 
 Next: inspect the new PR head and its checks. If Node regression passes, merge under repository policy, verify the corrected code and handoff on current main, then attempt the single registered date-scoped Render-only action only if current inputs/gates and supported dispatch path allow it. Otherwise preserve the exact WAITING state. Prompt A remains open until its registered Render/artifact completion contract is met.
+
+## MVP10-A-R2-FISH-RENDER-DURATION-MIN-5M-R1 — corrected CI result (2026-11-12 04:47 UTC)
+
+Prompt A implementation and focused validation are complete on the PR branch; Prompt B is not eligible because the change is not merged and the new Render-only evidence does not yet exist.
+
+- The root cause documented above was repaired in the M5 preview preflight and its contract test; no unrelated assertion was weakened.
+- Current verified code/test head before this handoff-only update: `696c13af9555736f84b3f4e6c8bd02f8d640b64a`.
+- Node Regression run #43156153408 / job #130976458218 succeeded: 1,262 tests, 1,262 passed, 0 failed; the suite left the tracked tree clean.
+- Registry/Safety run #43156153185 / job #130976442769 succeeded. Run #43154531509 remains a historical failure on prior head `63b9eee333b7ad123108e11f91d50eedc456f8eb`; its single stale duration-contract assertion is preserved as prior evidence.
+- These checks prove the modified branch code, including the production duration predicate and M5 preflight, passes on head `696c13a`. This checkpoint-only commit updates durable status; required checks must be confirmed for the final PR head before merge.
+- PR #110 is still open and unmerged. Do not merge without confirming final-head required checks and repository merge policy. No Render-only, Fish synthesis, Pages, YouTube, publication, release-lock, or checkpoint-delete action has occurred.
+
+Next: confirm checks for the final PR head; merge only under the repository policy. After merge, verify current main and the registered 20261104 inputs/checkpoint. Then either use a supported, authorized date-scoped Render-only dispatch once, or stop at WAITING_WORKFLOW and ask the owner to run `.github/workflows/daily-gainers-date-render-only.yml` on `main` with `date=20261104`. Prompt A stays open until the registered real Render artifact gate is satisfied.
