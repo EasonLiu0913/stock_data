@@ -3058,3 +3058,16 @@ This checkpoint only changes the unique active route and reconciles the video Ta
 - Next: inspect the next actual post-merge natural [08 TTS] run. If the date's frozen plan/checkpoint yields more than three missing scenes and all formal source gates pass, verify the complete queue and every job/checkpoint; otherwise record that the run did not exercise the uncapping edge case and do not synthesize matching successes. Separately, the owner must resolve/promote the already registered MVP10-A eligibility R2 Prompt A (or make a versioned sequencing decision) before the unchanged date-scoped Render prerequisites can be closed.
 - Prompt A is not complete; Prompt B remains not eligible. The ultimate daily-video goal remains NOT COMPLETE.
 
+
+
+### Post-merge natural schedule observation (verified 2026-11-12 01:17 UTC)
+
+A newer production workflow event supersedes the earlier “no post-merge schedule run observed” status above:
+
+- [08 TTS run #25 / 43121558787](https://github.com/EasonLiu0913/stock_data/actions/runs/43121558787) is a natural `schedule` event on post-PR-#103 main SHA `2fb938ca115c662198945a5977811ba5cd6cf982`. The workflow is `.github/workflows/daily-gainers-tts-scene-recovery.yml`.
+- Job IDs: schedule summary `130863044650` success; prepare `130863044817` success; synthesize `130865990139` skipped; sync-status `130865990383` skipped.
+- The prepare log states every FIFO candidate already had a validated complete checkpoint and no TTS request was made. This is durable post-merge evidence that the natural selector skips complete checkpoints. It is a no-op: it does not exercise a queue with more than three missing scenes, and it produced no new checkpoint commit.
+- The complete date checkpoint remains `tts-audio-pending-20261104`, commit `8f79344b537b6900fc382a42f85142153c9d9128`, manifest blob `df2fc0a7ae7cf98d41df8ca42860fa16907b9e30`, all 17 ordered scenes successful. Do not synthesize, delete, or mutate matching successes to simulate a missing queue.
+- Remote main has since advanced to `83a74edda8965aa96dd1286d8d882147691f785d`; comparison with `2fb938ca115c662198945a5977811ba5cd6cf982` shows only `data_twse_margin_balance/20261015_twse_margin_balance.csv`, `data_twse_margin_balance/20261016_twse_margin_balance.csv`, and `data_twse_margin_balance/files.json` changed. The TTS files and this checkpoint's inputs are unaffected.
+
+Prompt A is still not complete: the required date-scoped Render is blocked by the unchanged MVP10-A source/eligibility and thumbnail/visual-QA gates. The separately registered inclusive-eligibility R2 pair has not been promoted/started. Resolving phase order requires an owner decision; do not silently execute the separate pair or modify its status as part of this TTS round. The remaining v2 limitation is explicit: runtime uncapped synthesis of >3 missing scenes was not observed because no eligible date has missing scenes; use the frozen PR regression as code proof, preserve the no-op natural run as selector proof, and seek a versioned owner decision before treating those evidence classes as substitutable.
