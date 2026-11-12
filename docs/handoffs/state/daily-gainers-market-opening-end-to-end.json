@@ -6,9 +6,9 @@
   "goal_id": "goal-v3/MVP-10DAY-v1",
   "ultimate_goal_status": "not_complete",
   "current_phase_id": "MVP10-A-R2-FISH-RENDER-DURATION-MIN-5M-R1",
-  "phase_status": "registration_pending_merge",
+  "phase_status": "in_progress_waiting_pr_checks",
   "round_id": "MVP10-A-R2-FISH-RENDER-DURATION-MIN-5M-R1",
-  "prompt_a_status": "eligible_not_started_after_registration_merge",
+  "prompt_a_status": "in_progress_waiting_pr_checks",
   "prompt_b_status": "not_eligible",
   "owner_approved_on": "2026-11-09",
   "change_proposal": "data_research/m5/change-proposals/MVP10-A-R2-RENDER-DURATION-MINIMUM-CHANGE-v1.md",
@@ -76,7 +76,7 @@
   "youtube_scheduling_authorized": false,
   "public_release_authorized": false,
   "render_authorized_in_repair_phase": false,
-  "updated_at": "2026-11-12T03:56:18Z",
+  "updated_at": "2026-11-12T04:21:34Z",
   "prompt_b_failure_evidence": [
     "R1 frozen Prompt B criterion 5 required verifying no prohibited workflow was triggered.",
     "Render-only push-trigger runs: 42401534137 (20261102), 42401534168 (20261103); both failed before render and produced no artifacts.",
@@ -1277,12 +1277,33 @@
       "artifact_id": 13912818516,
       "artifact_disposition": "partial; historical failure retained"
     },
-    "implementation_status": "not_started",
+    "implementation_status": "branch_implementation_pr_in_progress",
     "new_render_validation_required": true,
     "youtube_upload_authorized": false,
     "youtube_scheduling_authorized": false,
     "public_release_authorized": false,
     "release_lock_changed": false,
-    "automatic_continuation_permitted": false
+    "automatic_continuation_permitted": false,
+    "registration_status": "merged_to_main",
+    "registration_pr": 109,
+    "registration_merge_commit": "a7450f0387815c07ef52ca982bdcb3b0c5699060",
+    "latest_main_at_implementation_start": "194e6a356b9596a2928053bbe43dc9ee9df910d3",
+    "implementation_branch": "codex/fix-render-duration-minimum-20261112",
+    "implementation": {
+      "renderer_path": "scripts/render_daily_gainers_video.js",
+      "renderer_before_blob": "3a2d71c2a16ef14a27b69ca30bae21453a6d0bdd",
+      "renderer_after_blob": "570f480df0a2eb9351274ace4e61edc8a23e6ff7",
+      "test_path": "tests/daily_gainers_video_duration_gate.test.js",
+      "test_blob": "58f03b58e36e39ad8cbefa2fa226b0b7e4f29c4f",
+      "behavior": "actual finite MP4 duration >=300 seconds passes; no maximum; invalid/below-minimum fails closed",
+      "assertions": [
+        "636.831224 passes",
+        "299.999 fails",
+        "300 passes",
+        "NaN fails closed"
+      ],
+      "validation": "not yet run; PR checks pending",
+      "new_render_run": null
+    }
   }
 }
