@@ -3332,3 +3332,54 @@ PR #119 merged at `cc66f5997f0f161f84639d428e87547061fc4a8b` on remote `main`. T
 The Task State correction records phase `MVP10-A-R2-NO-UPLOAD-GATE-SUCCESSOR-R1` as `registered_not_started`; Prompt A is eligible but not started, Prompt B is not eligible, and automatic continuation is false. The only prospective acceptance change removes private-upload authorization as a prerequisite; private upload, all YouTube upload/scheduling/public-release, Pages, and release-lock permissions remain false/prohibited. Original R2 and prior closeout histories remain unchanged.
 
 No workflow was triggered. Next action is a separate owner-issued `promptA`; registration does not execute it.
+
+
+## MVP10-A-R2-NO-UPLOAD-GATE-SUCCESSOR-R1 — Prompt A complete (2026-11-12)
+
+**Prompt A is complete; the paired Prompt B is eligible but has not been run.** This checkpoint applies only to the successor frozen in `data_research/m5/change-proposals/MVP10-A-R2-NO-UPLOAD-GATE-SUCCESSOR-PAIR-v1.md`. It removes private-upload authorization as a PASS prerequisite for this pair only. No other acceptance changed, and no external workflow was started during this Prompt A turn.
+
+### Fresh-main routing and immutable contracts
+
+- Remote main checked: `1471820299d3abee365498c15fc11858033eda6e`; unique active route remains `daily-gainers-market-opening-end-to-end`, goal `goal-v3/MVP-10DAY-v1`, phase/round `MVP10-A-R2-NO-UPLOAD-GATE-SUCCESSOR-R1`.
+- Proposal blob `78500205c1fcc3175a3a4d8305c468d81c55e9c3`; frozen A/B pair blob `01c99093c8d155ab909ec96498745da513271b99`. Original MVP10-A/B, inclusive-eligibility R2, Fish/duration predecessors and their WAITING/FAIL/PASS records remain untouched.
+- `docs/roadmap/current-phase.md` still identifies the general MOPS area; this does not match the active daily-video project. This Prompt A follows the unique main routing and the current project-specific canonical handoff/registered pair; no unrelated roadmap or charter was edited.
+
+### Current-main date/source and frozen-plan evidence
+
+- Raw source `data_daily_gain_over_5/20261104.json` blob `c54f39112e957a672ddb4725e3d8d6338eaf5c87`: 44 rows, 44 unique codes, every gain is at least 5% (range 5.06–10%). Candidate `research_pending/daily-gainers-video-scripts/20261104.json` blob `f690c703058a4367ac1f619dd786d61f9d55eab0`: 44 stocks across 16 grouped narration scenes; union coverage is exactly 44/44 with no duplicate, missing or extra code. The included `910322 康師傅-DR` remains source-labeled and is retained under the already registered inclusive rule.
+- Same-date official opening blob `3578047ff03548e2bcb65d908228e9753deb434b` is `verified_official_market_aggregate`; breadth is accurately scoped `TWSE_MI_INDEX_OFFICIAL_STOCK_COLUMN`. Facts `75e0573aa2fb394712f40cb9b115096b3e136c07`, News `c31055e4c0f3e60899be5e8e4fe9358c923190a6` (44 rows), AI v3 `24cf09ade6b98488b792aebc5036db9240c58a30`, market summary `5560810319b843c1b5e57c3ddbf009ff51946bc4` (final), and SEO `273b67878d52b3abbb10bd69c48025c953a18383` remain the previously frozen identities; SEO's raw/facts/news references match those blobs.
+- The durable official numeric receipt `data_daily_gain_over_5/verification/official-numeric/20261104.json` is blob `caecfc728f61368653f3dada2987470c845a5caa`, status PASS, target 20261104, run #42231051247/job #127936725531. Its log records the exact target and PASS output; the receipt's source hashes match the frozen 20261104 source lineage.
+- Frozen render plan blob `8e34905ce476c0b189340b5c193bb5513a614478`: 17 ordered scenes, 3,451 narration characters. No source, candidate, script, plan, SEO or checkpoint file was regenerated or overwritten.
+
+### Fish checkpoint and Render-only artifact reuse
+
+- Checkpoint branch `tts-audio-pending-20261104` remains at commit `8f79344b537b6900fc382a42f85142153c9d9128`; manifest blob `df2fc0a7ae7cf98d41df8ca42860fa16907b9e30`. Target date, script SHA `de2ea3550050ad5a8ec1d5b988fbe91b9344ce98cdebe74272ee4cd7678546f3`, Fish provider/voice `fish:e7af89da8abc4fbdacd9a10ab9881933`, rate 1.15, pipeline identity and all 17 scene identities match. All 17 are successful and each entry has a 64-character audio SHA-256 and WordBoundary SHA-256. No matching scene was synthesized again.
+- Reused Render-only run #43158687674/job #130984522584: event `workflow_dispatch`, head `51535708775e803dabbab9e5f2add61751c07712`, target `20261104`, conclusion success. Its artifact #13917708845 remains available (27,950,333 bytes, SHA-256 `57ff438c8f4b7c9a6e2394cfbef96663cefe937e10f8e2476610cf1d82d082bb`). The archive digest and its 18-file integrity / 6-of-6 SHA checks were already verified in the preceding Render-only closeout and are reused because the remote digest is unchanged.
+- The Render workflow and seven material validation/render scripts used by the run were compared with current main; all eight blobs are identical. Workflow blob is `448308feb483bd68409ce18b2acaab60b1d03efd`, uses explicit date and read-only contents permission, and contains no YouTube or Pages action. Its actual job log shows checkpoint restore with no TTS requests, 1080p render, burned-caption checks and successful artifact upload.
+- Media evidence: MP4 SHA `d8c331f0e6dbb2035aa3b24c9b30472a9d7454785f80352143b6a5d6513fa444`, measured 636.831224s (>=300s, no maximum); opening 64.443991s (within 60–90s); SRT SHA `e2a2c3be50c00661d720da309c5bae41837c5c887d07bc722d09cd9a5b9edca8`, 161 cues, burned-caption hashes match, duration 636.833333s. Artifact has 17 scenes / 44 stocks, 1280×720 non-mock thumbnail with QA PASS, and owner-confirmed manual visual-QA PASS. The generated machine visual-review labels remain `PASS_STATIC_AND_PIXEL_DELTA_VISUAL_REVIEW_PENDING` / `BURN_EXECUTED_VISUAL_QA_PENDING`; they were not rewritten. The provenance chain links current-main input blobs, frozen plan, run/head, Fish checkpoint, artifact digest and embedded media hashes.
+- Existing validation runs remain successful: Node regression #43156153408/job #130976458218 (1,262/1,262) and registry/safety #43156153185/job #130976442769. Their relevant renderer, validators, thumbnail and workflow blobs match current main. No tests were rerun in this turn.
+
+### Disposition and stop
+
+- Every applicable non-upload gate for this successor is satisfied by current-main identities plus reusable prior verified artifact evidence. Private-upload authorization remains false and is informational under this pair. YouTube upload/scheduling/public release, Pages, release-lock changes, checkpoint deletion and unauthorized workflow runs remain prohibited.
+- No TTS, Render-only, Pages, YouTube, upload or schedule workflow was triggered in this Prompt A turn; no source or historical result changed. Plan changed: yes, the previously owner-approved versioned successor acceptance is now exercised; there was no additional acceptance edit.
+- **Next:** Task State marks Prompt A complete and Prompt B eligible. Stop here; wait for a separate owner-issued `promptB` for independent closeout. Do not execute it automatically.
+
+### Frozen Prompt B (verbatim from the registered pair)
+
+## Frozen Prompt B — independent closeout
+
+Run only after this pair's Prompt A is complete and the evidence/handoff update is on remote main.
+
+1. Re-fetch current main; independently verify the registered phase identity, proposal and pair blobs, Task State, handoff, and Prompt A commit.
+2. Re-run no external workflow. Recheck each exact evidence identity and every unchanged non-upload R2 gate against the frozen contracts: official/date/source and numeric receipt; eligibility and opening breadth; script/news/SEO/render plan; Fish checkpoint date/script/voice/pipeline and scene coverage/audio/WordBoundary hashes; MP4/SRT/duration/subtitle-burn proof; thumbnail and visual QA; artifact digests and provenance. Verify any referenced artifact/run is still available and matches.
+3. Confirm the sole delta was applied prospectively: private-upload authorization is not a prerequisite, remains false, and no YouTube upload, scheduling, public release, Pages deployment, release-lock change, checkpoint deletion, or unauthorized workflow trigger occurred.
+4. Preserve every predecessor/history result exactly. If any criterion is missing, stale, or mismatched, record the exact first failure and keep Prompt B failed/not passed; make only a bounded repair under the original criteria and retain the original result. Never weaken acceptance.
+5. On PASS, commit a durable closeout record, set only this successor pair to Prompt B PASS, and stop. Do not auto-promote or start the next phase.
+
+## Global stop conditions
+
+- Never upload to YouTube, schedule, publicly release, or change/unlock a release lock.
+- No Pages deploy.
+- No automatic Prompt A/B continuation, phase promotion, TTS/Render dispatch, checkpoint deletion, or history rewrite.
+- The ultimate daily-video goal remains incomplete until all required date-specific official gates and Render artifacts are verified.
