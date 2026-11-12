@@ -15,7 +15,7 @@
   "paired_prompt": "data_research/m5/change-proposals/MVP10-A-FISH-TTS-PERSISTENCE-PAIR-v2.md",
   "predecessor_phase": "MVP10-A-FISH-AUDIO-TIMESTAMP-MIGRATION-R2",
   "next_phase_id": null,
-  "mvp10_a_status": "ALL_SCENES_V2_IMPLEMENTED_TTS_COMPLETE_RENDER_GATES_PENDING",
+  "mvp10_a_status": "ALL_SCENES_V2_TTS_COMPLETE_POSTMERGE_SELECTOR_VERIFIED_RENDER_GATES_PENDING",
   "mvp10_a_acceptance_changed": false,
   "mvp10_b_status": "frozen_not_eligible",
   "mvp10_b_acceptance_changed": false,
@@ -62,10 +62,13 @@
     "Remote checkpoint tts-audio-pending-20261104 commit 8f79344b537b6900fc382a42f85142153c9d9128, manifest blob df2fc0a7ae7cf98d41df8ca42860fa16907b9e30: exact date/script identity, 17/17 ordered scenes success, Fish identity and MP3/WordBoundary hashes present.",
     "Run #24 had only two missing scenes and predates the queue uncapping merge; it is not live evidence of >3 missing scene queue behavior. PR regression covers that behavior. Never delete/overwrite successes to manufacture missing-scene coverage.",
     "The next observed actual post-merge natural [08 TTS] run is still required for runtime evidence. Recovery cron is */15 * * * * UTC. No dispatch, rerun, synthesis of matching scenes, or render was initiated.",
-    "MVP10-A eligibility review on current main still records date-specific source/eligibility/breadth and thumbnail/visual-QA gaps; inclusive-eligibility R2 is registered but Prompt A is eligible_not_started. Current TTS pair does not authorize running a different pair or changing non-TTS gates."
+    "MVP10-A eligibility review on current main still records date-specific source/eligibility/breadth and thumbnail/visual-QA gaps; inclusive-eligibility R2 is registered but Prompt A is eligible_not_started. Current TTS pair does not authorize running a different pair or changing non-TTS gates.",
+    "Post-merge natural [08 TTS] run #25 / 43121558787 on main head 2fb938ca115c662198945a5977811ba5cd6cf982 succeeded: prepare 130863044817; synthesis 130865990139 skipped; sync-status 130865990383 skipped; no TTS request. Prepare log: every FIFO candidate has a validated complete checkpoint.",
+    "Run #25 post-merge confirms completed-date selector behavior but is no-op and does not exercise the >3-missing all-scenes queue; no valid pending scene/date exists, and successful checkpoints must not be modified to create one.",
+    "Current main 83a74edda8965aa96dd1286d8d882147691f785d differs from the run's head only by later oversold-rebound margin data files: 20261015, 20261016, and data_twse_margin_balance/files.json; TTS implementation and date checkpoint inputs are unaffected."
   ],
-  "research_progress_reason": "New durable evidence: PR #103 is merged and the 20261104 date checkpoint now validates all 17 Fish scenes. The only post-merge natural [08 TTS] run has not yet been observed; Render prerequisites remain gated by unchanged MVP10-A evidence and sequencing.",
-  "next_action": "Inspect the next actual post-merge natural [08 TTS] run and its event/head/date/jobs/log/checkpoint. Preserve all 17 matching 20261104 successes. Resolve the preregistered MVP10-A eligibility R2 sequencing through its own eligible Prompt A before considering date-scoped Render; do not run Prompt B or Render now.",
+  "research_progress_reason": "Post-merge natural schedule run #25 verified that the FIFO selector skips every candidate with a complete, identity-valid checkpoint and made no TTS request. The uncapped >3-missing runtime case remains unobserved because no eligible date has missing scenes; Render remains blocked by unchanged MVP10-A prerequisites.",
+  "next_action": "Do not synthesize or render. Resolve the already registered inclusive-eligibility R2 sequencing through one explicit owner decision; separately, if strict live >3-missing proof is still required, register a versioned evidence-acceptance proposal or provide a valid date with >3 genuinely missing scenes. Keep the active all-scenes Prompt A in progress, Prompt B not eligible, and preserve all 17 successes.",
   "automatic_continuation_permitted": false,
   "plan_changed": true,
   "publication_authorized": false,
@@ -612,7 +615,7 @@
     "checkpoint_status": "all five scenes pending; no audio or WordBoundary hashes",
     "acceptance_changed": false
   },
-  "current_blocker": "No post-merge natural [08 TTS] run has yet evidenced the uncapped queue at runtime. The 20261104 date is fully checkpointed (17/17), so do not resynthesize it. Date-scoped Render remains blocked by the latest recorded unchanged MVP10-A eligibility/breadth and thumbnail/visual-QA gates; the separately registered inclusive-eligibility R2 Prompt A is eligible_not_started and must not be silently substituted into this active TTS pair.",
+  "current_blocker": "20261104 has a valid 17/17 Fish checkpoint; post-merge schedule run #25 verifies the selector skips all complete FIFO candidates without requesting Fish. The >3-missing uncapped queue has no eligible live date to exercise, so this runtime edge is unobserved; never mutate successful checkpoints to simulate it. Date-scoped Render remains blocked by unchanged MVP10-A source/eligibility and thumbnail/visual-QA gates. The separate inclusive-eligibility R2 Prompt A is registered but not promoted/started; phase order needs an owner decision.",
   "planned_research": {
     "question": "Do the retained scene diagnostic artifacts show Fish emitting zero-duration events for spoken text, or does adapter conversion collapse a positive provider interval?",
     "method": "Read artifacts 13684156882, 13683087469, and 13684002692 through authenticated GitHub UI; compare raw start/end fields with the Fish-to-WordBoundary conversion in main.",
@@ -827,7 +830,27 @@
       "render_status": "blocked_by_unchanged_mvp10_a_gates",
       "prompt_a_status": "in_progress",
       "prompt_b_status": "not_eligible",
-      "note": "Run #24 predates PR #103 merge and queued only scenes 16-17. It proves checkpoint completion, not a post-merge >3-missing live queue. Do not delete or overwrite successful checkpoint entries. Await/inspect an actual post-merge natural run. No TTS dispatch/rerun or render."
+      "note": "Post-merge natural run #25 validates skipping complete checkpoints and makes no Fish request. It does not exercise >3 missing; all 17 20261104 scenes remain successful. Render is blocked by unchanged eligibility/source and thumbnail/visual-QA gates.",
+      "run_25": {
+        "id": 43121558787,
+        "event": "schedule",
+        "head_sha": "2fb938ca115c662198945a5977811ba5cd6cf982",
+        "target_date": null,
+        "conclusion": "success",
+        "no_tts_request": true,
+        "jobs": {
+          "schedule_timing_summary": 130863044650,
+          "prepare": 130863044817,
+          "synthesize": 130865990139,
+          "sync_status": 130865990383
+        },
+        "prepare_result": "every FIFO candidate had a validated complete checkpoint; no TTS request",
+        "checkpoint_branch": "tts-audio-pending-20261104",
+        "checkpoint_commit": "8f79344b537b6900fc382a42f85142153c9d9128",
+        "manifest_blob": "df2fc0a7ae7cf98d41df8ca42860fa16907b9e30",
+        "pending_scene_ids": [],
+        "uncapped_queue_runtime_exercised": false
+      }
     }
   },
   "current_phase_acceptance_changed": true,
@@ -843,8 +866,8 @@
     }
   ],
   "latest_observation": {
-    "observed_at_utc": "2026-11-11T23:06:00Z",
-    "remote_main": "2fb938ca115c662198945a5977811ba5cd6cf982",
+    "observed_at_utc": "2026-11-12T01:17:00Z",
+    "remote_main": "83a74edda8965aa96dd1286d8d882147691f785d",
     "current_phase_id": "MVP10-A-FISH-TTS-PERSISTENCE-R1-ALL-SCENES-V2",
     "prompt_a_status": "in_progress",
     "prompt_b_status": "not_eligible",
@@ -896,7 +919,7 @@
       ],
       "pending_scene_ids": []
     },
-    "post_merge_runtime_edge_case": "not_observed; the only schedule run after the all-scenes registration but before merge had two missing scenes and used pre-merge head; do not alter checkpoint successes to recreate a >3-missing queue",
+    "post_merge_runtime_edge_case": "not_observed: run #25 was no-op because all FIFO candidates already had identity-valid complete checkpoints; do not manufacture missing scenes",
     "render": {
       "status": "blocked",
       "authorization": "conditional after complete-audio validation and all unchanged MVP10-A gates",
@@ -915,6 +938,26 @@
       "public_release_authorized": false,
       "release_lock_changed": false
     },
-    "plan_changed": false
+    "plan_changed": false,
+    "run_25": {
+      "id": 43121558787,
+      "event": "schedule",
+      "head_sha": "2fb938ca115c662198945a5977811ba5cd6cf982",
+      "target_date": null,
+      "conclusion": "success",
+      "no_tts_request": true,
+      "jobs": {
+        "schedule_timing_summary": 130863044650,
+        "prepare": 130863044817,
+        "synthesize": 130865990139,
+        "sync_status": 130865990383
+      },
+      "prepare_result": "every FIFO candidate had a validated complete checkpoint; no TTS request",
+      "checkpoint_branch": "tts-audio-pending-20261104",
+      "checkpoint_commit": "8f79344b537b6900fc382a42f85142153c9d9128",
+      "manifest_blob": "df2fc0a7ae7cf98d41df8ca42860fa16907b9e30",
+      "pending_scene_ids": [],
+      "uncapped_queue_runtime_exercised": false
+    }
   }
 }
