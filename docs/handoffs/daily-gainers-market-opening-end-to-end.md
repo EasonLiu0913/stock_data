@@ -1,3 +1,14 @@
+## Owner-approved versioned Render-only closeout successor — 2026-11-12
+
+Owner approved a separate versioned acceptance change: absence of private-upload authorization no longer blocks PASS for this Render-only artifact closeout. This removes that prerequisite only. Private-upload authorization remains absent; `youtube_upload_authorized`, YouTube scheduling and public release remain false. No YouTube upload, scheduling, public release, release-lock change, Pages deployment, TTS synthesis, matching-scene regeneration, or checkpoint deletion is permitted.
+
+The predecessor phase `MVP10-A-R2-FISH-RENDER-DURATION-MIN-5M-R1` and its original frozen Prompt B are preserved unchanged. Its WAITING_PERMISSION observation remains historical evidence; this successor does not retroactively close or rewrite it. The new phase is `MVP10-A-R2-FISH-RENDER-DURATION-MIN-5M-RENDER-ONLY-CLOSEOUT-R1`, preregistered before Prompt A. Its proposal is `data_research/m5/change-proposals/MVP10-A-R2-RENDER-ONLY-CLOSEOUT-CHANGE-v1.md`; frozen pair is `data_research/m5/change-proposals/MVP10-A-R2-RENDER-ONLY-CLOSEOUT-PAIR-v1.md`. Prompt A has not started; Prompt B is not eligible.
+
+Evidence queued for the bounded read-only closeout: run #43158687674 / job #130984522584 / artifact #13917708845, target date 20261104; artifact SHA-256 `57ff438c8f4b7c9a6e2394cfbef96663cefe937e10f8e2476610cf1d82d082bb`; MP4 SHA-256 `d8c331f0e6dbb2035aa3b24c9b30472a9d7454785f80352143b6a5d6513fa444`, 636.831224 seconds; SRT SHA-256 `e2a2c3be50c00661d720da309c5bae41837c5c887d07bc722d09cd9a5b9edca8`; opening 64.443991 seconds; burned-caption duration 636.833333 seconds; 17 scenes, 44 stocks, thumbnail QA PASS, owner-confirmed visual QA PASS. Fish checkpoint: `tts-audio-pending-20261104` at `8f79344b537b6900fc382a42f85142153c9d9128`, manifest blob `df2fc0a7ae7cf98d41df8ca42860fa16907b9e30`. Prompt A must reverify the actual remote artifact and these identities; this registration itself did not render or synthesize.
+
+Next action after this registration is on main: owner issues `promptA`. No automatic continuation. Existing next phase ordering remains unchanged.
+---
+
 # TAIWAN STOCK — Daily 5% Video Market Opening (Goal-Anchored Handoff)
 ## Owner-confirmed visual QA PASS (2026-11-12 12:18:40 UTC)
 
