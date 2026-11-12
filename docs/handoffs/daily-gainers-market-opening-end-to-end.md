@@ -1,5 +1,24 @@
 # TAIWAN STOCK — Daily 5% Video Market Opening (Goal-Anchored Handoff)
 
+## Latest owner-approved sequencing decision (2026-11-12)
+
+Canonical handoff: `docs/handoffs/daily-gainers-market-opening-end-to-end.md`  
+Versioned order record: `data_research/m5/change-proposals/MVP10-A-ELIGIBILITY-TTS-RENDER-SEQUENCE-CHANGE-v1.md`  
+Registration base main: `399b4e7e85d7a98d8df51bb3abc95c65140a612c`.
+
+The owner approved this order: **(1) resume registered MVP10-A-R2 eligibility, (2) complete the registered TTS phase's Render-only threshold, (3) obtain genuine >3-missing all-scenes live evidence.** This changes execution order only; it does not alter either frozen A/B pair or any historical outcome.
+
+- **Current routed phase:** `MVP10-A-R2-INCLUSIVE-ELIGIBILITY`; Prompt A is resumable/in progress from its preserved `WAITING_TTS` checkpoint; Prompt B is not eligible. Exact pair: `data_research/m5/change-proposals/MVP10-A-INCLUSIVE-ELIGIBILITY-PAIR-R2-v1.md`.
+- **Reusable audio evidence:** current main contains TTS implementation PR #103 merge `4ebe48739ea1f1a44b6846859a76ebd5c4b98fd8`; checkpoint `tts-audio-pending-20261104` commit `8f79344b537b6900fc382a42f85142153c9d9128`, manifest blob `df2fc0a7ae7cf98d41df8ca42860fa16907b9e30`, all 17 scenes valid. Natural schedule run #25 / `43121558787` was a no-op because the complete checkpoint was reused; it proves selector skipping, not >3 live queue behavior or rendering.
+- **Deferred in-progress round:** `MVP10-A-FISH-TTS-PERSISTENCE-R1-ALL-SCENES-V2` remains A in progress/B ineligible under its original immutable pair `data_research/m5/change-proposals/MVP10-A-FISH-TTS-PERSISTENCE-PAIR-v2.md`. Do not mark complete, rewrite its acceptance, or auto-run it while R2 is the current phase.
+- After R2's original A/B permits progression, satisfy the TTS Render threshold from a real date-scoped artifact. Reuse R2's artifact only if date, script SHA, Fish manifest/checkpoint identity, provider fingerprint, workflow identity, and required MP4/SRT/QA/provenance all match the TTS contract exactly; otherwise use the registered date-scoped Render-only path once after all gates pass.
+- Only after the Render threshold, pursue >3-missing live evidence on a real eligible date with >3 genuinely missing/invalid scenes. The 20261104 checkpoint is complete and must never be mutated to manufacture missing work. Run #25 does not count as this evidence.
+- **Hard stop:** the global YouTube upload/scheduling/public-release/release-lock and Pages prohibitions remain in force. The frozen R2 Prompt B names missing private-upload authorization as `WAITING_OWNER/WAITING_PERMISSION`, not PASS. If that criterion prevents B PASS, stop there; do not upload or bypass the frozen pair. A separate owner-approved versioned decision would be needed before changing it.
+- Registration boundary: no TTS, Render, Pages, or YouTube workflow was triggered. Once the registration PR is merged, a new explicit `promptA` turn is required to resume R2; no automatic A/B continuation.
+
+The preceding handoff body below contains the historic charter, frozen pairs, and prior checkpoints. Preserve it as history; this latest section is the current execution-order overlay.
+
+
 Canonical handoff: `docs/handoffs/daily-gainers-market-opening-end-to-end.md`
 Task id: `daily-gainers-market-opening-end-to-end`
 Project routing status: **ACTIVE**; previous project routing remains preserved.
