@@ -1,4 +1,8 @@
 # TAIWAN STOCK — Daily 5% Video Market Opening (Goal-Anchored Handoff)
+## Owner-confirmed visual QA PASS (2026-11-12 12:18:40 UTC)
+
+The owner explicitly confirms manual visual QA for run #43158687674 / artifact #13917708845 as **PASS against the active frozen acceptance**. The requested individual-stock dealer column and Fish voice `fish:0715599c7277458591efda3ff230a51e` are follow-up improvements, not failures of this duration round. Prompt A remains complete and Prompt B remains eligible but unexecuted. The follow-up specification is registered by PR #112 in `data_research/m5/change-proposals/MVP10-A-DASHBOARD-DEALER-VOICE-0715599C-PAIR-v1.md`; no code implementation is included in PR #114 or #112. Existing next-phase ordering is unchanged.
+
 ## Active duration round — owner visual QA disposition (2026-11-12 12:15:21 UTC)
 
 The owner confirms the manual visual QA of Render-only run #43158687674 / artifact #13917708845 is complete and clarifies that the requested dealer column and new Fish voice are follow-up improvements; no error against the active round's original frozen acceptance was identified. Apply the frozen acceptance to its own artifact: this review therefore completes Prompt A for `MVP10-A-R2-FISH-RENDER-DURATION-MIN-5M-R1`, with Prompt B eligible for independent closeout. This is not a Prompt B PASS. The next action is the original same-round Prompt B, which must independently verify its frozen criteria and preserve run #43147301096 as historical FAIL.
