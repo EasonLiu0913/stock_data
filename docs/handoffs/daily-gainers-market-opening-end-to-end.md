@@ -1,3 +1,16 @@
+## Owner-approved original R2 no-upload successor registration — 2026-11-12 15:02 UTC
+
+The owner explicitly authorized a versioned successor to remove the private-upload authorization prerequisite from the original R2 closeout. This is a prospective acceptance delta only. The original R2 pair and its WAITING_TTS/WAITING_PERMISSION and historical failure evidence remain unchanged. No upload permission is granted: YouTube upload, upload retry/orchestrator, scheduling, public release, release-lock change, and Pages deployment remain forbidden.
+
+Frozen proposal: `data_research/m5/change-proposals/MVP10-A-R2-INCLUSIVE-ELIGIBILITY-NO-UPLOAD-GATE-CHANGE-v1.md`.
+Frozen A/B pair: `data_research/m5/change-proposals/MVP10-A-R2-INCLUSIVE-ELIGIBILITY-NO-UPLOAD-GATE-PAIR-v1.md`.
+Successor phase: `MVP10-A-R2-INCLUSIVE-ELIGIBILITY-NO-UPLOAD-GATE-SUCCESSOR-R1`.
+Sole delta: missing private-upload authorization is informational, not a prerequisite for this successor's Prompt A completion or Prompt B PASS. All other original R2 non-upload gates remain unchanged.
+
+The registration, pair, state and this handoff checkpoint are being carried in PR #123 on branch `codex/mvp10a-r2-resume-checkpoint-20261112`, based on main `6394ffd6959b5e663a7b2a9fde3a763194e1d6b4`. They are not yet on main. Prompt A has not started. Do not start it until PR #123 is merged and the exact proposal/pair blobs are verified on remote main; a separate owner `promptA` is required after merge. No automatic continuation.
+
+Ordering preserves the original R2 result, inserts this successor before the deferred all-scenes V2 gates, and retains those registered render-threshold and genuine >3-missing-scene requirements. All YouTube/publication permissions remain false.
+---
 ## Prompt A resumption checkpoint — MVP10-A-R2 — 2026-11-12 14:40 UTC
 
 The owner invoked `promptA` after the no-upload-gate Render-only successor closed. Current remote main before this checkpoint was `6394ffd6959b5e663a7b2a9fde3a763194e1d6b4`; active route remains `daily-gainers-market-opening-end-to-end`, goal `goal-v3/MVP-10DAY-v1`. The original frozen R2 Prompt A is resumed; its Prompt B remains ineligible.
