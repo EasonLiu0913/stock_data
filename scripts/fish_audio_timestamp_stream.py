@@ -25,7 +25,7 @@ from daily_gainers_spoken_text import normalize_spoken_text
 
 ENDPOINT = "https://api.fish.audio/v1/tts/stream/with-timestamp"
 MODEL = "s2.1-pro-free"
-REFERENCE_ID = "e7af89da8abc4fbdacd9a10ab9881933"
+REFERENCE_ID = "0715599c7277458591efda3ff230a51e"
 SPEED = 1.15
 
 
