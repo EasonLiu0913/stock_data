@@ -137,3 +137,9 @@ class FishProductionTtsTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    def test_registered_successor_voice_identity_is_pinned(self):
+        identity = fish.provider_identity()
+        self.assertEqual(fish.REFERENCE_ID, "0715599c7277458591efda3ff230a51e")
+        self.assertEqual(fish.VOICE, "fish:0715599c7277458591efda3ff230a51e")
+        self.assertEqual(identity["reference_id"], "0715599c7277458591efda3ff230a51e")
