@@ -5,15 +5,15 @@
   "project_state": "active",
   "goal_id": "goal-v3/MVP-10DAY-v1",
   "ultimate_goal_status": "not_complete",
-  "current_phase_id": "MVP10-A-R2-INCLUSIVE-ELIGIBILITY",
-  "phase_status": "resumable_in_progress",
-  "round_id": "MVP10-A-R2-INCLUSIVE-ELIGIBILITY",
-  "prompt_a_status": "resumable_in_progress",
+  "current_phase_id": "MVP10-A-R2-NO-UPLOAD-GATE-SUCCESSOR-R1",
+  "phase_status": "registered_not_started",
+  "round_id": "MVP10-A-R2-NO-UPLOAD-GATE-SUCCESSOR-R1",
+  "prompt_a_status": "eligible_not_started",
   "prompt_b_status": "not_eligible",
   "owner_approved_on": "2026-11-12",
-  "change_proposal": "data_research/m5/change-proposals/MVP10-A-R2-RENDER-ONLY-CLOSEOUT-CHANGE-v1.md",
-  "paired_prompt": "data_research/m5/change-proposals/MVP10-A-INCLUSIVE-ELIGIBILITY-PAIR-R2-v1.md",
-  "predecessor_phase": "MVP10-A-R2-FISH-RENDER-DURATION-MIN-5M-R1",
+  "change_proposal": "data_research/m5/change-proposals/MVP10-A-R2-NO-UPLOAD-GATE-SUCCESSOR-CHANGE-v1.md",
+  "paired_prompt": "data_research/m5/change-proposals/MVP10-A-R2-NO-UPLOAD-GATE-SUCCESSOR-PAIR-v1.md",
+  "predecessor_phase": "MVP10-A-R2-INCLUSIVE-ELIGIBILITY",
   "next_phase_id": "MVP10-A-FISH-TTS-PERSISTENCE-R1-ALL-SCENES-V2",
   "mvp10_a_status": "R2_RESUMABLE_TTS_GATE_CLEARED_REMAINING_R2_GATES_PENDING",
   "mvp10_a_acceptance_changed": false,
@@ -69,15 +69,15 @@
     "Prompt B PASS 2026-11-12 13:41 UTC: successor closeout pair 1423254d0b043dc1e95a72fe50025609ab9136ef; run #43158687674/job #130984522584/artifact #13917708845; artifact, frozen plan, checkpoint and 17/17 Fish hashes/boundaries independently verified; no prohibited action."
   ],
   "research_progress_reason": "Prompt B independently passed the separately registered Render-only closeout after rechecking the real run, artifact, frozen plan and Fish checkpoint. This closes only that closeout. Per the owner-approved sequence, the next eligible work remains resuming MVP10-A-R2 eligibility; all-scenes V2 >3-missing live evidence stays deferred.",
-  "next_action": "Owner should issue promptA to resume the registered MVP10-A-R2-INCLUSIVE-ELIGIBILITY from its WAITING_TTS checkpoint; do not run all-scenes V2 automatically.",
+  "next_action": "Merge the registration PR after required checks pass. Then the owner may issue a separate promptA for MVP10-A-R2-NO-UPLOAD-GATE-SUCCESSOR-R1; no automatic continuation.",
   "automatic_continuation_permitted": false,
-  "plan_changed": false,
+  "plan_changed": true,
   "publication_authorized": false,
   "youtube_upload_authorized": false,
   "youtube_scheduling_authorized": false,
   "public_release_authorized": false,
   "render_authorized_in_repair_phase": false,
-  "updated_at": "2026-11-12 13:41 UTC",
+  "updated_at": "2026-11-12T14:10:00Z",
   "prompt_b_failure_evidence": [
     "R1 frozen Prompt B criterion 5 required verifying no prohibited workflow was triggered.",
     "Render-only push-trigger runs: 42401534137 (20261102), 42401534168 (20261103); both failed before render and produced no artifacts.",
@@ -647,7 +647,7 @@
     "checkpoint_status": "all five scenes pending; no audio or WordBoundary hashes",
     "acceptance_changed": false
   },
-  "current_blocker": "20261104 has a valid 17/17 Fish checkpoint; post-merge schedule run #25 verifies the selector skips all complete FIFO candidates without requesting Fish. The >3-missing uncapped queue has no eligible live date to exercise, so this runtime edge is unobserved; never mutate successful checkpoints to simulate it. Date-scoped Render remains blocked by unchanged MVP10-A source/eligibility and thumbnail/visual-QA gates. The separate inclusive-eligibility R2 Prompt A is registered but not promoted/started; phase order needs an owner decision.",
+  "current_blocker": "Registration PR must be merged before this successor is active on main. After merge, Prompt A must revalidate all unchanged non-upload gates; private-upload authorization is not a gate and remains false. YouTube upload, scheduling, public release, Pages, release-lock changes, checkpoint deletion, and automatic workflow triggering remain prohibited.",
   "planned_research": {
     "question": "Do the retained scene diagnostic artifacts show Fish emitting zero-duration events for spoken text, or does adapter conversion collapse a positive provider interval?",
     "method": "Read artifacts 13684156882, 13683087469, and 13684002692 through authenticated GitHub UI; compare raw start/end fields with the Fish-to-WordBoundary conversion in main.",
@@ -1272,6 +1272,18 @@
       "historical_predecessor_waiting_permission_preserved": true,
       "next_step": "Resume registered MVP10-A-R2-INCLUSIVE-ELIGIBILITY Prompt A on a separate owner command; all-scenes V2 remains deferred.",
       "automatic_continuation_permitted": false
+    },
+    {
+      "phase_id": "MVP10-A-R2-NO-UPLOAD-GATE-SUCCESSOR-R1",
+      "round_id": "MVP10-A-R2-NO-UPLOAD-GATE-SUCCESSOR-R1",
+      "status": "registered_in_pending_pr",
+      "proposal": "data_research/m5/change-proposals/MVP10-A-R2-NO-UPLOAD-GATE-SUCCESSOR-CHANGE-v1.md",
+      "pair": "data_research/m5/change-proposals/MVP10-A-R2-NO-UPLOAD-GATE-SUCCESSOR-PAIR-v1.md",
+      "owner_decision_date": "2026-11-12",
+      "sole_acceptance_delta": "Missing private-upload authorization is informational and is not a prerequisite for this successor's Prompt A completion or Prompt B PASS.",
+      "predecessor_preserved": true,
+      "publication_actions_prohibited": true,
+      "automatic_continuation_permitted": false
     }
   ],
   "duration_gate_change": {
@@ -1679,5 +1691,35 @@
         "No automatic phase execution. Owner-approved sequencing resumes MVP10-A-R2 eligibility before the deferred all-scenes V2 >3-missing live-evidence phase."
       ]
     }
+  },
+  "release_lock_changed": false,
+  "r2_no_upload_gate_successor_registration": {
+    "phase_id": "MVP10-A-R2-NO-UPLOAD-GATE-SUCCESSOR-R1",
+    "round_id": "MVP10-A-R2-NO-UPLOAD-GATE-SUCCESSOR-R1",
+    "status": "registered_in_pending_pr",
+    "owner_decision_date": "2026-11-12",
+    "owner_decision_text": "建立版本化 R2 successor pair，移除私有上傳授權前置條件，但仍禁止任何 YouTube 上傳、排程與公開發布",
+    "registration_base_main": "9ec05adfe5699d54c9d233fc57b23047122f3cd9",
+    "proposal": "data_research/m5/change-proposals/MVP10-A-R2-NO-UPLOAD-GATE-SUCCESSOR-CHANGE-v1.md",
+    "pair": "data_research/m5/change-proposals/MVP10-A-R2-NO-UPLOAD-GATE-SUCCESSOR-PAIR-v1.md",
+    "predecessor_phase": "MVP10-A-R2-INCLUSIVE-ELIGIBILITY",
+    "prior_closeout_pair": "data_research/m5/change-proposals/MVP10-A-R2-RENDER-ONLY-CLOSEOUT-PAIR-v1.md",
+    "sole_acceptance_delta": "Missing private-upload authorization is informational and is not a prerequisite for this successor's Prompt A completion or Prompt B PASS.",
+    "preserved": "Original MVP10-A/B, original inclusive-eligibility R2 pair and wait/failure history, prior duration/Fish successor results, and PR #118 Render-only closeout PASS remain unchanged.",
+    "prompt_a_status": "eligible_not_started_after_merge",
+    "prompt_b_status": "not_eligible",
+    "private_upload_authorized": false,
+    "youtube_upload_authorized": false,
+    "youtube_scheduling_authorized": false,
+    "public_release_authorized": false,
+    "publication_authorized": false,
+    "release_lock_changed": false,
+    "pages_deploy_authorized": false,
+    "tts_synthesis_performed": false,
+    "render_triggered_by_registration": false,
+    "checkpoint_deleted": false,
+    "automatic_continuation_permitted": false,
+    "plan_changed": true,
+    "next_action": "After this registration is merged to main, owner may issue a separate promptA. Do not start Prompt A from this registration turn."
   }
 }
