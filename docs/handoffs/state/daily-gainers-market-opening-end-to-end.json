@@ -6,9 +6,9 @@
   "goal_id": "goal-v3/MVP-10DAY-v1",
   "ultimate_goal_status": "not_complete",
   "current_phase_id": "MVP10-A-R2-FISH-RENDER-SUCCESSOR-R1",
-  "phase_status": "registered_not_started",
+  "phase_status": "in_progress_waiting_workflow",
   "round_id": "MVP10-A-R2-FISH-RENDER-SUCCESSOR-R1",
-  "prompt_a_status": "not_started",
+  "prompt_a_status": "in_progress_waiting_workflow",
   "prompt_b_status": "not_eligible",
   "owner_approved_on": "2026-11-09",
   "change_proposal": "data_research/m5/change-proposals/MVP10-A-INCLUSIVE-ELIGIBILITY-CHANGE-PROPOSAL-v1.md",
@@ -68,7 +68,7 @@
     "Current main 83a74edda8965aa96dd1286d8d882147691f785d differs from the run's head only by later oversold-rebound margin data files: 20261015, 20261016, and data_twse_margin_balance/files.json; TTS implementation and date checkpoint inputs are unaffected."
   ],
   "research_progress_reason": "Owner approved the cross-phase order: resume registered inclusive eligibility R2, then satisfy the TTS phase Render-only threshold, then seek genuine >3-missing-scene live evidence. The original pairs remain immutable. All-scenes Fish checkpoint is 17/17; run #25 was a no-op. R2 Prompt A is resumable, not complete. Frozen R2 Prompt B may stop at its separate private-upload WAITING_PERMISSION gate; YouTube actions are prohibited.",
-  "next_action": "After registration PR #107 is verified on remote main, a separate owner-issued promptA may start MVP10-A-R2-FISH-RENDER-SUCCESSOR-R1. Reuse the exact complete Fish checkpoint, preserve every other R2 gate, do not upload, and do not automatically continue.",
+  "next_action": "Owner triggers the native date-scoped Render-only workflow at .github/workflows/daily-gainers-date-render-only.yml on main with date=20261104; then a fresh promptA resumes artifact inspection. Do not run Prompt B.",
   "automatic_continuation_permitted": false,
   "plan_changed": true,
   "publication_authorized": false,
@@ -1169,6 +1169,76 @@
     "youtube_scheduling_authorized": false,
     "public_release_authorized": false,
     "release_lock_changed": false,
+    "automatic_continuation_permitted": false
+  },
+  "successor_prompt_a_observation": {
+    "observed_at_utc": "2026-11-12T03:10:00Z",
+    "checked_remote_main": "176e8139ab3d09b0d61a5442878bcc0a276ddd08",
+    "active_project": "daily-gainers-market-opening-end-to-end",
+    "goal_id": "goal-v3/MVP-10DAY-v1",
+    "phase_id": "MVP10-A-R2-FISH-RENDER-SUCCESSOR-R1",
+    "target_date": "20261104",
+    "prompt_a_status": "in_progress_waiting_workflow",
+    "prompt_b_status": "not_eligible",
+    "verified_remote_inputs": {
+      "raw_source_blob": "c54f39112e957a672ddb4725e3d8d6338eaf5c87",
+      "candidate_blob": "f690c703058a4367ac1f619dd786d61f9d55eab0",
+      "official_opening_blob": "3578047ff03548e2bcb65d908228e9753deb434b",
+      "facts_blob": "75e0573aa2fb394712f40cb9b115096b3e136c07",
+      "news_blob": "c31055e4c0f3e60899be5e8e4fe9358c923190a6",
+      "ai_blob": "24cf09ade6b98488b792aebc5036db9240c58a30",
+      "market_summary_blob": "5560810319b843c1b5e57c3ddbf009ff51946bc4",
+      "seo_blob": "273b67878d52b3abbb10bd69c48025c953a18383",
+      "frozen_render_plan_blob": "8e34905ce476c0b189340b5c193bb5513a614478",
+      "source_rows": 44,
+      "candidate_coverage": "44/44 unique",
+      "scene_count": 17,
+      "receipt_run": 42231051247
+    },
+    "fish_checkpoint": {
+      "branch": "tts-audio-pending-20261104",
+      "commit": "8f79344b537b6900fc382a42f85142153c9d9128",
+      "manifest_blob": "df2fc0a7ae7cf98d41df8ca42860fa16907b9e30",
+      "script_sha256": "de2ea3550050ad5a8ec1d5b988fbe91b9344ce98cdebe74272ee4cd7678546f3",
+      "engine": "fish.audio",
+      "voice": "fish:e7af89da8abc4fbdacd9a10ab9881933",
+      "model": "s2.1-pro-free",
+      "rate": "1.15",
+      "pipeline_version": "daily-gainers-tts-checkpoint-v1",
+      "scene_count": 17,
+      "successful_scene_ids": "1-17",
+      "reused_natural_run": 43121558787,
+      "reused_natural_run_result": "schedule success; checkpoint complete, no TTS request; no Render"
+    },
+    "validation": {
+      "current_main_matching_isolated_checks": "opening validator PASS; materializer PASS; formal script validator PASS (17 scenes / 3451 narration chars); news/narration validator PASS (44/44 source coverage, four attributions)",
+      "tests": "daily_gainers_dual_track.test.js 4/4; targeted daily_gainers_news_narration.test.js 1/1",
+      "thumbnail": "1280x720 JPEG builder/verifier PASS, 3px down-market green frame; rendered output was temporary, not a durable artifact",
+      "caution": "Prior verification used code blobs matching current main; latest main commit 176e813 changes only unrelated 20261111 external-market snapshots/manifests."
+    },
+    "render_workflow": {
+      "path": ".github/workflows/daily-gainers-date-render-only.yml",
+      "blob": "448308feb483bd68409ce18b2acaab60b1d03efd",
+      "url": "https://github.com/EasonLiu0913/stock_data/actions/workflows/daily-gainers-date-render-only.yml",
+      "target_date_input": "20261104",
+      "permissions": "contents:read",
+      "publishing_actions": "none",
+      "status": "WAITING_WORKFLOW"
+    },
+    "blocker": {
+      "cause": "GitHub MCP connector exposes no workflow_dispatch operation; available authenticated browser session shows GitHub login page, so no dispatch was submitted.",
+      "owner_action": "Owner must authenticate in GitHub and manually select Run workflow with branch main and date 20261104, or provide a session with supported workflow_dispatch capability.",
+      "observation": "A new run must show event=workflow_dispatch, target date 20261104, current main head, successful jobs, then its real MP4/SRT/thumbnail/QA/provenance artifacts must be inspected."
+    },
+    "publication": {
+      "youtube_upload_authorized": false,
+      "youtube_scheduling_authorized": false,
+      "public_release_authorized": false,
+      "release_lock_changed": false,
+      "pages_triggered": false,
+      "checkpoint_deleted": false
+    },
+    "plan_changed": false,
     "automatic_continuation_permitted": false
   }
 }
