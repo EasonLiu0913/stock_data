@@ -3031,3 +3031,43 @@ This checkpoint only changes the unique active route and reconciles the video Ta
 - Run #19 / `42836332036` remains historical workflow_dispatch evidence for `20261104`: 17 scenes, 1–3 successful, 4–17 pending. Its three successes must be reused if their current identity and hashes still match. Do not treat the successful run as proof that the remaining scenes are complete.
 - No Fish request, workflow dispatch, Render, Pages, YouTube/upload/publication, release-lock change, or checkpoint deletion has occurred in this Prompt A progress checkpoint. YouTube publication lock remains closed.
 - Next in this A: open a narrow PR; verify required CI, repair only in-scope failures, and merge only under repository checks/policy. After merge, recheck current main, date/FIFO/source gates and checkpoint. The current GitHub connector has no workflow-dispatch operation, so any live TTS recovery requires a supported owner-triggered Actions UI path; do not claim the run started. Render-only remains gated by complete-audio and the registered date-scoped Render authorization. Prompt A remains open until its frozen live recovery, reuse, render/artifact checks and durable handoff evidence are actually satisfied.
+
+
+## Fish TTS all-scenes v2 — Prompt A checkpoint after PR #103 and natural schedule recovery (2026-11-12)
+
+**Prompt A remains IN PROGRESS; Prompt B is NOT ELIGIBLE.** The full missing-scene queue repair is on main, but the existing natural schedule run predates that merge, and date-scoped Render remains blocked by unchanged MVP10-A prerequisites. No historical A/B result or frozen acceptance was changed.
+
+### Fresh-main and implementation evidence
+
+- Startup verified remote main at `2fb938ca115c662198945a5977811ba5cd6cf982`; the latest commit after the PR merge updates MOPS data and does not change TTS behavior.
+- Active route remains `daily-gainers-market-opening-end-to-end`, goal `goal-v3/MVP-10DAY-v1`, phase `MVP10-A-FISH-TTS-PERSISTENCE-R1-ALL-SCENES-V2`. The immutable pair remains `data_research/m5/change-proposals/MVP10-A-FISH-TTS-PERSISTENCE-PAIR-v2.md`.
+- PR #103 merged at `4ebe48739ea1f1a44b6846859a76ebd5c4b98fd8`. On main, the planner/workflow now queues every missing/invalid scene in deterministic order and fails closed before synthesis above the GitHub matrix limit. Focused checkpoint-contract/Fish integration and Node regression checks passed. Node 24 audit run #43069305591 failed on the unchanged main issue at `.github/workflows/backfill-market-environment.yml:93`; this is outside PR #103's changed paths and is preserved as a separate pre-existing failure.
+- A review of the stale selector branch remains unchanged: its selector logic is already present on main; do not merge the stale branch wholesale.
+
+### Natural schedule and durable checkpoint
+
+- Latest [08 TTS] run is [#24 / 43068501122](https://github.com/EasonLiu0913/stock_data/actions/runs/43068501122), event `schedule`, head `4d6c81ec64898c22e53927d79abd9ec2806eb8e7`, target date `20261104`. Jobs `prepare` (130689770401), `synthesize (16)` (130694338276), `synthesize (17)` (130694338280), and `sync-status` (130695952873) succeeded.
+- The date checkpoint branch `tts-audio-pending-20261104` is at commit `8f79344b537b6900fc382a42f85142153c9d9128`; manifest blob `df2fc0a7ae7cf98d41df8ca42860fa16907b9e30`. It identifies frozen script SHA-256 `de2ea3550050ad5a8ec1d5b988fbe91b9344ce98cdebe74272ee4cd7678546f3`, 17 ordered scenes, all 17 `success`, and Fish voice/rate/pipeline identity plus MP3 and WordBoundary hashes. The remaining scenes 16–17 were checkpointed by run #24. Do not synthesize or overwrite any matching success.
+- Run #24 predates PR #103 merge and queued only two missing scenes (16–17), so it does not prove live behavior for an invocation with more than three missing scenes under the new code. PR regression covers the >3 queue contract. Do not delete or corrupt successful checkpoint entries to manufacture a live >3-missing scenario.
+- The current GitHub Actions connector exposes no workflow_dispatch operation. No TTS dispatch, job rerun, or new run was initiated. The recovery workflow cron is `*/15 * * * *` UTC; next evidence must come from an actual post-merge natural run, with its event/head/date/jobs and resulting checkpoint inspected. Do not assume a cron tick has arrived.
+
+### Remaining frozen gates and next action
+
+- The date-scoped render authorization in the owner promotion is conditional on complete-audio validation **and all unchanged MVP10-A gates**. Task State's latest eligibility review still records the 20261104 candidate's ordinary-stock eligibility/breadth and SEO-thumbnail/visual-QA gaps; the later inclusive-eligibility R2 is registered but its Prompt A remains `eligible_not_started`. Do not execute that separate pair or alter its activation order from this TTS Prompt A.
+- No Render-only, Pages, YouTube, upload, public scheduling, release-lock change, or checkpoint deletion occurred. YouTube publication/upload/scheduling authorization remains false.
+- Next: inspect the next actual post-merge natural [08 TTS] run. If the date's frozen plan/checkpoint yields more than three missing scenes and all formal source gates pass, verify the complete queue and every job/checkpoint; otherwise record that the run did not exercise the uncapping edge case and do not synthesize matching successes. Separately, the owner must resolve/promote the already registered MVP10-A eligibility R2 Prompt A (or make a versioned sequencing decision) before the unchanged date-scoped Render prerequisites can be closed.
+- Prompt A is not complete; Prompt B remains not eligible. The ultimate daily-video goal remains NOT COMPLETE.
+
+
+
+### Post-merge natural schedule observation (verified 2026-11-12 01:17 UTC)
+
+A newer production workflow event supersedes the earlier “no post-merge schedule run observed” status above:
+
+- [08 TTS run #25 / 43121558787](https://github.com/EasonLiu0913/stock_data/actions/runs/43121558787) is a natural `schedule` event on post-PR-#103 main SHA `2fb938ca115c662198945a5977811ba5cd6cf982`. The workflow is `.github/workflows/daily-gainers-tts-scene-recovery.yml`.
+- Job IDs: schedule summary `130863044650` success; prepare `130863044817` success; synthesize `130865990139` skipped; sync-status `130865990383` skipped.
+- The prepare log states every FIFO candidate already had a validated complete checkpoint and no TTS request was made. This is durable post-merge evidence that the natural selector skips complete checkpoints. It is a no-op: it does not exercise a queue with more than three missing scenes, and it produced no new checkpoint commit.
+- The complete date checkpoint remains `tts-audio-pending-20261104`, commit `8f79344b537b6900fc382a42f85142153c9d9128`, manifest blob `df2fc0a7ae7cf98d41df8ca42860fa16907b9e30`, all 17 ordered scenes successful. Do not synthesize, delete, or mutate matching successes to simulate a missing queue.
+- Remote main has since advanced to `83a74edda8965aa96dd1286d8d882147691f785d`; comparison with `2fb938ca115c662198945a5977811ba5cd6cf982` shows only `data_twse_margin_balance/20261015_twse_margin_balance.csv`, `data_twse_margin_balance/20261016_twse_margin_balance.csv`, and `data_twse_margin_balance/files.json` changed. The TTS files and this checkpoint's inputs are unaffected.
+
+Prompt A is still not complete: the required date-scoped Render is blocked by the unchanged MVP10-A source/eligibility and thumbnail/visual-QA gates. The separately registered inclusive-eligibility R2 pair has not been promoted/started. Resolving phase order requires an owner decision; do not silently execute the separate pair or modify its status as part of this TTS round. The remaining v2 limitation is explicit: runtime uncapped synthesis of >3 missing scenes was not observed because no eligible date has missing scenes; use the frozen PR regression as code proof, preserve the no-op natural run as selector proof, and seek a versioned owner decision before treating those evidence classes as substitutable.
