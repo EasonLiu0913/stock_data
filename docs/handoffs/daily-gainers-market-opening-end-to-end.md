@@ -3320,3 +3320,15 @@ Run only after this pair's Prompt A is complete and the evidence/handoff update 
 - No Pages deploy.
 - No automatic Prompt A/B continuation, phase promotion, TTS/Render dispatch, checkpoint deletion, or history rewrite.
 - The ultimate daily-video goal remains incomplete until all required date-specific official gates and Render artifacts are verified.
+
+
+## R2 no-upload-gate successor — post-merge registration verification (2026-11-12)
+
+PR #119 merged at `cc66f5997f0f161f84639d428e87547061fc4a8b` on remote `main`. The versioned proposal and frozen Prompt A/B pair are now durable on main at:
+
+- `data_research/m5/change-proposals/MVP10-A-R2-NO-UPLOAD-GATE-SUCCESSOR-CHANGE-v1.md`
+- `data_research/m5/change-proposals/MVP10-A-R2-NO-UPLOAD-GATE-SUCCESSOR-PAIR-v1.md`
+
+The Task State correction records phase `MVP10-A-R2-NO-UPLOAD-GATE-SUCCESSOR-R1` as `registered_not_started`; Prompt A is eligible but not started, Prompt B is not eligible, and automatic continuation is false. The only prospective acceptance change removes private-upload authorization as a prerequisite; private upload, all YouTube upload/scheduling/public-release, Pages, and release-lock permissions remain false/prohibited. Original R2 and prior closeout histories remain unchanged.
+
+No workflow was triggered. Next action is a separate owner-issued `promptA`; registration does not execute it.
