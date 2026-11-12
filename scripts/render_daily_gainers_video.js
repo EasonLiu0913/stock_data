@@ -1,4 +1,9 @@
 #!/usr/bin/env node
+function isWholeVideoDurationValid(seconds) {
+  return Number.isFinite(seconds) && seconds >= 300;
+}
+
+if (require.main === module) {
 const fs = require('node:fs');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
@@ -311,7 +316,7 @@ const qa = {
   duration_minutes: Number((finalDuration / 60).toFixed(2)),
   file_size_bytes: stat.size,
   file_size_mib: Number((stat.size / 1024 / 1024).toFixed(2)),
-  duration_pass: finalDuration >= 300 && finalDuration <= 600,
+  duration_pass: isWholeVideoDurationValid(finalDuration),
   size_pass: stat.size >= 1024 * 1024,
   vtuber_enabled: vtuberEnabled,
   vtuber_lipsync: vtuberEnabled ? (lipSync.methodology || 'text-aware') : 'disabled',
@@ -324,5 +329,8 @@ const qa = {
 fs.writeFileSync(path.join(outDir, 'qa.json'), JSON.stringify(qa, null, 2) + '\n');
 console.log(JSON.stringify(qa, null, 2));
 
-if (!qa.duration_pass) throw new Error(`Video duration ${qa.duration_minutes} min is outside required 5-10 minute validation window`);
+if (!qa.duration_pass) throw new Error(`Video duration ${qa.duration_minutes} min is below the required 5-minute minimum`);
 if (!qa.size_pass) throw new Error('Rendered video is unexpectedly small');
+}
+
+module.exports = { isWholeVideoDurationValid };

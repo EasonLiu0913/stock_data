@@ -6,9 +6,9 @@
   "goal_id": "goal-v3/MVP-10DAY-v1",
   "ultimate_goal_status": "not_complete",
   "current_phase_id": "MVP10-A-R2-FISH-RENDER-DURATION-MIN-5M-R1",
-  "phase_status": "registration_pending_merge",
+  "phase_status": "prompt_a_ci_pass_waiting_merge_and_render",
   "round_id": "MVP10-A-R2-FISH-RENDER-DURATION-MIN-5M-R1",
-  "prompt_a_status": "eligible_not_started_after_registration_merge",
+  "prompt_a_status": "in_progress_waiting_merge_and_render",
   "prompt_b_status": "not_eligible",
   "owner_approved_on": "2026-11-09",
   "change_proposal": "data_research/m5/change-proposals/MVP10-A-R2-RENDER-DURATION-MINIMUM-CHANGE-v1.md",
@@ -68,7 +68,7 @@
     "Current main 83a74edda8965aa96dd1286d8d882147691f785d differs from the run's head only by later oversold-rebound margin data files: 20261015, 20261016, and data_twse_margin_balance/files.json; TTS implementation and date checkpoint inputs are unaffected."
   ],
   "research_progress_reason": "Owner approved the cross-phase order: resume registered inclusive eligibility R2, then satisfy the TTS phase Render-only threshold, then seek genuine >3-missing-scene live evidence. The original pairs remain immutable. All-scenes Fish checkpoint is 17/17; run #25 was a no-op. R2 Prompt A is resumable, not complete. Frozen R2 Prompt B may stop at its separate private-upload WAITING_PERMISSION gate; YouTube actions are prohibited.",
-  "next_action": "Owner triggers the native date-scoped Render-only workflow at .github/workflows/daily-gainers-date-render-only.yml on main with date=20261104; then a fresh promptA resumes artifact inspection. Do not run Prompt B.",
+  "next_action": "PR #110 is CI-green but not merged. Follow repository merge policy; after merge verify current main and exact 20261104 input/checkpoint gates, then continue the registered date-scoped Render-only step. If no authorized dispatch capability, stop at WAITING_WORKFLOW and give owner the workflow URL/date.",
   "automatic_continuation_permitted": false,
   "plan_changed": true,
   "publication_authorized": false,
@@ -76,7 +76,7 @@
   "youtube_scheduling_authorized": false,
   "public_release_authorized": false,
   "render_authorized_in_repair_phase": false,
-  "updated_at": "2026-11-12T03:56:18Z",
+  "updated_at": "2026-11-12T04:47:00Z",
   "prompt_b_failure_evidence": [
     "R1 frozen Prompt B criterion 5 required verifying no prohibited workflow was triggered.",
     "Render-only push-trigger runs: 42401534137 (20261102), 42401534168 (20261103); both failed before render and produced no artifacts.",
@@ -1277,12 +1277,62 @@
       "artifact_id": 13912818516,
       "artifact_disposition": "partial; historical failure retained"
     },
-    "implementation_status": "not_started",
+    "implementation_status": "branch_implementation_pr_in_progress",
     "new_render_validation_required": true,
     "youtube_upload_authorized": false,
     "youtube_scheduling_authorized": false,
     "public_release_authorized": false,
     "release_lock_changed": false,
-    "automatic_continuation_permitted": false
+    "automatic_continuation_permitted": false,
+    "registration_status": "merged_to_main",
+    "registration_pr": 109,
+    "registration_merge_commit": "a7450f0387815c07ef52ca982bdcb3b0c5699060",
+    "latest_main_at_implementation_start": "194e6a356b9596a2928053bbe43dc9ee9df910d3",
+    "implementation_branch": "codex/fix-render-duration-minimum-20261112",
+    "implementation": {
+      "renderer_path": "scripts/render_daily_gainers_video.js",
+      "renderer_before_blob": "3a2d71c2a16ef14a27b69ca30bae21453a6d0bdd",
+      "renderer_after_blob": "570f480df0a2eb9351274ace4e61edc8a23e6ff7",
+      "test_path": "tests/daily_gainers_video_duration_gate.test.js",
+      "test_blob": "58f03b58e36e39ad8cbefa2fa226b0b7e4f29c4f",
+      "behavior": "actual finite MP4 duration >=300 seconds passes; no maximum; invalid/below-minimum fails closed",
+      "assertions": [
+        "636.831224 passes",
+        "299.999 fails",
+        "300 passes",
+        "NaN fails closed"
+      ],
+      "validation": "PASS on PR head 696c13af9555736f84b3f4e6c8bd02f8d640b64a: Node Regression run 43156153408/job 130976458218, 1262 passed/0 failed; Registry/Safety run 43156153185/job 130976442769 success. Initial failure on 63b9eee remains preserved; its sole stale preflight contract assertion was corrected on changed inputs.",
+      "new_render_run": null,
+      "corrected_preflight": {
+        "path": "scripts/preflight_daily_gainers_m5_private_preview.js",
+        "before_blob": "67332a0914c217ec8f8aadc0a2eb5face6cad9f9",
+        "after_blob": "e596d14add0684ba8795f0ce9f20400fea14c79f",
+        "test_path": "tests/preflight_daily_gainers_m5_private_preview.test.js",
+        "test_before_blob": "b7016fa73bd78c38cd5fdf9d2787e9a56c4862b0",
+        "test_after_blob": "11777a52827f3d17e156ae30a66e06b457378771",
+        "commits": [
+          "ec53f6b98819587473651e799772ffe54d911e24",
+          "44bac3bb484f035c54dab39b58158be071c5a516"
+        ],
+        "contract": "production predicate accepts finite duration >=300 with no maximum; market opening [60,90] unchanged"
+      },
+      "corrected_head_checks": {
+        "head_sha": "696c13af9555736f84b3f4e6c8bd02f8d640b64a",
+        "node_run": {
+          "id": 43156153408,
+          "job_id": 130976458218,
+          "conclusion": "success",
+          "tests": 1262,
+          "passed": 1262,
+          "failed": 0
+        },
+        "registry_run": {
+          "id": 43156153185,
+          "job_id": 130976442769,
+          "conclusion": "success"
+        }
+      }
+    }
   }
 }
