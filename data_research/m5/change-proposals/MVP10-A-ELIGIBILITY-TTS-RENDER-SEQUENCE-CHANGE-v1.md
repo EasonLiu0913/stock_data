@@ -1,6 +1,8 @@
 # MVP10-A execution-order change v1 — eligibility, Render, then live all-scenes proof
 
-Status: **Owner-approved order; registration PR pending.**  
+Status: **Owner-approved and registered on remote main.**
+
+Registration PR: #105, merged at `cd36073f813c2980ad2279c785386a9c9505cd15`; latest main observed during Prompt A: `c1044de858b7871c8bfb9d8771dec2bbf8b27a5a`.  
 Owner decision: 2026-11-12, Asia/Taipei — “ok，按這順序執行”。  
 Registration base main: `399b4e7e85d7a98d8df51bb3abc95c65140a612c`.  
 Active project: `daily-gainers-market-opening-end-to-end`.  
