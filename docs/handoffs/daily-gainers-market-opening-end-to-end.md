@@ -3142,3 +3142,16 @@ Registration branch: `codex/mvp10-a-r2-render-duration-minimum-v1`; base main: `
 - The run log shows the Fish checkpoint and input preflight completed. No need to repeat source research or synthesize matching scenes. New successor Prompt A requires a focused predicate/test update and one new current-main date-scoped Render-only validation after the change is merged.
 - Original phase/pairs, opening bound, checkpoint identity, previous FAIL history, private-upload permission gate, and publication prohibitions remain preserved. No YouTube/Pages action, upload, scheduling, release-lock change, or checkpoint deletion is authorized.
 - New successor Prompt A is not started before its proposal/pair and this checkpoint are merged to main. Prompt B is not eligible. Automatic continuation is not permitted.
+
+
+## MVP10-A-R2-FISH-RENDER-DURATION-MIN-5M-R1 — Prompt A implementation checkpoint (2026-11-12 04:21 UTC)
+
+The owner-approved registration PR #109 is merged at `a7450f0387815c07ef52ca982bdcb3b0c5699060`; current remote main at Prompt A startup was `194e6a356b9596a2928053bbe43dc9ee9df910d3`. This successor phase is now active. Prompt A is IN PROGRESS; Prompt B is NOT ELIGIBLE. Earlier Task State text saying registration was pending merge is superseded by this checkpoint, not by rewriting the prior run outcome.
+
+- Frozen proposal/pair on main: `data_research/m5/change-proposals/MVP10-A-R2-RENDER-DURATION-MINIMUM-CHANGE-v1.md` and `data_research/m5/change-proposals/MVP10-A-R2-RENDER-DURATION-MINIMUM-PAIR-v1.md`. Owner rule is whole-video duration >=300 seconds with no maximum; actual spoken opening remains 60–90 seconds.
+- Historical run #43147301096 / job #130948007616 remains FAIL on head `6682c06c2e04d78ea863b2969563524599bd0a40`, measured duration 636.831224 seconds, artifact #13912818516 partial. No result was rewritten.
+- Prompt A implementation branch `codex/fix-render-duration-minimum-20261112` is based on current main. Renderer change is limited to the whole-video duration predicate and its diagnostic: before blob `3a2d71c2a16ef14a27b69ca30bae21453a6d0bdd`, branch blob `570f480df0a2eb9351274ace4e61edc8a23e6ff7`. Predicate is finite measured duration >=300; no upper bound.
+- Focused regression added at `tests/daily_gainers_video_duration_gate.test.js`, blob `58f03b58e36e39ad8cbefa2fa226b0b7e4f29c4f`: 636.831224 passes; 299.999 fails; 300 passes; NaN fails closed.
+- Current implementation PR/checks are not yet available at this checkpoint; do not claim test PASS or merge. Once checks pass, merge the narrow code/test and handoff update, then verify the current-main inputs/checkpoint and perform one new date-scoped Render-only run.
+- This session has no GitHub workflow_dispatch operation. If still unavailable after the implementation merges, stop at WAITING_WORKFLOW and ask the owner to run `.github/workflows/daily-gainers-date-render-only.yml` on branch `main` with date `20261104`. Do not use job rerun as dispatch.
+- Matching Fish scenes must not be synthesized again. No YouTube upload/scheduling/public release, Pages deployment, release-lock change, or checkpoint deletion occurred or is authorized. Private-upload permission remains unresolved.
