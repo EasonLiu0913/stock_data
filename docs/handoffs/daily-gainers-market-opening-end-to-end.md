@@ -3443,3 +3443,15 @@ Run only after this pair's Prompt A is complete and the evidence/handoff update 
 - Current Render workflow blob `448308feb483bd68409ce18b2acaab60b1d03efd` still has `contents: read`; inspection found no YouTube uploader or Pages deploy (its `actions/upload-artifact` uploads a GitHub artifact only). The job log explicitly states no YouTube action or upload credential was used. Private-upload authorization remains false and informational. YouTube upload/scheduling/public release and release-lock changes remain false. No TTS, Render, Pages, YouTube, upload, or schedule workflow was triggered during this B.
 - Regression run #43156153408/job #130976458218 remains success (1,262/1,262); registry/safety run #43156153185/job #130976442769 remains success. No tests were rerun because PR #124 changed only Task State and the concurrent main change was unrelated to the target date and code.
 - The predecessor `MVP10-A-R2-INCLUSIVE-ELIGIBILITY` remains `in_progress_waiting_permission` / B not eligible in preserved history; historical failure IDs remain unchanged. The successor's sole delta is prospective. **Stop:** Prompt B PASS; do not promote or start the deferred `MVP10-A-FISH-TTS-PERSISTENCE-R1-ALL-SCENES-V2` under this pair.
+
+
+---
+
+## Owner-approved phase supersession and promotion — 2026-11-13
+
+The owner directed: close the registered old-format phase, formally promote the already-registered dashboard/dealer + Fish voice successor, and implement that version. This decision is recorded in versioned proposal `data_research/m5/change-proposals/MVP10-A-DASHBOARD-DEALER-VOICE-PROMOTION-CHANGE-v1.md`; it does not alter the frozen pair `data_research/m5/change-proposals/MVP10-A-DASHBOARD-DEALER-VOICE-0715599C-PAIR-v1.md` (blob `9e9da65be76acbe081a2beb1c97cf01adcdca807`).
+
+- `MVP10-A-FISH-TTS-PERSISTENCE-R1-ALL-SCENES-V2` is dispositioned **SUPERSEDED_BY_OWNER_DIRECTION, NOT PASS**. Its A/B, missing >3-scene live evidence, and inherited Render gates were not rewritten or marked complete. Preserve its original proposal/pair, run #19 / #42836332036, schedule no-op #43121558787, checkpoint and all prior outcomes.
+- Active successor: `MVP10-A-DASHBOARD-DEALER-FISH-VOICE-0715599C-R1`; target `20261104`; exact new voice `fish:0715599c7277458591efda3ff230a51e`. The already-merged #112 frozen Prompt A/B is unchanged. Prompt A is eligible only after this promotion is on main; Prompt B remains ineligible until Prompt A's full contract is met. No automatic continuation.
+- The legacy 20261104 video/checkpoint is retained only as historical evidence, excluded from all successor inputs, and never reused for new output. It is not overwritten or deleted.
+- YouTube upload/scheduling/public release, Pages, release-lock changes, and checkpoint deletion remain prohibited. No TTS or Render workflow is triggered by this promotion record.
