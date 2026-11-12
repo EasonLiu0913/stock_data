@@ -1,3 +1,18 @@
+## Prompt A complete — versioned Render-only closeout — 2026-11-12 13:32 UTC
+
+Prompt A for `MVP10-A-R2-FISH-RENDER-DURATION-MIN-5M-RENDER-ONLY-CLOSEOUT-R1` is complete. This was a read-only reconciliation of existing output; no Render workflow, TTS synthesis, YouTube action, Pages deploy, release-lock change, or checkpoint deletion was performed. Prompt B is now eligible and must be invoked separately.
+
+The remote run #43158687674 / job #130984522584 is completed success for 20261104, on head `51535708775e803dabbab9e5f2add61751c07712`. The non-expired artifact #13917708845 has SHA-256 `57ff438c8f4b7c9a6e2394cfbef96663cefe937e10f8e2476610cf1d82d082bb`; the owner-provided ZIP's byte digest matches, zip integrity passed, and all six archived sha256sums validate. The artifact's frozen plan matches remote `research_pending/daily-gainers-render-scripts/20261104.json` after removing only the workflow's explicitly ignored `generated_at` field.
+
+The MP4 SHA-256 is `d8c331f0e6dbb2035aa3b24c9b30472a9d7454785f80352143b6a5d6513fa444`; QA timeline duration is 636.831224 sec and final-container ffprobe duration is 636.833333 sec, both above the frozen 300-sec minimum. The 17-scene opening is 64.443991 sec; SRT SHA-256 is `e2a2c3be50c00661d720da309c5bae41837c5c887d07bc722d09cd9a5b9edca8` with 161 cues; burned-caption proof ties the MP4/SRT hashes and duration. Thumbnail QA is PASS, non-mock, for 44 stocks. Owner manual visual QA PASS remains separately recorded (2026-11-12 12:18:40 UTC); the artifact's machine-generated pending-review label was not rewritten.
+
+The exact Fish checkpoint is branch `tts-audio-pending-20261104`, commit `8f79344b537b6900fc382a42f85142153c9d9128`, manifest blob `df2fc0a7ae7cf98d41df8ca42860fa16907b9e30`. Checkpoint and artifact TTS manifests match date, source script SHA, Fish provider/voice/model/rate/pipeline, ordered scenes 1–17, every MP3 SHA-256, and every WordBoundary array. Run logs show the checkpoint restore/validation step explicitly made no TTS requests. Renderer/test blobs and prior successful Node Regression (run #43156153408) and Registry/Safety (run #43156153185) remain the recorded >=300/no-maximum validation. Historical run #43147301096 remains FAIL on its original head. The predecessor pair is unchanged.
+
+Private upload authorization remains absent and recorded false. YouTube upload, scheduling and public release remain prohibited; release lock remains unchanged. The explicit acceptance amendment affects only this successor Render-only closeout.
+
+Next step: run this same pair's independent Prompt B. No automatic continuation; all-scenes V2 remains a later, separate phase.
+---
+
 ## Owner-approved versioned Render-only closeout successor — 2026-11-12
 
 Owner approved a separate versioned acceptance change: absence of private-upload authorization no longer blocks PASS for this Render-only artifact closeout. This removes that prerequisite only. Private-upload authorization remains absent; `youtube_upload_authorized`, YouTube scheduling and public release remain false. No YouTube upload, scheduling, public release, release-lock change, Pages deployment, TTS synthesis, matching-scene regeneration, or checkpoint deletion is permitted.
