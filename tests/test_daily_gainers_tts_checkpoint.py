@@ -322,6 +322,27 @@ class TtsCheckpointTests(unittest.TestCase):
             self.initialize()
 
 
+    def test_registered_voice_identity_does_not_reuse_legacy_voice_scene(self):
+        legacy = {
+            "provider": "fish.audio",
+            "endpoint": "https://api.fish.audio/v1/tts/stream/with-timestamp",
+            "model": "s2.1-pro-free",
+            "reference_id": "e7af89da8abc4fbdacd9a10ab9881933",
+            "prosody_speed": 1.15, "format": "mp3", "sample_rate": 44100,
+            "mp3_bitrate": 128, "normalize": False, "language": "zh-TW",
+            "parser_version": "fish-audio-timestamp-stream-v1",
+            "pipeline_version": "daily-gainers-fish-tts-v1",
+        }
+        successor = {**legacy, "reference_id": "0715599c7277458591efda3ff230a51e"}
+        self.initialize(voice="fish:" + legacy["reference_id"], rate="speed=1.15", provider_identity=legacy)
+        self.record_scene(1, provider_identity=legacy)
+        legacy_fingerprint = json.loads(self.manifest.read_text(encoding="utf-8"))["scenes"][0]["fingerprint"]
+        current = self.initialize(voice="fish:" + successor["reference_id"], rate="speed=1.15", provider_identity=successor)
+        self.assertEqual(checkpoint.missing_scenes(current), [1, 2])
+        self.assertNotEqual(current["scenes"][0]["fingerprint"], legacy_fingerprint)
+        self.assertEqual(current["scenes"][0]["identity"]["voice"], "fish:0715599c7277458591efda3ff230a51e")
+
+
 class TtsRecoveryWorkflowContractTests(unittest.TestCase):
     def read_head(self, path):
         return subprocess.run(
