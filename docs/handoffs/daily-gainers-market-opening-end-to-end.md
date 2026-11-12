@@ -1,5 +1,17 @@
 # TAIWAN STOCK — Daily 5% Video Market Opening (Goal-Anchored Handoff)
 
+## Latest owner-approved Fish TTS successor registration (2026-11-12)
+
+Owner approved a versioned successor pair after the R2 Prompt A audit found that the immutable predecessor requires YunJhe +15% while current main's date-scoped renderer consumes Fish checkpoint audio. Registration proposal: `data_research/m5/change-proposals/MVP10-A-R2-FISH-RENDER-SUCCESSOR-CHANGE-v1.md`; frozen pair: `data_research/m5/change-proposals/MVP10-A-R2-FISH-RENDER-SUCCESSOR-PAIR-v1.md`; registration PR: #107.
+
+- Successor phase: `MVP10-A-R2-FISH-RENDER-SUCCESSOR-R1`. Prompt A is preregistered but not started; Prompt B is not eligible. A separate owner-issued `promptA` is required only after this pair is verified on remote main.
+- The sole approved acceptance substitution is exact same-date Fish checkpoint MP3/WordBoundary identity and hashes instead of YunJhe +15% TTS. All other R2 eligibility, script, source, thumbnail, Render, artifact, and QA gates remain unchanged.
+- The predecessor `MVP10-A-R2-INCLUSIVE-ELIGIBILITY` remains A-incomplete at `WAITING_TTS`, B not eligible, and historical. Its original pair and YunJhe failure run #42472929875 remain unchanged; no predecessor PASS is claimed.
+- Reuse 20261104 Fish checkpoint branch `tts-audio-pending-20261104`, commit `8f79344b537b6900fc382a42f85142153c9d9128`, manifest blob `df2fc0a7ae7cf98d41df8ca42860fa16907b9e30`, 17/17 scenes only after current-main plan/checkpoint validation. Do not synthesize matching scenes.
+- The separate private-upload permission gate remains unchanged. Missing authorization is WAITING_OWNER/WAITING_PERMISSION, not PASS. YouTube upload, scheduling, public release, release-lock changes, Pages deployment, and checkpoint deletion remain prohibited.
+- No workflow was triggered by registration. This is not Prompt A execution and does not auto-continue.
+
+
 ## Latest owner-approved sequencing decision (2026-11-12)
 
 Canonical handoff: `docs/handoffs/daily-gainers-market-opening-end-to-end.md`  
