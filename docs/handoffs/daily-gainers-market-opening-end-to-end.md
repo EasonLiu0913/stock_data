@@ -3128,3 +3128,17 @@ Prompt A is still not complete: the required date-scoped Render is blocked by th
 - **First blocking step:** this session's GitHub connector has no workflow-dispatch operation, and the available GitHub browser tab is signed out (GitHub presents “Login with GitHub”). No dispatch was submitted. Current state is `WAITING_WORKFLOW`; the owner must authenticate and manually run this exact workflow on `main` with date `20261104`, or make a supported dispatch capability available. Resume after a new run appears with `event=workflow_dispatch`, the expected date and current main head; then inspect its actual jobs and artifact bundle for MP4, SRT, Fish manifest, thumbnail, QA, burned-caption proof, visual evidence and provenance. Do not treat this message as background execution.
 - Private upload permission is still false. Do not upload, schedule, publish, change the release lock, invoke Pages, or delete checkpoints. Prompt B remains ineligible. `plan_changed: no`.
 
+
+
+## Owner-approved Render duration successor registration — 2026-11-12 03:56 UTC
+
+Owner decision: “不保留5–10 分鐘門檻，改成5 分鐘以上即可”.
+Registration proposal: `data_research/m5/change-proposals/MVP10-A-R2-RENDER-DURATION-MINIMUM-CHANGE-v1.md`.
+Frozen pair: `data_research/m5/change-proposals/MVP10-A-R2-RENDER-DURATION-MINIMUM-PAIR-v1.md`.
+Registration branch: `codex/mvp10-a-r2-render-duration-minimum-v1`; base main: `ed3863d6d1625462f7f058fc595381d84ba4a7d7`.
+
+- This is a versioned successor to `MVP10-A-R2-FISH-RENDER-SUCCESSOR-R1`; it replaces only the whole-video duration upper bound. New rule: measured final MP4 duration must be at least 300 seconds, with no maximum. The actual spoken opening remains 60–90 seconds; all other acceptance gates are unchanged.
+- Run #43147301096 / job #130948007616 remains historical FAIL on head `6682c06c2e04d78ea863b2969563524599bd0a40`: 17 Fish scenes produced a measured MP4 duration of 636.831224 seconds (10.61 minutes); renderer blob at that run rejected it against 300–600 seconds. Artifact #13912818516 remains partial evidence, not PASS.
+- The run log shows the Fish checkpoint and input preflight completed. No need to repeat source research or synthesize matching scenes. New successor Prompt A requires a focused predicate/test update and one new current-main date-scoped Render-only validation after the change is merged.
+- Original phase/pairs, opening bound, checkpoint identity, previous FAIL history, private-upload permission gate, and publication prohibitions remain preserved. No YouTube/Pages action, upload, scheduling, release-lock change, or checkpoint deletion is authorized.
+- New successor Prompt A is not started before its proposal/pair and this checkpoint are merged to main. Prompt B is not eligible. Automatic continuation is not permitted.
