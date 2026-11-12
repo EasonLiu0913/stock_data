@@ -1,3 +1,25 @@
+## Prompt B independent closeout PASS — no-upload-gate successor — 2026-11-12 14:28 UTC
+
+**Prompt B PASS** for `MVP10-A-R2-NO-UPLOAD-GATE-SUCCESSOR-R1`. This closes only this versioned successor. It does not complete MVP10-A, the daily-video ultimate goal, or promote/execute another phase.
+
+### Independent current-main evidence
+
+- Main at verification: `c7acce1eded750a0f3e8832d4e075e130ace0f91`; unique active project remains `daily-gainers-market-opening-end-to-end`, goal `goal-v3/MVP-10DAY-v1`. Proposal blob `78500205c1fcc3175a3a4d8305c468d81c55e9c3`; frozen pre-A pair blob `01c99093c8d155ab909ec96498745da513271b99`; Prompt A closeout commit `c7acce1eded750a0f3e8832d4e075e130ace0f91`.
+- The 20261104 official raw list is blob `c54f39112e957a672ddb4725e3d8d6338eaf5c87`: 44 rows, 44 unique codes, +5.06% through +10%; every row is at least 5%. The inclusive candidate blob `f690c703058a4367ac1f619dd786d61f9d55eab0` covers the same 44 codes exactly once in 16 stock scenes and retains `910322 康師傅-DR` accurately labeled under the frozen inclusive rule.
+- Official numeric receipt `caecfc728f61368653f3dada2987470c845a5caa` is PASS for 20261104 (run #42231051247, completed success). Verified official opening blob `3578047ff03548e2bcb65d908228e9753deb434b` retains TWSE official aggregate scope and MI_INDEX stock-column breadth. Facts `75e0573aa2fb394712f40cb9b115096b3e136c07`, News `c31055e4c0f3e60899be5e8e4fe9358c923190a6`, AI v3 `24cf09ade6b98488b792aebc5036db9240c58a30`, final market summary `5560810319b843c1b5e57c3ddbf009ff51946bc4`, and SEO `273b67878d52b3abbb10bd69c48025c953a18383` are all same-date; SEO source identities match raw/Facts/News. Frozen plan blob `8e34905ce476c0b189340b5c193bb5513a614478` has 17 scenes / 3,451 narration characters.
+- Fish checkpoint branch `tts-audio-pending-20261104`, commit `8f79344b537b6900fc382a42f85142153c9d9128`, manifest blob `df2fc0a7ae7cf98d41df8ca42860fa16907b9e30`: date/script/voice/model/rate/provider-pipeline/checkpoint-pipeline identities match, all 17 ordered scenes succeeded, all MP3 and WordBoundary hashes match, and no matching scene was resynthesized.
+- Render run [#43158687674](https://github.com/EasonLiu0913/stock_data/actions/runs/43158687674), job #130984522584, is a successful date-scoped `workflow_dispatch` for 20261104 on head `51535708775e803dabbab9e5f2add61751c07712`. Artifact #13917708845 is unexpired (expires 2026-11-26) and its remote SHA-256 remains `57ff438c8f4b7c9a6e2394cfbef96663cefe937e10f8e2476610cf1d82d082bb`, size 27,950,333 bytes. Its previously verified archive integrity and six embedded checksums are reused; no binary re-download was needed.
+- MP4 SHA-256 `d8c331f0e6dbb2035aa3b24c9b30472a9d7454785f80352143b6a5d6513fa444`; QA duration 636.831224 seconds, final container duration 636.833333 seconds, meeting the frozen >=300 second minimum with no maximum. Opening is 64.443991 seconds. SRT SHA-256 `e2a2c3be50c00661d720da309c5bae41837c5c887d07bc722d09cd9a5b9edca8`, 161 cues; burned-caption proof reports 636.833333 seconds and ties MP4/SRT hashes. Dashboard includes 44 stocks / 17 scenes. Thumbnail is 1280x720, non-mock, QA PASS, SHA-256 `8f66f2d89a5d8b8248086c112b8d9a9b2aaf1c6c1efa8d008ffc757db0efc8c2`.
+- Owner manual visual QA PASS remains separate evidence. Machine-generated pending-review labels were not changed. The artifact has no standalone `provenance.json`; provenance is traceable through source blobs, frozen plan, render run/head, Fish checkpoint commit/manifest, artifact digest, and embedded media hashes.
+- Historical Render failure #43147301096 remains failure on head `6682c06c2e04d78ea863b2969563524599bd0a40`; historical Fish TTS failure #42472929875 remains failure on head `e48384b6c04ca83e9c49f0306fd6f7086f6c003d`. The original predecessor wait/failure and prior R2 histories remain unchanged.
+- Render workflow blob `448308feb483bd68409ce18b2acaab60b1d03efd` is read-only (`contents: read)); job has no YouTube/upload or Pages deployment step. Aggregate workflow-run query found no new run after Prompt A docs merge `c7acce1`. No workflow was triggered during Prompt B.
+
+### Sole delta and stop
+
+The sole prospective delta is applied: missing private-upload authorization does not block this successor's closeout. `private_upload_authorized=false`, `youtube_upload_authorized=false`, `youtube_scheduling_authorized=false`, `public_release_authorized=false`; release lock unchanged. No Pages deployment, upload, synthesis, checkpoint deletion, or Render rerun occurred.
+
+This PASS changes only this pair's closeout status. No phase was promoted or started; no future work runs automatically. Overall ultimate daily-video goal remains incomplete.
+
 ## Prompt B independent closeout PASS — Render-only successor — 2026-11-12 13:41 UTC
 
 **Prompt B PASS** for `MVP10-A-R2-FISH-RENDER-DURATION-MIN-5M-RENDER-ONLY-CLOSEOUT-R1`. This closes only this Render-only closeout round. It does not rewrite the predecessor pair, change duration or media acceptance, authorize publication, or complete the overall daily-video goal.
