@@ -14,7 +14,7 @@
   "change_proposal": "data_research/m5/change-proposals/MVP10-A-R2-NO-UPLOAD-GATE-SUCCESSOR-CHANGE-v1.md",
   "paired_prompt": "data_research/m5/change-proposals/MVP10-A-R2-NO-UPLOAD-GATE-SUCCESSOR-PAIR-v1.md",
   "predecessor_phase": "MVP10-A-R2-INCLUSIVE-ELIGIBILITY",
-  "next_phase_id": "MVP10-A-FISH-TTS-PERSISTENCE-R1-ALL-SCENES-V2",
+  "next_phase_id": "MVP10-A-R2-INCLUSIVE-ELIGIBILITY-NO-UPLOAD-GATE-SUCCESSOR-R1",
   "mvp10_a_status": "R2_WAITING_PERMISSION_AFTER_FISH_RENDER_SUCCESS",
   "mvp10_a_acceptance_changed": false,
   "mvp10_b_status": "frozen_not_eligible",
@@ -75,15 +75,15 @@
     "Reused exact date-scoped Render run #43158687674/job #130984522584/artifact #13917708845; live job and artifact digest reconfirmed. Fish checkpoint remains 17/17, matching MP3/WordBoundary hashes; owner visual QA PASS remains separate evidence."
   ],
   "research_progress_reason": "The prior WAITING_TTS checkpoint is now satisfied by the registered Fish identity successor and the real successful 20261104 Render artifact. Remaining original R2 A gate is private-upload feasibility/permission, which is absent and may not be bypassed; no YouTube action is authorized.",
-  "next_action": "WAITING_PERMISSION: obtain an owner-approved versioned successor for the original R2 private-upload prerequisite while keeping all YouTube actions prohibited, or preserve R2 as waiting and continue only under an explicitly promoted authorized phase.",
+  "next_action": "PR #123 contains the owner-approved versioned successor and frozen pair. Applicable CI checks are not yet observable; do not merge until required checks/branch rules are satisfied. After merge, re-read exact blobs on main and wait for a separate owner promptA.",
   "automatic_continuation_permitted": false,
-  "plan_changed": false,
+  "plan_changed": true,
   "publication_authorized": false,
   "youtube_upload_authorized": false,
   "youtube_scheduling_authorized": false,
   "public_release_authorized": false,
   "render_authorized_in_repair_phase": false,
-  "updated_at": "2026-11-12T14:40:27Z",
+  "updated_at": "2026-11-12T15:02:24Z",
   "prompt_b_failure_evidence": [
     "R1 frozen Prompt B criterion 5 required verifying no prohibited workflow was triggered.",
     "Render-only push-trigger runs: 42401534137 (20261102), 42401534168 (20261103); both failed before render and produced no artifacts.",
@@ -1098,47 +1098,45 @@
     }
   },
   "execution_order_change": {
-    "version": 1,
-    "status": "registered_on_main",
-    "proposal": "data_research/m5/change-proposals/MVP10-A-ELIGIBILITY-TTS-RENDER-SEQUENCE-CHANGE-v1.md",
+    "version": 2,
+    "status": "owner_approved_pending_pr_merge",
+    "proposal": "data_research/m5/change-proposals/MVP10-A-R2-INCLUSIVE-ELIGIBILITY-NO-UPLOAD-GATE-CHANGE-v1.md",
     "owner_decision_date": "2026-11-12",
-    "owner_decision_text": "ok，按這順序執行",
-    "registration_base_main": "399b4e7e85d7a98d8df51bb3abc95c65140a612c",
+    "owner_decision_text": "確授權是否建立一份版本化 successor，解除「原 R2」的私有上傳授權前置條件",
+    "registration_pr": 123,
+    "registration_base_main": "6394ffd6959b5e663a7b2a9fde3a763194e1d6b4",
     "phases": [
       {
         "order": 1,
         "id": "MVP10-A-R2-INCLUSIVE-ELIGIBILITY",
-        "action": "resume original frozen Prompt A; Prompt B only after A complete"
+        "status": "preserved_waiting_permission",
+        "action": "preserve original R2 pair and outcomes"
       },
       {
         "order": 2,
-        "id": "MVP10-A-FISH-TTS-PERSISTENCE-R1-ALL-SCENES-V2",
-        "action": "complete date-scoped Render-only threshold after R2 closeout; reuse exact matching R2 render artifact if it satisfies all unchanged TTS proof"
+        "id": "MVP10-A-R2-INCLUSIVE-ELIGIBILITY-NO-UPLOAD-GATE-SUCCESSOR-R1",
+        "status": "pending_pr_merge",
+        "action": "independently revalidate R2 non-upload gates; Prompt A only after merge and separate owner command"
       },
       {
         "order": 3,
         "id": "MVP10-A-FISH-TTS-PERSISTENCE-R1-ALL-SCENES-V2",
-        "action": "seek >3 genuinely missing-scene live recovery only on an eligible date; do not mutate complete checkpoint"
+        "status": "deferred",
+        "action": "continue only after successor closeout; follow its registered render threshold"
+      },
+      {
+        "order": 4,
+        "id": "MVP10-A-FISH-TTS-PERSISTENCE-R1-ALL-SCENES-V2",
+        "status": "deferred",
+        "action": "seek genuine >3 missing-scene live evidence only on an eligible date"
       }
     ],
-    "acceptance_changed": false,
-    "publication_authorized": false,
+    "sole_acceptance_delta": "Missing private-upload authorization is informational and not a prerequisite for this successor's Prompt A completion or Prompt B PASS; no other acceptance changes.",
     "youtube_upload_authorized": false,
     "youtube_scheduling_authorized": false,
     "public_release_authorized": false,
     "release_lock_changed": false,
-    "automatic_continuation_permitted": false,
-    "registration_pr": 105,
-    "registration_merge_commit": "cd36073f813c2980ad2279c785386a9c9505cd15",
-    "latest_verified_main": "c1044de858b7871c8bfb9d8771dec2bbf8b27a5a",
-    "successor_amendment": {
-      "version": 1,
-      "owner_approved": true,
-      "registration_pr": 107,
-      "predecessor_order_preserved": true,
-      "first_phase_id": "MVP10-A-R2-FISH-RENDER-SUCCESSOR-R1",
-      "only_change": "Owner-approved Fish checkpoint identity substitutes for YunJhe +15% TTS proof in the eligibility/render successor; no other R2 criterion changes."
-    }
+    "automatic_continuation_permitted": false
   },
   "current_prompt_a_resumption_checkpoint": {
     "observed_at_utc": "2026-11-12T02:27:03Z",
@@ -1458,6 +1456,15 @@
       "youtube_scheduling_authorized": false,
       "public_release_authorized": false,
       "automatic_continuation_permitted": false
+    },
+    {
+      "phase_id": "MVP10-A-R2-INCLUSIVE-ELIGIBILITY-NO-UPLOAD-GATE-SUCCESSOR-R1",
+      "status": "frozen_pair_pending_pr_merge_promptA_not_started",
+      "proposal": "data_research/m5/change-proposals/MVP10-A-R2-INCLUSIVE-ELIGIBILITY-NO-UPLOAD-GATE-CHANGE-v1.md",
+      "pair": "data_research/m5/change-proposals/MVP10-A-R2-INCLUSIVE-ELIGIBILITY-NO-UPLOAD-GATE-PAIR-v1.md",
+      "owner_decision_date": "2026-11-12",
+      "predecessor_waiting_permission_preserved": true,
+      "acceptance_delta": "Only private-upload authorization prerequisite removed for this successor; YouTube/publication actions remain prohibited."
     }
   ],
   "duration_gate_change": {
@@ -2233,5 +2240,72 @@
       "next_action": "Stop after this closeout. Do not auto-promote or start another phase."
     }
   },
-  "prompt_b_completed_at_utc": "2026-11-12T14:28:23Z"
+  "prompt_b_completed_at_utc": "2026-11-12T14:28:23Z",
+  "execution_order_change_history": [
+    {
+      "version": 1,
+      "status": "registered_on_main",
+      "proposal": "data_research/m5/change-proposals/MVP10-A-ELIGIBILITY-TTS-RENDER-SEQUENCE-CHANGE-v1.md",
+      "owner_decision_date": "2026-11-12",
+      "owner_decision_text": "ok，按這順序執行",
+      "registration_base_main": "399b4e7e85d7a98d8df51bb3abc95c65140a612c",
+      "phases": [
+        {
+          "order": 1,
+          "id": "MVP10-A-R2-INCLUSIVE-ELIGIBILITY",
+          "action": "resume original frozen Prompt A; Prompt B only after A complete"
+        },
+        {
+          "order": 2,
+          "id": "MVP10-A-FISH-TTS-PERSISTENCE-R1-ALL-SCENES-V2",
+          "action": "complete date-scoped Render-only threshold after R2 closeout; reuse exact matching R2 render artifact if it satisfies all unchanged TTS proof"
+        },
+        {
+          "order": 3,
+          "id": "MVP10-A-FISH-TTS-PERSISTENCE-R1-ALL-SCENES-V2",
+          "action": "seek >3 genuinely missing-scene live recovery only on an eligible date; do not mutate complete checkpoint"
+        }
+      ],
+      "acceptance_changed": false,
+      "publication_authorized": false,
+      "youtube_upload_authorized": false,
+      "youtube_scheduling_authorized": false,
+      "public_release_authorized": false,
+      "release_lock_changed": false,
+      "automatic_continuation_permitted": false,
+      "registration_pr": 105,
+      "registration_merge_commit": "cd36073f813c2980ad2279c785386a9c9505cd15",
+      "latest_verified_main": "c1044de858b7871c8bfb9d8771dec2bbf8b27a5a",
+      "successor_amendment": {
+        "version": 1,
+        "owner_approved": true,
+        "registration_pr": 107,
+        "predecessor_order_preserved": true,
+        "first_phase_id": "MVP10-A-R2-FISH-RENDER-SUCCESSOR-R1",
+        "only_change": "Owner-approved Fish checkpoint identity substitutes for YunJhe +15% TTS proof in the eligibility/render successor; no other R2 criterion changes."
+      }
+    }
+  ],
+  "r2_original_no_upload_successor_registration": {
+    "phase_id": "MVP10-A-R2-INCLUSIVE-ELIGIBILITY-NO-UPLOAD-GATE-SUCCESSOR-R1",
+    "proposal": "data_research/m5/change-proposals/MVP10-A-R2-INCLUSIVE-ELIGIBILITY-NO-UPLOAD-GATE-CHANGE-v1.md",
+    "pair": "data_research/m5/change-proposals/MVP10-A-R2-INCLUSIVE-ELIGIBILITY-NO-UPLOAD-GATE-PAIR-v1.md",
+    "status": "owner_approved_frozen_pair_pending_pr_merge",
+    "registration_pr": 123,
+    "registration_base_main": "6394ffd6959b5e663a7b2a9fde3a763194e1d6b4",
+    "predecessor_phase_id": "MVP10-A-R2-INCLUSIVE-ELIGIBILITY",
+    "predecessor_pair_unchanged": true,
+    "predecessor_prompt_a_status": "in_progress_waiting_permission",
+    "predecessor_prompt_b_status": "not_eligible",
+    "prompt_a_status": "not_started",
+    "prompt_b_status": "not_eligible",
+    "sole_acceptance_delta": "Missing private-upload authorization is informational and not a prerequisite for this successor's Prompt A completion or Prompt B PASS.",
+    "private_upload_authorized": false,
+    "youtube_upload_authorized": false,
+    "youtube_scheduling_authorized": false,
+    "public_release_authorized": false,
+    "release_lock_changed": false,
+    "automatic_continuation_permitted": false,
+    "next_action": "Wait for applicable PR checks on #123; after merge and remote readback on main, stop and wait for a separate owner promptA."
+  }
 }
