@@ -1,4 +1,14 @@
 # TAIWAN STOCK — Daily 5% Video Market Opening (Goal-Anchored Handoff)
+## Current durable checkpoint and dormant successor registration (2026-11-12 12:03:14 UTC)
+
+Current remote main at registration: `ff8fc7f6a6dc76024596f0954e0b887afb04b561`. The date-scoped Render-only workflow completed on head `51535708775e803dabbab9e5f2add61751c07712`: run #43158687674 / job #130984522584 succeeded for 20261104 and created artifact #13917708845 (`daily-gainers-20261104-render-only`, SHA-256 `57ff438c8f4b7c9a6e2394cfbef96663cefe937e10f8e2476610cf1d82d082bb`). Artifact evidence records 636.831224-second MP4, 636.833333-second burned-caption duration, 17 scenes, 44 stocks, thumbnail QA pass, and automated static/pixel checks pass. Human visual review remains pending (`BURN_EXECUTED_VISUAL_QA_PENDING`, `PASS_STATIC_AND_PIXEL_DELTA_VISUAL_REVIEW_PENDING`). Therefore the active duration phase Prompt A remains incomplete and Prompt B remains not eligible. The old Task State pointer that said waiting for the merge/render is superseded by this checkpoint; the current next action is the required human visual QA review. No TTS synthesis, Pages, YouTube/upload, public-release, release-lock, or checkpoint deletion action occurred in this Render-only run.
+
+The user requested a versioned successor pair for adding per-stock dealer flow while keeping broker-branch buy/sell, verifying layout, and selecting Fish voice `fish:0715599c7277458591efda3ff230a51e`. Registration files:
+- `data_research/m5/change-proposals/MVP10-A-DASHBOARD-DEALER-VOICE-0715599C-CHANGE-v1.md`
+- `data_research/m5/change-proposals/MVP10-A-DASHBOARD-DEALER-VOICE-0715599C-PAIR-v1.md`
+
+This candidate `MVP10-A-DASHBOARD-DEALER-FISH-VOICE-0715599C-R1` is preregistered but dormant. It does not alter the active project, active duration phase, the existing `MVP10-A-FISH-TTS-PERSISTENCE-R1-ALL-SCENES-V2` next-phase pointer, phase sequence, or any frozen predecessor acceptance. Do not start its Prompt A until all preceding registered phases/gates close and a later canonical handoff explicitly promotes it. The pair freezes 20261104 facts blob `75e0573aa2fb394712f40cb9b115096b3e136c07`, where `flow.dealer.net_lots` is the per-stock source; the existing broker branch buy/sell column remains separate. Requested voice identity is `fish:0715599c7277458591efda3ff230a51e`. Preserve old voice checkpoint branch `tts-audio-pending-20261104`, commit `8f79344b537b6900fc382a42f85142153c9d9128`, and manifest blob `df2fc0a7ae7cf98d41df8ca42860fa16907b9e30` unchanged. New-voice audio must use the distinct identity-scoped checkpoint branch and fingerprint defined in the pair. Registration itself did not trigger any workflow.
+
 
 ## Latest owner-approved Fish TTS successor registration (2026-11-12)
 
