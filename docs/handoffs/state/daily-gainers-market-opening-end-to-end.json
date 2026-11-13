@@ -6,10 +6,10 @@
   "goal_id": "goal-v3/MVP-10DAY-v1",
   "ultimate_goal_status": "not_complete",
   "current_phase_id": "MVP10-A-DASHBOARD-DEALER-FISH-VOICE-OPENING-MIN-40S-R2",
-  "phase_status": "waiting_workflow",
+  "phase_status": "waiting_owner_visual_qa",
   "round_id": "MVP10-A-DASHBOARD-DEALER-FISH-VOICE-OPENING-MIN-40S-R2",
   "prompt_a_status": "complete_pending_prompt_b",
-  "prompt_b_status": "in_progress_waiting_repair_ci",
+  "prompt_b_status": "in_progress_waiting_visual_qa",
   "owner_approved_on": "2026-11-13",
   "change_proposal": "data_research/m5/change-proposals/MVP10-A-DASHBOARD-DEALER-FISH-VOICE-OPENING-MIN-40S-CHANGE-v1.md",
   "paired_prompt": "data_research/m5/change-proposals/MVP10-A-DASHBOARD-DEALER-FISH-VOICE-OPENING-MIN-40S-PAIR-v1.md",
@@ -17,7 +17,7 @@
   "next_phase_id": null,
   "mvp10_a_status": "PROMPT_A_COMPLETE_PROMPT_B_WAITING_WORKFLOW",
   "mvp10_a_acceptance_changed": false,
-  "mvp10_b_status": "IN_PROGRESS_WAITING_WORKFLOW",
+  "mvp10_b_status": "IN_PROGRESS_WAITING_OWNER_VISUAL_QA",
   "mvp10_b_acceptance_changed": false,
   "research_progress_status": "PROGRESS",
   "research_progress_evidence": [
@@ -88,10 +88,13 @@
     "Render run #43376274314/job #131723397314 failed before checkpoint restore: test_daily_gainers_caption_numbers.py absent from sparse checkout, unittest Ran 0 tests exit 5",
     "partial artifact #14015100795 digest sha256:e78fed22cb5bce696ed658fb1fa4f38d201bc8e92f4afc3ab959d41a88c5fe37; no MP4/SRT render acceptance",
     "minimal fix branch codex/r2-caption-numbers-render-checkout-fix based on main 954df39e6d90460aad8e69097365a0c1254ba0e2",
-    "workflow before blob f5d0e4d6ae664798d94ff10cd71b997acd6664e1; after blob ee8cf5ffed8942f6f014515921dcf680ce0d3e1e"
+    "workflow before blob f5d0e4d6ae664798d94ff10cd71b997acd6664e1; after blob ee8cf5ffed8942f6f014515921dcf680ce0d3e1e",
+    "R2 repair PR #136 merged as main 196f73131affc40ca393f1af2af6b4175dca143b; checkpoint CI #43377878600/job #131728534679 passed caption-number tests 5/5; other required PR checks #43377878514 #43377878524 #43377878617 passed.",
+    "R2 exact-date Render-only run #43384988694/job #131751265569 success, workflow_dispatch, main head 196f73131affc40ca393f1af2af6b4175dca143b, date 20261104; no TTS; checkpoint 17/17 PASS, Fish voice 0715599c7277458591efda3ff230a51e; checkpoint commit ca6a5ea656b3cb4718886391ab3b846ed00fbd2b and manifest blob 06b9ba677553fb3e04f6594d5614d4a8fc138801.",
+    "Artifact #14018153582 digest sha256:4f2244c74e9dc5be005e151b1e444fc181a2b7faf6a37400726fb8050155d7e9; MP4 sha256 bc2b9346a04a2f98b3d4c026f089a70d8645d571f6b6ead108d97186f9563afb; SRT sha256 dc167ce821d1217c8cfcf94da18fe842d997fe75a5134c025decf6382cfeabd9; measured opening 50.808005s; whole video 519.881565s; exact artifact human visual QA pending."
   ],
-  "research_progress_reason": "Render run #43376274314 exposed a distinct sparse-checkout defect: the workflow invoked the caption-number unittest but omitted the test file, so 0 tests ran. A minimal workflow-path repair and durable checkpoint were created; verify PR CI, merge, then run one changed-input Render-only validation.",
-  "next_action": "Check PR CI for tests/test_daily_gainers_caption_numbers.py discovery and PASS; after merge, owner runs .github/workflows/daily-gainers-date-render-only.yml on main with date 20261104 and provides the run URL/artifact for closeout.",
+  "research_progress_reason": "PR #136 CI passed and owner-triggered Render-only run #43384988694 completed with the matching 17-scene Fish checkpoint and zero TTS requests; the remaining frozen Prompt B gate is the owner visual review of this exact artifact.",
+  "next_action": "Owner: visually inspect artifact #14018153582 from Render-only run #43384988694 (MP4/SRT, Dashboard and burned captions) and report PASS or FAIL for this exact artifact. Do not reuse prior-artifact QA.",
   "automatic_continuation_permitted": false,
   "plan_changed": true,
   "publication_authorized": false,
@@ -99,7 +102,7 @@
   "youtube_scheduling_authorized": false,
   "public_release_authorized": false,
   "render_authorized_in_repair_phase": false,
-  "updated_at": "2026-11-13T06:18:00Z",
+  "updated_at": "2026-11-13T07:35:15Z",
   "prompt_b_failure_evidence": [
     "R1 frozen Prompt B criterion 5 required verifying no prohibited workflow was triggered.",
     "Render-only push-trigger runs: 42401534137 (20261102), 42401534168 (20261103); both failed before render and produced no artifacts.",
@@ -727,7 +730,7 @@
     "checkpoint_status": "all five scenes pending; no audio or WordBoundary hashes",
     "acceptance_changed": false
   },
-  "current_blocker": "PR CI and merge for sparse-checkout repair; then a new date-scoped Render-only run for 20261104 and owner visual review of its exact artifact.",
+  "current_blocker": "WAITING_OWNER_VISUAL_QA: exact artifact #14018153582 / run #43384988694 requires owner visual review; render-only-visual-check and burned-caption-proof both explicitly mark visual review pending.",
   "planned_research": "Use PR CI to validate the renderer/workflow/test diff; after merge, run one authorized date-scoped Render-only check against the matching 17-scene checkpoint, verify the emitted opening duration fields and inherited media evidence, then obtain exact-artifact visual QA.",
   "anti_loop": {
     "repeats_previous_method_with_unchanged_input": false,
@@ -2797,5 +2800,25 @@
     "next_action": "Verify PR CI, merge, then one bounded date-scoped Render-only run for 20261104 using same 17-scene Fish checkpoint; verify no TTS and exact-artifact QA",
     "youtube_or_pages_action": false,
     "automatic_continuation_permitted": false
+  },
+  "r2_caption_render_run": {
+    "run_id": 43384988694,
+    "job_id": 131751265569,
+    "target_date": "20261104",
+    "event": "workflow_dispatch",
+    "head_sha": "196f73131affc40ca393f1af2af6b4175dca143b",
+    "conclusion": "success",
+    "fish_checkpoint_branch": "tts-audio-pending-20261104-fish-0715599c7277458591efda3ff230a51e",
+    "fish_checkpoint_commit": "ca6a5ea656b3cb4718886391ab3b846ed00fbd2b",
+    "fish_manifest_blob": "06b9ba677553fb3e04f6594d5614d4a8fc138801",
+    "scene_count": 17,
+    "fish_tts_requests": 0,
+    "market_opening_duration_seconds": 50.808005,
+    "total_video_duration_seconds": 519.881565,
+    "mp4_sha256": "bc2b9346a04a2f98b3d4c026f089a70d8645d571f6b6ead108d97186f9563afb",
+    "srt_sha256": "dc167ce821d1217c8cfcf94da18fe842d997fe75a5134c025decf6382cfeabd9",
+    "artifact_id": 14018153582,
+    "artifact_digest": "sha256:4f2244c74e9dc5be005e151b1e444fc181a2b7faf6a37400726fb8050155d7e9",
+    "qa_visual_review": "pending_owner"
   }
 }
