@@ -3531,3 +3531,14 @@ This implementation is not yet CI-verified or merged. Prompt A remains in progre
 - Durable artifact #14009273473, 23,162,351 bytes, digest `sha256:957ba83a757a77da45f4e626391f081235650db889fdba9b02b98f449aab2ea7`, includes 18 files. MP4 SHA-256 `7847b23fdbf5218e6233810b11238757d5a17e9875d715a3acb8b9a74e30bdcc`; SRT SHA-256 `375022d24f44a44de110827f65ce73bad1359c0ec5ecda1eb12eb114ef2f416b`; QA SHA-256 `7190eddffdf927f756d78cdbe383616e4ed777d788e0375431c84bdc50d2ff66`.
 - The workflow explicitly leaves `PASS_STATIC_AND_PIXEL_DELTA_VISUAL_REVIEW_PENDING` and `BURN_EXECUTED_VISUAL_QA_PENDING`. The exact new artifact therefore still requires owner human visual QA, including the added dealer column, preserved broker buy/sell column, new Fish voice and burned captions. Prior visual QA does not transfer to this changed artifact.
 - Prompt A remains in progress; Prompt B is not eligible. Next: owner reviews artifact #14009273473 and reports PASS or a concrete defect; then a separate `promptA` records that decision and closes A if all criteria pass. No TTS rerun, YouTube action, Pages deployment, release-lock change or checkpoint deletion.
+
+
+---
+
+## R2 Prompt A — owner visual QA PASS — 2026-11-13
+
+- The owner reported “人工 QA pass” for the exact new-format artifact from Render-only run [#43362621652](https://github.com/EasonLiu0913/stock_data/actions/runs/43362621652), artifact #14009273473. This satisfies the inherited exact-artifact human visual QA item for the frozen R2 Prompt A.
+- The prior durable render evidence remains unchanged: main `d5632c3248b9ab967ec7d6e03e6e71001e13d9cd`; opening 50.808005s and R2 >=40s gate PASS; whole video 519.881565s and >=300s gate PASS; 17 scenes reused with no TTS requests; artifact hashes recorded in Task State.
+- R2 Prompt A is now complete; the preregistered Prompt B for this same round is eligible. Stop and await the separate owner `promptB`; do not execute it in this same invocation.
+- Owner also mentioned unspecified additional changes. They are not folded into the completed frozen R2 scope. Ask the owner to list them; determine whether they fit current acceptance or require an owner-approved versioned successor. Do not alter frozen R2 acceptance or historical results.
+- YouTube upload/scheduling/public release, Pages, release-lock changes, and checkpoint deletion remain prohibited.
