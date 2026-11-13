@@ -6,16 +6,16 @@
   "goal_id": "goal-v3/MVP-10DAY-v1",
   "ultimate_goal_status": "not_complete",
   "current_phase_id": "MVP10-A-DASHBOARD-DEALER-FISH-VOICE-OPENING-MIN-40S-R2",
-  "phase_status": "in_progress",
+  "phase_status": "complete_pending_prompt_b",
   "round_id": "MVP10-A-DASHBOARD-DEALER-FISH-VOICE-OPENING-MIN-40S-R2",
-  "prompt_a_status": "in_progress",
-  "prompt_b_status": "not_eligible",
+  "prompt_a_status": "complete_pending_prompt_b",
+  "prompt_b_status": "eligible_pending_owner_command",
   "owner_approved_on": "2026-11-13",
   "change_proposal": "data_research/m5/change-proposals/MVP10-A-DASHBOARD-DEALER-FISH-VOICE-OPENING-MIN-40S-CHANGE-v1.md",
   "paired_prompt": "data_research/m5/change-proposals/MVP10-A-DASHBOARD-DEALER-FISH-VOICE-OPENING-MIN-40S-PAIR-v1.md",
   "predecessor_phase": "MVP10-A-DASHBOARD-DEALER-FISH-VOICE-0715599C-R1",
   "next_phase_id": null,
-  "mvp10_a_status": "R2_RENDER_QA_PASS_WAITING_EXACT_ARTIFACT_HUMAN_VISUAL_QA",
+  "mvp10_a_status": "PROMPT_A_COMPLETE_PROMPT_B_ELIGIBLE",
   "mvp10_a_acceptance_changed": false,
   "mvp10_b_status": "frozen_preregistered_not_eligible",
   "mvp10_b_acceptance_changed": false,
@@ -82,7 +82,7 @@
     "R2 implementation branch codex/mvp10-a-opening-duration-40s-r2 adds a finite measured opening-scene >=40s/no-maximum predicate to renderer QA and workflow, plus boundary regression cases."
   ],
   "research_progress_reason": "The first failing R1 gate is now encoded as an enforceable check against actual rendered scene timing; <40s, missing and non-finite values fail, while >=40s has no upper limit.",
-  "next_action": "Owner: inspect artifact 14009273473 from Render-only run 43362621652 for the exact 20261104 dealer dashboard and Fish voice output, then report visual QA PASS or the specific defect. After that, invoke promptA to record the result and close R2 A; Prompt B remains ineligible until A closes.",
+  "next_action": "Run the preregistered Prompt B for MVP10-A-DASHBOARD-DEALER-FISH-VOICE-OPENING-MIN-40S-R2. Separately, ask the owner to list the additional requested changes; assess them after this frozen R2 closeout and register a versioned successor if needed.",
   "automatic_continuation_permitted": false,
   "plan_changed": true,
   "publication_authorized": false,
@@ -90,7 +90,7 @@
   "youtube_scheduling_authorized": false,
   "public_release_authorized": false,
   "render_authorized_in_repair_phase": false,
-  "updated_at": "2026-11-13T04:30:51Z",
+  "updated_at": "2026-11-13T05:09:53Z",
   "prompt_b_failure_evidence": [
     "R1 frozen Prompt B criterion 5 required verifying no prohibited workflow was triggered.",
     "Render-only push-trigger runs: 42401534137 (20261102), 42401534168 (20261103); both failed before render and produced no artifacts.",
@@ -718,7 +718,7 @@
     "checkpoint_status": "all five scenes pending; no audio or WordBoundary hashes",
     "acceptance_changed": false
   },
-  "current_blocker": "New main-based Render-only run 43362621652 passed all workflow jobs and emitted MP4/SRT/QA/thumbnail artifacts; the artifact's automated visual state explicitly remains PASS_STATIC_AND_PIXEL_DELTA_VISUAL_REVIEW_PENDING. Owner must review the exact rendered artifact and report a human visual QA result before Prompt A can close.",
+  "current_blocker": "No blocker remains for the frozen R2 Prompt A acceptance. Owner mentioned additional desired visual changes but has not specified them; keep them outside the completed R2 scope until listed and versioned if they alter acceptance.",
   "planned_research": "Use PR CI to validate the renderer/workflow/test diff; after merge, run one authorized date-scoped Render-only check against the matching 17-scene checkpoint, verify the emitted opening duration fields and inherited media evidence, then obtain exact-artifact visual QA.",
   "anti_loop": {
     "repeats_previous_method_with_unchanged_input": false,
@@ -2720,12 +2720,20 @@
       "artifact_files": 18,
       "artifact_url": "https://github.com/EasonLiu0913/stock_data/actions/runs/43362621652/artifacts/14009273473"
     },
-    "human_visual_qa": "pending_owner_review",
-    "prompt_a_complete": false,
-    "prompt_b_eligible": false,
+    "human_visual_qa": "PASS",
+    "prompt_a_complete": true,
+    "prompt_b_eligible": true,
     "youtube_upload_or_scheduling_or_public_release": false,
     "pages_deployed": false,
     "release_lock_changed": false,
-    "checkpoint_deleted": false
+    "checkpoint_deleted": false,
+    "owner_visual_qa_observation": {
+      "result": "PASS",
+      "observed_at_utc": "2026-11-13T05:09:53Z",
+      "evidence": "Owner stated: 人工 QA pass",
+      "artifact_id": 14009273473,
+      "render_run_id": 43362621652
+    },
+    "additional_visual_changes": "Owner says there are additional changes but has not specified the items. Do not fold unspecified requests into this frozen pair or change its acceptance."
   }
 }
