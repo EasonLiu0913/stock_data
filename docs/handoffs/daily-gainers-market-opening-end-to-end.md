@@ -3468,3 +3468,32 @@ The owner directed: close the registered old-format phase, formally promote the 
 - Required next steps: open/check the implementation PR and resolve any relevant CI failures without relaxing the frozen pair; after code is on main, execute the authorized 20261104 Fish recovery into the new identity-scoped branch and independently verify all 17 scenes/MP3/WordBoundary hashes; then execute the same-date Render-only and verify the rendered dashboard plus all inherited artifacts. This session has no workflow_dispatch operation, so the live recovery/Render gate may require the owner to run the workflow manually. Prompt A stays incomplete until the frozen completion contract is met.
 - YouTube upload/scheduling/public release, Pages, lock changes and checkpoint deletion remain prohibited. The predecessor all-scenes-v2 remains `SUPERSEDED_BY_OWNER_DIRECTION, NOT PASS`.
 
+
+
+---
+
+## Prompt A render evidence checkpoint — MVP10-A-DASHBOARD-DEALER-FISH-VOICE-0715599C-R1 — 2026-11-13
+
+Current remote `main` before this documentation checkpoint: `6036e728ed843050bd2c534abde9b6faacc7d929`. Active route remains `daily-gainers-market-opening-end-to-end`, goal `goal-v3/MVP-10DAY-v1`. The successor code is on main via PR #127, merge commit `b2badbb6a6bc851d70b85ee5e836f635f6ae07f5`; required checks on final PR head passed.
+
+- Fish run [#43340699051](https://github.com/EasonLiu0913/stock_data/actions/runs/43340699051) completed successfully for `20261104`. New-voice checkpoint branch `tts-audio-pending-20261104-fish-0715599c7277458591efda3ff230a51e`, commit `ca6a5ea656b3cb4718886391ab3b846ed00fbd2b`, manifest blob `06b9ba677553fb3e04f6594d5614d4a8fc138801`. Manifest records the exact frozen script SHA `de2ea3550050ad5a8ec1d5b988fbe91b9344ce98cdebe74272ee4cd7678546f3`, voice `fish:0715599c7277458591efda3ff230a51e`, and 17/17 successful scenes with MP3/WordBoundary SHA-256 values.
+- Render run [#43347687018](https://github.com/EasonLiu0913/stock_data/actions/runs/43347687018), job `131630895392`, completed success for `20261104` on head `5d1126a7cf43645f25ff553982933d1a1a4f42eb`. Its checkpoint validation passed with 17 scenes and made no TTS requests. Artifact `14002714186` digest `sha256:9b01b38d79e3337dc64ac08cbda8e2a0da22e939340090cfe5076e39d884bf34`; MP4 SHA-256 `7847b23fdbf5218e6233810b11238757d5a17e9875d715a3acb8b9a74e30bdcc`, SRT SHA-256 `375022d24f44a44de110827f65ce73bad1359c0ec5ecda1eb12eb114ef2f416b`, duration `519.881565` seconds (meets >=300-second total-duration gate). Thumbnail QA passed at 1280x720 with 44 stocks.
+- Dashboard manifest in the run log records all seven columns, including `自營商(張)` and separate `分點買／賣`; its regression tests passed. The generated burned-caption proof and visual-check records remain explicitly `BURN_EXECUTED_VISUAL_QA_PENDING` / `PASS_STATIC_AND_PIXEL_DELTA_VISUAL_REVIEW_PENDING`; these are not manual visual PASS evidence.
+- **Frozen acceptance blocker:** the registered pair requires actual spoken market opening duration 60–90 seconds. The checkpoint identifies scene 1 as `market_opening`; Render QA reports its audio duration as `50.808` seconds. The Actions workflow concluded success, but this does not satisfy the frozen phase gate. Do not change the frozen threshold or mark this run/phase PASS. Extending the opening changes the frozen script SHA and therefore requires an owner-approved versioned re-registration before new TTS/Render execution.
+- Prompt A remains `IN_PROGRESS_NOT_PASS`; Prompt B is not eligible. No YouTube upload, schedule, public release, Pages deployment, release-lock change, or checkpoint deletion occurred. The prior 20261104 old-voice output/checkpoint remains historical only and is never reused for successor output.
+- Next owner action: decide whether to authorize a versioned successor that extends only the 20261104 market-opening narration to meet the existing 60–90-second gate, with a new frozen script SHA and all affected scene fingerprints regenerated, or to leave the phase blocked. Separately, complete visual QA on the exact artifact if accessible; do not substitute the earlier old-format video's visual review.
+
+
+
+---
+
+## Owner-approved opening-duration successor registration — 2026-11-13
+
+The owner explicitly changed the current 20261104 dashboard/new-Fish-voice successor's opening requirement to “40 seconds or longer passes.” The versioned proposal is `data_research/m5/change-proposals/MVP10-A-DASHBOARD-DEALER-FISH-VOICE-OPENING-MIN-40S-CHANGE-v1.md`; its immutable paired A/B is `data_research/m5/change-proposals/MVP10-A-DASHBOARD-DEALER-FISH-VOICE-OPENING-MIN-40S-PAIR-v1.md`.
+
+- Successor phase: `MVP10-A-DASHBOARD-DEALER-FISH-VOICE-OPENING-MIN-40S-R2`. Sole acceptance delta: actual measured spoken market-opening audio must be finite and >=40.000 seconds; no maximum. All other dashboard, Fish identity/checkpoint, media, subtitle, QA, visual-review and provenance gates remain unchanged.
+- Predecessor `MVP10-A-DASHBOARD-DEALER-FISH-VOICE-0715599C-R1` and its frozen 60–90-second pair remain unchanged. Run #43347687018's 50.808-second opening remains R1's unmet result; R1 is superseded by owner direction, NOT PASS.
+- The existing R1 artifact #14002714186 may be re-evaluated only under R2 after rechecking its exact date/input/voice/checkpoint/provenance and every unchanged gate; this does not retroactively change R1's result. The artifact's machine visual-review labels remain pending, so exact-artifact human visual QA is still required.
+- Registration PR branch: `codex/mvp10-a-dashboard-fish-opening-min-40s-r2`, based on PR #129's documentation checkpoint (which records the real Render evidence). Registration is not yet on main. Once merged, R2 Prompt A is eligible only after a separate owner `promptA`; no automatic execution or Prompt B.
+- R2 Prompt A should add a fail-closed measured opening-duration gate (>=40.000, no maximum) to `scripts/render_daily_gainers_video.js` and `.github/workflows/daily-gainers-date-render-only.yml`, with boundary tests in `tests/daily_gainers_video_duration_gate.test.js`. Reuse the exact complete Fish checkpoint; Render-only makes no TTS request. Preserve the >=300-second whole-video minimum with no maximum.
+- YouTube upload/scheduling/public release, Pages, upload/orchestrator, release-lock changes and checkpoint deletion remain prohibited.
