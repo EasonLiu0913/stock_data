@@ -27,7 +27,7 @@ jobs:
       matrix: ${{ steps.queue.outputs.matrix }}
     env:
       REQUESTED_DATE: ${{ inputs.target_date || '' }}
-      FISH_TTS_VOICE: fish:e7af89da8abc4fbdacd9a10ab9881933
+      FISH_TTS_VOICE: fish:0715599c7277458591efda3ff230a51e
       FISH_TTS_RATE: '1.15'
     steps:
       - name: Checkout validated script inputs
@@ -103,7 +103,7 @@ jobs:
           else
             for candidate in $CANDIDATE_DATES; do
               plan="research_pending/daily-gainers-render-scripts/$candidate.json"
-              branch="tts-audio-pending-$candidate"
+              branch="tts-audio-pending-$candidate-fish-0715599c7277458591efda3ff230a51e"
               if [ ! -s "$plan" ]; then
                 echo "Selecting earliest incomplete date $candidate: frozen plan is missing."
                 date="$candidate"
@@ -208,14 +208,14 @@ jobs:
         shell: bash
         env:
           DATE: ${{ steps.resolve.outputs.target_date }}
-          FISH_TTS_VOICE: fish:e7af89da8abc4fbdacd9a10ab9881933
+          FISH_TTS_VOICE: fish:0715599c7277458591efda3ff230a51e
           FISH_TTS_RATE: '1.15'
         run: |
           set -euo pipefail
           script="research_pending/daily-gainers-render-scripts/$DATE.json"
           test -s "$script"
           cp "$script" "$RUNNER_TEMP/frozen-plan.json"
-          branch="tts-audio-pending-$DATE"
+          branch="tts-audio-pending-$DATE-fish-0715599c7277458591efda3ff230a51e"
           checkpoint="$RUNNER_TEMP/checkpoint"
           if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
             git fetch origin "refs/heads/$branch:refs/remotes/origin/$branch"
@@ -282,7 +282,7 @@ jobs:
     env:
       DATE: ${{ needs.prepare.outputs.target_date }}
       SCENE_ID: ${{ matrix.scene_id }}
-      FISH_TTS_VOICE: fish:e7af89da8abc4fbdacd9a10ab9881933
+      FISH_TTS_VOICE: fish:0715599c7277458591efda3ff230a51e
       FISH_TTS_RATE: '1.15'
       TAIWAN_STOCK_TTS_MAX_ATTEMPTS: '1'
       TAIWAN_STOCK_TTS_TRANSPORT_DIAGNOSTICS: '1'
@@ -318,7 +318,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          branch="tts-audio-pending-$DATE"
+          branch="tts-audio-pending-$DATE-fish-0715599c7277458591efda3ff230a51e"
           if ! git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
             echo "Checkpoint branch disappeared before scene run" >&2
             exit 1
@@ -375,7 +375,7 @@ jobs:
           git -C "$RUNNER_TEMP/checkpoint" config user.name "github-actions[bot]"
           git -C "$RUNNER_TEMP/checkpoint" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git -C "$RUNNER_TEMP/checkpoint" commit -m "tts: checkpoint $DATE scene $SCENE_ID"
-          git -C "$RUNNER_TEMP/checkpoint" push origin "HEAD:refs/heads/tts-audio-pending-$DATE"
+          git -C "$RUNNER_TEMP/checkpoint" push origin "HEAD:refs/heads/tts-audio-pending-$DATE-fish-0715599c7277458591efda3ff230a51e"
 
   sync-status:
     needs: [prepare, synthesize]
@@ -393,7 +393,7 @@ jobs:
       - name: Restore text manifest from durable date checkpoint
         uses: actions/checkout@v7
         with:
-          ref: tts-audio-pending-${{ needs.prepare.outputs.target_date }}
+          ref: tts-audio-pending-${{ needs.prepare.outputs.target_date }}-fish-0715599c7277458591efda3ff230a51e
           path: .tts-checkpoint
           fetch-depth: 1
           sparse-checkout: tts-audio/${{ needs.prepare.outputs.target_date }}
