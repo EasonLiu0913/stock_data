@@ -15,7 +15,7 @@
   "paired_prompt": "data_research/m5/change-proposals/MVP10-A-DASHBOARD-DEALER-FISH-VOICE-OPENING-MIN-40S-PAIR-v1.md",
   "predecessor_phase": "MVP10-A-DASHBOARD-DEALER-FISH-VOICE-0715599C-R1",
   "next_phase_id": null,
-  "mvp10_a_status": "OPENING_MIN_40S_R2_IMPLEMENTATION_IN_PROGRESS",
+  "mvp10_a_status": "R2_RENDER_QA_PASS_WAITING_EXACT_ARTIFACT_HUMAN_VISUAL_QA",
   "mvp10_a_acceptance_changed": false,
   "mvp10_b_status": "frozen_preregistered_not_eligible",
   "mvp10_b_acceptance_changed": false,
@@ -82,7 +82,7 @@
     "R2 implementation branch codex/mvp10-a-opening-duration-40s-r2 adds a finite measured opening-scene >=40s/no-maximum predicate to renderer QA and workflow, plus boundary regression cases."
   ],
   "research_progress_reason": "The first failing R1 gate is now encoded as an enforceable check against actual rendered scene timing; <40s, missing and non-finite values fail, while >=40s has no upper limit.",
-  "next_action": "Review and merge the R2 implementation PR after its required checks pass; then run the authorized 20261104 date-scoped Render-only verification. No TTS calls.",
+  "next_action": "Owner: inspect artifact 14009273473 from Render-only run 43362621652 for the exact 20261104 dealer dashboard and Fish voice output, then report visual QA PASS or the specific defect. After that, invoke promptA to record the result and close R2 A; Prompt B remains ineligible until A closes.",
   "automatic_continuation_permitted": false,
   "plan_changed": true,
   "publication_authorized": false,
@@ -90,7 +90,7 @@
   "youtube_scheduling_authorized": false,
   "public_release_authorized": false,
   "render_authorized_in_repair_phase": false,
-  "updated_at": "2026-11-12T17:02:51Z",
+  "updated_at": "2026-11-13T04:30:51Z",
   "prompt_b_failure_evidence": [
     "R1 frozen Prompt B criterion 5 required verifying no prohibited workflow was triggered.",
     "Render-only push-trigger runs: 42401534137 (20261102), 42401534168 (20261103); both failed before render and produced no artifacts.",
@@ -718,7 +718,7 @@
     "checkpoint_status": "all five scenes pending; no audio or WordBoundary hashes",
     "acceptance_changed": false
   },
-  "current_blocker": "Code and boundary tests are committed on the Prompt A branch; required CI and a post-merge same-date Render-only validation are pending. The exact artifact still needs inherited human visual QA.",
+  "current_blocker": "New main-based Render-only run 43362621652 passed all workflow jobs and emitted MP4/SRT/QA/thumbnail artifacts; the artifact's automated visual state explicitly remains PASS_STATIC_AND_PIXEL_DELTA_VISUAL_REVIEW_PENDING. Owner must review the exact rendered artifact and report a human visual QA result before Prompt A can close.",
   "planned_research": "Use PR CI to validate the renderer/workflow/test diff; after merge, run one authorized date-scoped Render-only check against the matching 17-scene checkpoint, verify the emitted opening duration fields and inherited media evidence, then obtain exact-artifact visual QA.",
   "anti_loop": {
     "repeats_previous_method_with_unchanged_input": false,
@@ -900,6 +900,19 @@
       "successor_phase_id": "MVP10-A-FISH-TTS-PERSISTENCE-R1-ALL-SCENES-V2",
       "successor_round_id": "MVP10-A-FISH-TTS-PERSISTENCE-R1-ALL-SCENES-V2",
       "reason": "Task State reconciled to already merged owner-authorized PR #91; v2 prospectively removes only the three-missing-scenes invocation cap; prior phase history remains in evidence."
+    },
+    {
+      "version": "R2-PROMPT-A-POST-RENDER-20261113",
+      "status": "render_gate_pass_waiting_human_visual_qa",
+      "main_sha": "d5632c3248b9ab967ec7d6e03e6e71001e13d9cd",
+      "render_run_id": 43362621652,
+      "artifact_id": 14009273473,
+      "opening_duration_seconds": 50.808005,
+      "opening_duration_pass": true,
+      "tts_requests_made": 0,
+      "human_visual_qa": "pending_owner_review",
+      "historical_failures_rewritten": false,
+      "publication_authorized": false
     }
   ],
   "latest_observation": {
@@ -2661,5 +2674,58 @@
   },
   "prior_attempt": "R1 render #43347687018 scene 1 measured 50.808 seconds; R1 remains not PASS under the old 60–90 criterion. R2 was preregistered and merged before this implementation.",
   "r1_disposition": "SUPERSEDED_BY_OWNER_APPROVED_ACCEPTANCE_CHANGE, NOT PASS",
-  "r1_frozen_acceptance_preserved": true
+  "r1_frozen_acceptance_preserved": true,
+  "mvp10_a_r2_post_render_checkpoint": {
+    "phase_id": "MVP10-A-DASHBOARD-DEALER-FISH-VOICE-OPENING-MIN-40S-R2",
+    "observed_at_utc": "2026-11-13T04:30:51Z",
+    "main_sha": "d5632c3248b9ab967ec7d6e03e6e71001e13d9cd",
+    "implementation_pr": 131,
+    "implementation_merge_commit": "d5632c3248b9ab967ec7d6e03e6e71001e13d9cd",
+    "ci": {
+      "node_regression_run": 43358812481,
+      "node_regression_job": 131667165398,
+      "node_regression_conclusion": "success",
+      "checkpoint_contract_run": 43358812602,
+      "checkpoint_contract_job": 131667165095,
+      "checkpoint_contract_conclusion": "success"
+    },
+    "render": {
+      "workflow": ".github/workflows/daily-gainers-date-render-only.yml",
+      "run_id": 43362621652,
+      "job_id": 131679471578,
+      "event": "workflow_dispatch",
+      "target_date": "20261104",
+      "head_sha": "d5632c3248b9ab967ec7d6e03e6e71001e13d9cd",
+      "conclusion": "success",
+      "tts_requests_made": 0,
+      "scenes": 17,
+      "market_opening_scene_type": "market_opening",
+      "market_opening_duration_seconds": 50.808005,
+      "market_opening_duration_pass": true,
+      "whole_video_duration_seconds": 519.881565,
+      "whole_video_duration_pass": true,
+      "srt_cues": 161,
+      "subtitle_safe_area": "PASS",
+      "thumbnail_qa": "PASS",
+      "thumbnail_sha256": "8f66f2d89a5d8b8248086c112b8d9a9b2aaf1c6c1efa8d008ffc757db0efc8c2",
+      "mp4_sha256": "7847b23fdbf5218e6233810b11238757d5a17e9875d715a3acb8b9a74e30bdcc",
+      "srt_sha256": "375022d24f44a44de110827f65ce73bad1359c0ec5ecda1eb12eb114ef2f416b",
+      "qa_sha256": "7190eddffdf927f756d78cdbe383616e4ed777d788e0375431c84bdc50d2ff66",
+      "visual_state": "PASS_STATIC_AND_PIXEL_DELTA_VISUAL_REVIEW_PENDING",
+      "caption_burn_state": "BURN_EXECUTED_VISUAL_QA_PENDING",
+      "artifact_id": 14009273473,
+      "artifact_name": "daily-gainers-20261104-render-only",
+      "artifact_size_bytes": 23162351,
+      "artifact_digest": "sha256:957ba83a757a77da45f4e626391f081235650db889fdba9b02b98f449aab2ea7",
+      "artifact_files": 18,
+      "artifact_url": "https://github.com/EasonLiu0913/stock_data/actions/runs/43362621652/artifacts/14009273473"
+    },
+    "human_visual_qa": "pending_owner_review",
+    "prompt_a_complete": false,
+    "prompt_b_eligible": false,
+    "youtube_upload_or_scheduling_or_public_release": false,
+    "pages_deployed": false,
+    "release_lock_changed": false,
+    "checkpoint_deleted": false
+  }
 }
