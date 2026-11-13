@@ -5,6 +5,7 @@ from mutagen.mp3 import MP3
 from daily_gainers_spoken_text import normalize_spoken_text
 from daily_gainers_subtitle_alignment import align_cues, format_srt_interval, SubtitleAlignmentError
 from daily_gainers_caption_segments import segment_pairs
+from daily_gainers_caption_numbers import normalize_spoken_percentages
 
 if len(sys.argv) < 2:
     print("Usage: python scripts/build_daily_gainers_srt.py <plan.json>", file=sys.stderr)
@@ -226,14 +227,7 @@ for scene in plan.get("scenes", []):
         # v1 aligns the *spoken* chunks first.  Change display text only AFTER
         # WordBoundary alignment so speech remains 百分之9.96 and captions show 9.96%.
         if plan.get("schema_version") == 1:
-            percent_words = {"零": "0", "一": "1", "二": "2", "三": "3", "四": "4",
-                             "五": "5", "六": "6", "七": "7", "八": "8",
-                             "九": "9", "十": "10"}
-            def display_percent(match):
-                value = match.group(1)
-                return (percent_words.get(value, value) + "%")
-            chunk = re.sub(r"百分之\s*(\d+(?:\.\d+)?|[零一二三四五六七八九十])",
-                           display_percent, chunk)
+            chunk = normalize_spoken_percentages(chunk)
         # Display-only two-line wrapping; WordBoundary alignment used the original spoken chunk.
         chunk = wrap_caption_for_screen(chunk, max_columns=30)
         end = min(end, rendered_duration)
