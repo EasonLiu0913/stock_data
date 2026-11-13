@@ -6,18 +6,18 @@
   "goal_id": "goal-v3/MVP-10DAY-v1",
   "ultimate_goal_status": "not_complete",
   "current_phase_id": "MVP10-A-DASHBOARD-DEALER-FISH-VOICE-OPENING-MIN-40S-R2",
-  "phase_status": "complete_pending_prompt_b",
+  "phase_status": "waiting_workflow",
   "round_id": "MVP10-A-DASHBOARD-DEALER-FISH-VOICE-OPENING-MIN-40S-R2",
   "prompt_a_status": "complete_pending_prompt_b",
-  "prompt_b_status": "eligible_pending_owner_command",
+  "prompt_b_status": "in_progress_waiting_workflow",
   "owner_approved_on": "2026-11-13",
   "change_proposal": "data_research/m5/change-proposals/MVP10-A-DASHBOARD-DEALER-FISH-VOICE-OPENING-MIN-40S-CHANGE-v1.md",
   "paired_prompt": "data_research/m5/change-proposals/MVP10-A-DASHBOARD-DEALER-FISH-VOICE-OPENING-MIN-40S-PAIR-v1.md",
   "predecessor_phase": "MVP10-A-DASHBOARD-DEALER-FISH-VOICE-0715599C-R1",
   "next_phase_id": null,
-  "mvp10_a_status": "PROMPT_A_COMPLETE_PROMPT_B_ELIGIBLE",
+  "mvp10_a_status": "PROMPT_A_COMPLETE_PROMPT_B_WAITING_WORKFLOW",
   "mvp10_a_acceptance_changed": false,
-  "mvp10_b_status": "frozen_preregistered_not_eligible",
+  "mvp10_b_status": "IN_PROGRESS_WAITING_WORKFLOW",
   "mvp10_b_acceptance_changed": false,
   "research_progress_status": "PROGRESS",
   "research_progress_evidence": [
@@ -79,10 +79,15 @@
     "R1 Render run #43347687018/job #131630895392; scene 1 measured 50.808 seconds; artifact #14002714186. R1 remains not PASS under its original 60–90-second pair.",
     "R2 proposal/pair and corrected handoff are on PR branch codex/mvp10-a-dashboard-fish-opening-min-40s-r2; not yet on main.",
     "Remote-main review confirmed qa.json had only whole-video duration_pass; Render-only final QA did not enforce the frozen spoken-opening duration.",
-    "R2 implementation branch codex/mvp10-a-opening-duration-40s-r2 adds a finite measured opening-scene >=40s/no-maximum predicate to renderer QA and workflow, plus boundary regression cases."
+    "R2 implementation branch codex/mvp10-a-opening-duration-40s-r2 adds a finite measured opening-scene >=40s/no-maximum predicate to renderer QA and workflow, plus boundary regression cases.",
+    "main e3933fe64110e91e7985e9c4af3115f6f5b51d6f; PR #134 merged",
+    "focused caption percentage tests 5/5 PASS; py_compile PASS",
+    "PR checks #43374142817, #43374142731, #43374142718, #43374142653, #43374142818, #43374142677 PASS",
+    "main workflow summary #43375059268/job #131719493956 failed in repo-wide summary migration audit; baseline relationship unverified",
+    "Render-only date 20261104 must be manually dispatched; browser logged out, no workflow_dispatch connector tool"
   ],
-  "research_progress_reason": "The first failing R1 gate is now encoded as an enforceable check against actual rendered scene timing; <40s, missing and non-finite values fail, while >=40s has no upper limit.",
-  "next_action": "Run the preregistered Prompt B for MVP10-A-DASHBOARD-DEALER-FISH-VOICE-OPENING-MIN-40S-R2. Separately, ask the owner to list the additional requested changes; assess them after this frozen R2 closeout and register a versioned successor if needed.",
+  "research_progress_reason": "Merged a bounded root-cause repair for malformed compound Chinese percentage captions; focused tests passed. Independent R2 closeout now requires a new date-scoped render, but this session cannot dispatch because the GitHub browser is logged out and connector has no workflow_dispatch tool.",
+  "next_action": "Owner: sign into GitHub, run the date-scoped Render-only workflow on branch main with date 20261104, then provide its run URL/ID and visually inspect the exact resulting artifact.",
   "automatic_continuation_permitted": false,
   "plan_changed": true,
   "publication_authorized": false,
@@ -90,7 +95,7 @@
   "youtube_scheduling_authorized": false,
   "public_release_authorized": false,
   "render_authorized_in_repair_phase": false,
-  "updated_at": "2026-11-13T05:09:53Z",
+  "updated_at": "2026-11-13T06:00:06Z",
   "prompt_b_failure_evidence": [
     "R1 frozen Prompt B criterion 5 required verifying no prohibited workflow was triggered.",
     "Render-only push-trigger runs: 42401534137 (20261102), 42401534168 (20261103); both failed before render and produced no artifacts.",
@@ -718,7 +723,7 @@
     "checkpoint_status": "all five scenes pending; no audio or WordBoundary hashes",
     "acceptance_changed": false
   },
-  "current_blocker": "No blocker remains for the frozen R2 Prompt A acceptance. Owner mentioned additional desired visual changes but has not specified them; keep them outside the completed R2 scope until listed and versioned if they alter acceptance.",
+  "current_blocker": "WAITING_WORKFLOW: authenticated owner must run .github/workflows/daily-gainers-date-render-only.yml on main with date 20261104; after completion owner must visually review the exact new artifact.",
   "planned_research": "Use PR CI to validate the renderer/workflow/test diff; after merge, run one authorized date-scoped Render-only check against the matching 17-scene checkpoint, verify the emitted opening duration fields and inherited media evidence, then obtain exact-artifact visual QA.",
   "anti_loop": {
     "repeats_previous_method_with_unchanged_input": false,
@@ -2735,5 +2740,30 @@
       "render_run_id": 43362621652
     },
     "additional_visual_changes": "Owner says there are additional changes but has not specified the items. Do not fold unspecified requests into this frozen pair or change its acceptance."
+  },
+  "r2_prompt_b_caption_repair_checkpoint": {
+    "phase_id": "MVP10-A-DASHBOARD-DEALER-FISH-VOICE-OPENING-MIN-40S-R2",
+    "observed_at_utc": "2026-11-13T06:00:06Z",
+    "main_sha": "e3933fe64110e91e7985e9c4af3115f6f5b51d6f",
+    "prompt_b_status": "in_progress_waiting_workflow",
+    "pair": "data_research/m5/change-proposals/MVP10-A-DASHBOARD-DEALER-FISH-VOICE-OPENING-MIN-40S-PAIR-v1.md",
+    "pair_blob": "96a58d46d4fabd7ea5b29408d8aca1c4fdf2ca92",
+    "pr_134_merge_sha": "e3933fe64110e91e7985e9c4af3115f6f5b51d6f",
+    "fixed_defect": "Compound Chinese percentage formatter previously captured one numeral, yielding 3%十八",
+    "focused_tests": "5/5 pass",
+    "dispatch_workflow": ".github/workflows/daily-gainers-date-render-only.yml",
+    "target_date": "20261104",
+    "dispatch_attempted": false,
+    "dispatch_blocker": "GitHub connector has no workflow_dispatch; browser workflow page shows Login with GitHub",
+    "required_after_owner_run": "Verify no TTS request; same 17-scene new Fish checkpoint identity/hashes; corrected SRT and burned-caption proof; QA, provenance, artifact digest; owner visual review exact new artifact",
+    "prior_artifact_visual_qa_does_not_transfer": true,
+    "requested_future_changes_deferred": [
+      "Dashboard order: 標的／代號、漲幅、外資、投信、自營商、融資、分點買／賣",
+      "Display every subtitle number using Arabic digits"
+    ],
+    "upload_or_publication_actions": false,
+    "research_progress_status": "PROGRESS",
+    "phase_status": "waiting_workflow",
+    "automatic_continuation_permitted": false
   }
 }
