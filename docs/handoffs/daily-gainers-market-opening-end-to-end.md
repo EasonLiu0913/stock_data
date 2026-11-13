@@ -3519,3 +3519,15 @@ No TTS or Render workflow has run in this Prompt A turn. No MP3/WordBoundary or 
 ### Status and next
 
 This implementation is not yet CI-verified or merged. Prompt A remains in progress. Next: complete PR checks; merge only if eligible under repository policy; then perform the authorized, same-date Render-only validation on the exact 17-scene checkpoint with no TTS requests. Verify the emitted QA opening fields, MP4/SRT/caption QA, dashboard, thumbnail, provenance and artifact hashes, and retain the manual visual-review requirement. Prompt B is not eligible until all Prompt A gates close. No YouTube, Pages, upload, lock or checkpoint-deletion action.
+
+
+---
+
+## R2 Prompt A — post-merge Render-only validation checkpoint — 2026-11-13
+
+- Current main at validation: `d5632c3248b9ab967ec7d6e03e6e71001e13d9cd`; implementation PR [#131](https://github.com/EasonLiu0913/stock_data/pull/131) is merged at this SHA. Node regression and checkpoint-contract CI both passed (runs #43358812481 and #43358812602).
+- Date-scoped Render-only workflow `.github/workflows/daily-gainers-date-render-only.yml` run [#43362621652](https://github.com/EasonLiu0913/stock_data/actions/runs/43362621652), event `workflow_dispatch`, target `20261104`, head main SHA above: job #131679471578 success. It restored the existing 17-scene Fish checkpoint; no TTS requests were made.
+- Actual renderer QA: opening scene type `market_opening`, ffprobe duration 50.808005 seconds, `market_opening_duration_pass=true`; whole video 519.881565 seconds and duration gate passed. SRT has 161 cues; subtitle safe-area check passed; thumbnail QA passed (1280x720).
+- Durable artifact #14009273473, 23,162,351 bytes, digest `sha256:957ba83a757a77da45f4e626391f081235650db889fdba9b02b98f449aab2ea7`, includes 18 files. MP4 SHA-256 `7847b23fdbf5218e6233810b11238757d5a17e9875d715a3acb8b9a74e30bdcc`; SRT SHA-256 `375022d24f44a44de110827f65ce73bad1359c0ec5ecda1eb12eb114ef2f416b`; QA SHA-256 `7190eddffdf927f756d78cdbe383616e4ed777d788e0375431c84bdc50d2ff66`.
+- The workflow explicitly leaves `PASS_STATIC_AND_PIXEL_DELTA_VISUAL_REVIEW_PENDING` and `BURN_EXECUTED_VISUAL_QA_PENDING`. The exact new artifact therefore still requires owner human visual QA, including the added dealer column, preserved broker buy/sell column, new Fish voice and burned captions. Prior visual QA does not transfer to this changed artifact.
+- Prompt A remains in progress; Prompt B is not eligible. Next: owner reviews artifact #14009273473 and reports PASS or a concrete defect; then a separate `promptA` records that decision and closes A if all criteria pass. No TTS rerun, YouTube action, Pages deployment, release-lock change or checkpoint deletion.
