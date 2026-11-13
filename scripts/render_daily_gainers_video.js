@@ -3,6 +3,10 @@ function isWholeVideoDurationValid(seconds) {
   return Number.isFinite(seconds) && seconds >= 300;
 }
 
+function isMarketOpeningDurationValid(seconds) {
+  return Number.isFinite(seconds) && seconds >= 40;
+}
+
 if (require.main === module) {
 const fs = require('node:fs');
 const path = require('node:path');
@@ -292,7 +296,7 @@ const renderedScenes = timings.map(timing => {
     '-of','default=noprint_wrappers=1:nokey=1',segmentPath
   ]));
   if (!Number.isFinite(duration) || duration <= 0) throw new Error('Invalid rendered segment: '+sid);
-  const record = {id:Number(timing.scene.id),start_seconds:measuredCursor,duration_seconds:duration};
+  const record = {id:Number(timing.scene.id),scene_type:String(timing.scene.scene_type||''),start_seconds:measuredCursor,duration_seconds:duration};
   measuredCursor += duration;
   return record;
 });
@@ -308,6 +312,11 @@ if (Math.abs(measuredCursor-finalDuration) > 0.30) {
 fs.writeFileSync(path.join(outDir,'render-timings.json'),
   JSON.stringify({source:'measured-rendered-mp4-segments',duration_seconds:finalDuration,scenes:renderedScenes},null,2)+'\n');
 const stat = fs.statSync(finalPath);
+const marketOpeningScene = renderedScenes[0];
+const marketOpeningDurationSeconds = Number(marketOpeningScene?.duration_seconds);
+const marketOpeningSceneType = String(marketOpeningScene?.scene_type || '');
+const marketOpeningDurationPass = marketOpeningSceneType === 'market_opening' &&
+  isMarketOpeningDurationValid(marketOpeningDurationSeconds);
 const qa = {
   target_date: date,
   scene_count: plan.scenes.length,
@@ -317,6 +326,9 @@ const qa = {
   file_size_bytes: stat.size,
   file_size_mib: Number((stat.size / 1024 / 1024).toFixed(2)),
   duration_pass: isWholeVideoDurationValid(finalDuration),
+  market_opening_scene_type: marketOpeningSceneType,
+  market_opening_duration_seconds: marketOpeningDurationSeconds,
+  market_opening_duration_pass: marketOpeningDurationPass,
   size_pass: stat.size >= 1024 * 1024,
   vtuber_enabled: vtuberEnabled,
   vtuber_lipsync: vtuberEnabled ? (lipSync.methodology || 'text-aware') : 'disabled',
@@ -330,7 +342,8 @@ fs.writeFileSync(path.join(outDir, 'qa.json'), JSON.stringify(qa, null, 2) + '\n
 console.log(JSON.stringify(qa, null, 2));
 
 if (!qa.duration_pass) throw new Error(`Video duration ${qa.duration_minutes} min is below the required 5-minute minimum`);
+if (!qa.market_opening_duration_pass) throw new Error(`Measured market-opening scene duration ${qa.market_opening_duration_seconds}s is below the required 40-second minimum or is invalid`);
 if (!qa.size_pass) throw new Error('Rendered video is unexpectedly small');
 }
 
-module.exports = { isWholeVideoDurationValid };
+module.exports = { isWholeVideoDurationValid, isMarketOpeningDurationValid };
