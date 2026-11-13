@@ -197,7 +197,7 @@ jobs:
           const raw=JSON.parse(fs.readFileSync(path.join('data_daily_gain_over_5',process.env.DATE+'.json'),'utf8'));
           const plan=JSON.parse(fs.readFileSync(path.join(d,'plan.json')));
           const p=JSON.parse(fs.readFileSync(path.join(d,'list-dashboard-manifest.json')));
-          if(q.target_date!==process.env.DATE||q.scene_count!==plan.scenes.length||q.duration_pass!==true||q.vtuber_enabled!==true)throw Error('MP4 QA incomplete');
+          if(q.target_date!==process.env.DATE||q.scene_count!==plan.scenes.length||q.duration_pass!==true||q.market_opening_scene_type!=='market_opening'||!Number.isFinite(q.market_opening_duration_seconds)||q.market_opening_duration_seconds<40||q.market_opening_duration_pass!==true||q.vtuber_enabled!==true)throw Error('MP4 QA incomplete or measured market opening is below 40 seconds');
           const visual=JSON.parse(fs.readFileSync(path.join(d,'render-only-visual-check.json')));
           const burn=JSON.parse(fs.readFileSync(path.join(d,'burned-caption-proof.json')));
           if(plan.scenes[0]?.scene_type!=='market_opening'||!['summary','closing_summary'].includes(plan.scenes.at(-1)?.scene_type))throw Error('Opening or closing missing');

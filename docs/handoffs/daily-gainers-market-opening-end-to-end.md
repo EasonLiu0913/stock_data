@@ -3497,3 +3497,25 @@ The owner explicitly changed the current 20261104 dashboard/new-Fish-voice succe
 - Registration PR branch: `codex/mvp10-a-dashboard-fish-opening-min-40s-r2`, based on PR #129's documentation checkpoint (which records the real Render evidence). Registration is not yet on main. Once merged, R2 Prompt A is eligible only after a separate owner `promptA`; no automatic execution or Prompt B.
 - R2 Prompt A should add a fail-closed measured opening-duration gate (>=40.000, no maximum) to `scripts/render_daily_gainers_video.js` and `.github/workflows/daily-gainers-date-render-only.yml`, with boundary tests in `tests/daily_gainers_video_duration_gate.test.js`. Reuse the exact complete Fish checkpoint; Render-only makes no TTS request. Preserve the >=300-second whole-video minimum with no maximum.
 - YouTube upload/scheduling/public release, Pages, upload/orchestrator, release-lock changes and checkpoint deletion remain prohibited.
+
+
+---
+
+## R2 Prompt A implementation checkpoint — opening minimum 40s — 2026-11-13
+
+Fresh startup verified main `b6c5029578038fb465c34822dc485b90b1987280`, unique active route `daily-gainers-market-opening-end-to-end`, goal `goal-v3/MVP-10DAY-v1`, and active pair `MVP10-A-DASHBOARD-DEALER-FISH-VOICE-OPENING-MIN-40S-R2`. The owner-approved proposal/pair are on main; the prior R1 pair SHA remains `9e9da65be76acbe081a2beb1c97cf01adcdca807`. Prompt A is in progress; B is not eligible.
+
+### Root cause and bounded implementation
+
+The prior Render job's `qa.json` asserted whole-video `duration_pass` only. The Render-only workflow final QA also checked only that whole-video gate. The phase's spoken-opening threshold existed in the frozen pair but was not enforced by rendered scene duration.
+
+On branch `codex/mvp10-a-opening-duration-40s-r2`, starting from the exact main revision above:
+- `scripts/render_daily_gainers_video.js` now derives the first scene's duration/type from the actual ffprobe-measured rendered scene records, exports a finite `>=40`-second predicate, and records `market_opening_scene_type`, `market_opening_duration_seconds`, and `market_opening_duration_pass` in QA. It fails after writing QA when the actual opening is missing/invalid or below 40 seconds. It adds no maximum. Whole-video `>=300` with no maximum is unchanged.
+- `.github/workflows/daily-gainers-date-render-only.yml` final QA now independently requires the market-opening scene type, finite measured duration >=40, and passing duration field.
+- `tests/daily_gainers_video_duration_gate.test.js` retains the whole-video tests and adds 39.999 fail, 40 pass, 50.808 pass, >90 pass, Number.MAX_VALUE pass, and undefined/NaN/infinity fail.
+
+No TTS or Render workflow has run in this Prompt A turn. No MP3/WordBoundary or frozen script changed. The existing 17-scene Fish checkpoint remains reusable only after identity/hash revalidation. The previous artifact's 50.808-second scene meets the new R2 threshold only; this does not retroactively change R1. Existing artifact #14002714186 has pending visual-review labels, so inherited exact-artifact human visual QA is still required.
+
+### Status and next
+
+This implementation is not yet CI-verified or merged. Prompt A remains in progress. Next: complete PR checks; merge only if eligible under repository policy; then perform the authorized, same-date Render-only validation on the exact 17-scene checkpoint with no TTS requests. Verify the emitted QA opening fields, MP4/SRT/caption QA, dashboard, thumbnail, provenance and artifact hashes, and retain the manual visual-review requirement. Prompt B is not eligible until all Prompt A gates close. No YouTube, Pages, upload, lock or checkpoint-deletion action.

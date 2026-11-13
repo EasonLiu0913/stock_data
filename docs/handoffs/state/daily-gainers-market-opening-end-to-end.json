@@ -6,16 +6,16 @@
   "goal_id": "goal-v3/MVP-10DAY-v1",
   "ultimate_goal_status": "not_complete",
   "current_phase_id": "MVP10-A-DASHBOARD-DEALER-FISH-VOICE-OPENING-MIN-40S-R2",
-  "phase_status": "active",
+  "phase_status": "in_progress",
   "round_id": "MVP10-A-DASHBOARD-DEALER-FISH-VOICE-OPENING-MIN-40S-R2",
-  "prompt_a_status": "eligible_not_started",
-  "prompt_b_status": "preregistered_not_eligible",
+  "prompt_a_status": "in_progress",
+  "prompt_b_status": "not_eligible",
   "owner_approved_on": "2026-11-13",
   "change_proposal": "data_research/m5/change-proposals/MVP10-A-DASHBOARD-DEALER-FISH-VOICE-OPENING-MIN-40S-CHANGE-v1.md",
   "paired_prompt": "data_research/m5/change-proposals/MVP10-A-DASHBOARD-DEALER-FISH-VOICE-OPENING-MIN-40S-PAIR-v1.md",
   "predecessor_phase": "MVP10-A-DASHBOARD-DEALER-FISH-VOICE-0715599C-R1",
   "next_phase_id": null,
-  "mvp10_a_status": "OPENING_MIN_40S_SUCCESSOR_A_ELIGIBLE_AFTER_REGISTRATION_MERGE",
+  "mvp10_a_status": "OPENING_MIN_40S_R2_IMPLEMENTATION_IN_PROGRESS",
   "mvp10_a_acceptance_changed": false,
   "mvp10_b_status": "frozen_preregistered_not_eligible",
   "mvp10_b_acceptance_changed": false,
@@ -77,10 +77,12 @@
     "Prompt A started on implementation branch codex/mvp10-a-dashboard-dealer-fish-voice-r1 from main 67324c6c77dabeb62fb80ac859831d13f03e72e3; code commit 88b49c5c871335a92f0378095d77a93d74248442 changes dashboard dealer field and isolates Fish voice 0715599c7277458591efda3ff230a51e; adds regression tests. Frozen 20261104 facts/plan blobs and old checkpoint identity rechecked. CI and live TTS/Render are pending; not a PASS.",
     "Owner decision on 2026-11-13: actual spoken market-opening audio >=40 seconds passes; no maximum.",
     "R1 Render run #43347687018/job #131630895392; scene 1 measured 50.808 seconds; artifact #14002714186. R1 remains not PASS under its original 60–90-second pair.",
-    "R2 proposal/pair and corrected handoff are on PR branch codex/mvp10-a-dashboard-fish-opening-min-40s-r2; not yet on main."
+    "R2 proposal/pair and corrected handoff are on PR branch codex/mvp10-a-dashboard-fish-opening-min-40s-r2; not yet on main.",
+    "Remote-main review confirmed qa.json had only whole-video duration_pass; Render-only final QA did not enforce the frozen spoken-opening duration.",
+    "R2 implementation branch codex/mvp10-a-opening-duration-40s-r2 adds a finite measured opening-scene >=40s/no-maximum predicate to renderer QA and workflow, plus boundary regression cases."
   ],
-  "research_progress_reason": "Registered a prospective successor with the sole duration acceptance delta (>=40.000 seconds, no maximum), while preserving R1 and all historical Task State evidence.",
-  "next_action": "Merge the versioned R2 registration PR; then issue a separate promptA. Do not run A before registration is on main.",
+  "research_progress_reason": "The first failing R1 gate is now encoded as an enforceable check against actual rendered scene timing; <40s, missing and non-finite values fail, while >=40s has no upper limit.",
+  "next_action": "Review and merge the R2 implementation PR after its required checks pass; then run the authorized 20261104 date-scoped Render-only verification. No TTS calls.",
   "automatic_continuation_permitted": false,
   "plan_changed": true,
   "publication_authorized": false,
@@ -716,11 +718,11 @@
     "checkpoint_status": "all five scenes pending; no audio or WordBoundary hashes",
     "acceptance_changed": false
   },
-  "current_blocker": "Versioned registration PR must merge to main before R2 Prompt A starts; after merge a separate owner promptA is required. Exact-artifact human visual review remains an inherited gate.",
-  "planned_research": "Verify actual opening-duration QA, implement a finite measured >=40.000-second/no-maximum predicate with boundary tests, then revalidate the unchanged new-voice checkpoint/artifact and complete exact-artifact visual QA.",
+  "current_blocker": "Code and boundary tests are committed on the Prompt A branch; required CI and a post-merge same-date Render-only validation are pending. The exact artifact still needs inherited human visual QA.",
+  "planned_research": "Use PR CI to validate the renderer/workflow/test diff; after merge, run one authorized date-scoped Render-only check against the matching 17-scene checkpoint, verify the emitted opening duration fields and inherited media evidence, then obtain exact-artifact visual QA.",
   "anti_loop": {
     "repeats_previous_method_with_unchanged_input": false,
-    "distinct_next_step": "Versioned R2 changes the accepted floor; implement validator/tests, then one bounded Render-only verification on the changed validator."
+    "distinct_next_step": "This changes renderer/workflow QA code and adds boundary tests; use CI and then a bounded Render-only validation, not a rerun of old criteria."
   },
   "fish_timestamp_migration_r1_checkpoint": {
     "status": "BOUNDED_VALIDATION_FAILED_PROVIDER_TIMING",
@@ -2657,7 +2659,7 @@
     "plan_changed": false,
     "automatic_continuation_permitted": false
   },
-  "prior_attempt": "R1 run #43347687018 recorded 50.808 seconds and remained below its frozen 60-second minimum; do not rerun or rewrite R1 evidence.",
+  "prior_attempt": "R1 render #43347687018 scene 1 measured 50.808 seconds; R1 remains not PASS under the old 60–90 criterion. R2 was preregistered and merged before this implementation.",
   "r1_disposition": "SUPERSEDED_BY_OWNER_APPROVED_ACCEPTANCE_CHANGE, NOT PASS",
   "r1_frozen_acceptance_preserved": true
 }
