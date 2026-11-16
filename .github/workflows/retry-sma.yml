@@ -79,7 +79,7 @@ jobs:
         run: |
           FAILED_FILE="data_fubon/fubon_${{ steps.date.outputs.target }}_sma_failedList.json"
           if [ -f "$FAILED_FILE" ]; then
-            COUNT=$(jq length "$FAILED_FILE")
+            COUNT=$(node -e 'const fs = require("node:fs"); const list = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); if (!Array.isArray(list)) throw new Error("SMA failed list must be a JSON array"); process.stdout.write(String(list.length));' "$FAILED_FILE")
             echo "exists=true" >> $GITHUB_OUTPUT
             echo "count=$COUNT" >> $GITHUB_OUTPUT
             echo "📋 Found $COUNT failed stocks to retry"
