@@ -1,0 +1,177 @@
+{
+  "schemaVersion": 4,
+  "generated_at": "2026-11-21T03:36:41.245Z",
+  "forecast_date": "2026-11-23",
+  "forecast_date_compact": "20261123",
+  "base_trade_date": "2026-11-20",
+  "base_trade_date_compact": "20261120",
+  "information_cutoff": "2026-11-21T03:36:41.245Z",
+  "historical_reconstruction": false,
+  "mode": "shadow",
+  "data_freshness": {
+    "status": "fresh",
+    "reason": "exact_primary_market_date_match",
+    "expected_us_market_date": "20261120",
+    "actual_us_market_date": "20261120",
+    "business_day_gap": 0,
+    "source_directory_date": "20261120",
+    "source_collection_date": "20261120",
+    "primary_indicator_agreement": "5/5",
+    "primary_market_dates": {
+      "nasdaq": "20261120",
+      "sp500": "20261120",
+      "dow": "20261120",
+      "sox": "20261120",
+      "tsm_adr": "20261120"
+    },
+    "error_count": 0
+  },
+  "source_files": {
+    "external_market": "data_external_market/20261120/external_market_indicators.json",
+    "market_risk": "data_market_risk/20261120/market_risk_snapshot.json",
+    "twse_index": "data_twse_mi_index/20261120_twse_mi_index.json",
+    "foreign_futures": "data_taifex_major_institutional_traders_futures_contracts/20261120_taifex_major_institutional_traders_futures_contracts.json",
+    "previous_actual_environment": "data_market_environment/20261120/actual_market_environment.json"
+  },
+  "metrics": {
+    "sox_change_1d_pct": -10.73,
+    "sox_return_3d_pct": -12.8,
+    "tsm_adr_change_1d_pct": -9.48,
+    "wti_crude_change_1d_pct": 0.49,
+    "wti_crude_return_5d_pct": -5.58,
+    "wti_crude_return_20d_pct": -19.03,
+    "brent_crude_change_1d_pct": -2.29,
+    "brent_crude_return_5d_pct": -6.23,
+    "brent_crude_return_20d_pct": -23,
+    "twse_change_1d_pct": -6.23,
+    "twse_return_3d_pct": -10.12,
+    "twse_minus_sox_3d_pct_points": 2.68,
+    "foreign_futures_net_contracts": -97863,
+    "foreign_futures_net_change_contracts": 1356,
+    "market_risk_score": 75.5,
+    "adr_sox_nasdaq_market_risk": 100
+  },
+  "oil_market": {
+    "source": "yahoo_finance_futures",
+    "scoring_effect": "none_shadow_context",
+    "instruments": {
+      "wti": {
+        "available": true,
+        "market_date": "20261120",
+        "close": 83.62,
+        "change_1d_pct": 0.49,
+        "return_5d_pct": -5.58,
+        "return_20d_pct": -19.03
+      },
+      "brent": {
+        "available": true,
+        "market_date": "20261120",
+        "close": 89.87,
+        "change_1d_pct": -2.29,
+        "return_5d_pct": -6.23,
+        "return_20d_pct": -23
+      }
+    },
+    "oil_trend": {
+      "code": "down",
+      "label": "偏空",
+      "basis": "mean_wti_brent_5d",
+      "mean_5d_pct": -5.91,
+      "mean_20d_pct": -21.02
+    },
+    "oil_shock": {
+      "active": false,
+      "direction": "none",
+      "reason": "within_thresholds",
+      "observed": {
+        "max_1d_pct": 0.49,
+        "min_1d_pct": -2.29,
+        "max_5d_pct": -5.58,
+        "min_5d_pct": -6.23
+      },
+      "thresholds": {
+        "upside_1d_pct": 5,
+        "upside_5d_pct": 10,
+        "downside_1d_pct": -5,
+        "downside_5d_pct": -10
+      }
+    }
+  },
+  "environment": {
+    "code": "post_shock_day_2",
+    "label": "衝擊後第 2 日",
+    "score": 9,
+    "confidence": "medium",
+    "decision_gate": {
+      "passed": false,
+      "required_conditions": {
+        "taiwan_not_repriced": false,
+        "external_acceleration": true
+      },
+      "supporting_conditions": {
+        "accumulated_external_drop": true,
+        "foreign_short_acceleration": false,
+        "severe_external_one_day_drop": true
+      },
+      "explanation": "台股前一日已明顯下跌，不能再視為尚未反映外部衝擊的首日。"
+    },
+    "triggers": [
+      {
+        "id": "sox_1d_drop",
+        "label": "費半單日跌幅低於 -2%",
+        "value": -10.73,
+        "points": 2
+      },
+      {
+        "id": "sox_3d_drop",
+        "label": "費半近 3 個交易日跌幅低於 -5%",
+        "value": -12.8,
+        "points": 2
+      },
+      {
+        "id": "tsm_adr_drop",
+        "label": "台積電 ADR 單日跌幅低於 -1%",
+        "value": -9.48,
+        "points": 1
+      },
+      {
+        "id": "foreign_futures_net_short",
+        "label": "外資臺股期貨淨空低於 -70,000 口",
+        "value": -97863,
+        "points": 2
+      },
+      {
+        "id": "market_risk_high",
+        "label": "市場風險分數至少 70",
+        "value": 75.5,
+        "points": 1
+      },
+      {
+        "id": "semiconductor_external_risk_high",
+        "label": "ADR／費半外部風險至少 85",
+        "value": 100,
+        "points": 1
+      }
+    ]
+  },
+  "strategy_policy": {
+    "enforcement_mode": "shadow",
+    "raw_predictions_preserved": true,
+    "formal_direction_score_adjustment": 0,
+    "bearish_prediction": "normal",
+    "relative_leadership_momentum": "restricted_shadow",
+    "bullish_upgrade": "confirmed_only_shadow",
+    "post_shock_survivor": "enabled_shadow",
+    "explanation": "衝擊後第二日有限度恢復一般動能，仍保留抗跌倖存者研究。"
+  },
+  "notes": [
+    "Shadow mode：目前只標示策略政策，不修改正式方向分數或刪除原始候選。",
+    "首日衝擊必須同時符合台股尚未補跌，以及外部跌勢／外資空單持續惡化的閘門。",
+    "首日衝擊分數為啟發式，需累積至少 30～60 個覆盤日與多個系統性事件後校準。",
+    "WTI／Brent 使用 Yahoo Finance 期貨作為即時市場風險參考；oil_trend／oil_shock 目前僅為 shadow context，不改正式環境分數。",
+    "美股日期依紐約最近已完成的正常交易時段判定，盤中資料不會被誤認為缺漏。",
+    "美股日期使用交易所共同休市日曆；若來源 requested directory 落在休市日，但 5/5 primary market date 與正確最近交易日一致，視為 fresh。",
+    "此檔為目前流程產生的盤前環境快照。"
+  ],
+  "snapshot_hash": "bab975da0cb0bce29a46a2a2fc4581553537afe4182b07a2718cbe882b4647d1"
+}
