@@ -93,6 +93,8 @@ jobs:
           node --check scripts/scan_pages_dependencies.js
           node --check scripts/trim_pages_artifact.js
           node --check scripts/apply_pages_size_budget.js
+          node --check scripts/wait_pages_artifact.js
+          node scripts/wait_pages_artifact.js --self-test
           node --check scripts/validate_pages_fubon_freshness.js
           node --check scripts/prepare_eps_valuation_pages_payload.js
           bash scripts/prepare_pages_site.sh --self-test
@@ -281,10 +283,21 @@ jobs:
         uses: actions/configure-pages@v6
 
       - name: Upload Pages artifact
+        id: pages_artifact
         uses: actions/upload-pages-artifact@v5
         with:
           name: github-pages-${{ github.run_attempt }}
           path: _site
+
+      - name: Verify Pages artifact readiness
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PAGES_ARTIFACT_ID: ${{ steps.pages_artifact.outputs.artifact_id }}
+          PAGES_ARTIFACT_NAME: github-pages-${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          node scripts/wait_pages_artifact.js
 
       - name: Deploy to GitHub Pages
         id: deployment
