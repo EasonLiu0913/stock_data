@@ -132,6 +132,21 @@ function bodyPreview(text, maxLength = 1200) {
 }
 
 async function fetchAnonymousToken() {
+    const delays = [0, 5000, 15000, 30000, 60000];
+    for (let i=0; i<delays.length; i++) {
+        if (delays[i]) await sleep(delays[i]);
+        console.log('[auth] attempt '+(i+1)+'/'+delays.length);
+        try { return await requestAnonymousToken(); }
+        catch (error) {
+            const retryable = error.retryable === true || error.name === 'TimeoutError' || error.name === 'AbortError' || error instanceof TypeError;
+            if (!retryable || i === delays.length-1) throw error;
+            console.warn('[auth] transient failure; retrying: '+error.message);
+            if (error.retryAfterMs) await sleep(Math.max(0,error.retryAfterMs-delays[i+1]));
+        }
+    }
+}
+
+async function requestAnonymousToken() {
     const body = new URLSearchParams({
         grant_type: 'guest',
         client_id: POCKET_CLIENT_ID
@@ -146,7 +161,8 @@ async function fetchAnonymousToken() {
             'content-type': 'application/x-www-form-urlencoded',
             'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
         },
-        body
+        body,
+        signal: AbortSignal.timeout(30000)
     });
 
     const rawText = await response.text();
@@ -157,7 +173,17 @@ async function fetchAnonymousToken() {
     );
 
     if (!response.ok) {
-        throw new Error('[auth] anonymous token request failed: HTTP ' + response.status + ' ' + response.statusText + '; body-preview=' + bodyPreview(rawText));
+        const error = new Error('[auth] anonymous token request failed: HTTP ' + response.status + ' ' + response.statusText);
+        error.retryable = [429,500,502,503,504].includes(response.status);
+        const retryAfter = response.headers.get('retry-after');
+        if (retryAfter) {
+            const ms = /^\d+$/.test(retryAfter) ? Number(retryAfter)*1000 : Date.parse(retryAfter)-Date.now();
+            if (Number.isFinite(ms) && ms>0) {
+                if (ms>120000) error.retryable=false;
+                else error.retryAfterMs=ms;
+            }
+        }
+        throw error;
     }
 
     let payload;
@@ -280,11 +306,16 @@ function refreshFilesJson() {
 
 (async () => {
     try {
+        const target = expectedHoldingsDate(getTaipeiTodayCompact(), process.env.POCKET_EXPECTED_HOLDINGS_DATE);
+        const latestPath = path.join(OUTPUT_DIR,HOLDINGS_LATEST_FILE);
+        if (fs.existsSync(latestPath) && JSON.parse(fs.readFileSync(latestPath,'utf8')).summary?.date > target) {
+            throw new Error('Refusing to overwrite newer latest holdings with '+target);
+        }
         const accessToken = await fetchAnonymousToken();
         const holdingsPayload = await fetchPocketData(HOLDINGS_API_URL, 'holdings', accessToken);
         const holdings = holdingsPayload.Data.map(normalizeHolding);
         const holdingsSummary = summarize(holdings);
-        assertFreshHoldings(holdingsSummary, holdings, expectedHoldingsDate(getTaipeiTodayCompact(), process.env.POCKET_EXPECTED_HOLDINGS_DATE));
+        assertFreshHoldings(holdingsSummary, holdings, target);
         console.log(
             '[holdings] accepted data date=' + holdingsSummary.date +
             '; rows=' + holdingsSummary.totalRows +
@@ -333,7 +364,7 @@ function refreshFilesJson() {
         const industryOutputFile = `${ETF_ID}_industry_distribution_${industrySummary.date}.json`;
         const holdingsOutputPath = path.join(OUTPUT_DIR, holdingsOutputFile);
         const industryOutputPath = path.join(OUTPUT_DIR, industryOutputFile);
-        const updateDate = getTaipeiTodayCompact();
+        const updateDate = holdingsSummary.date;
         const updateOutputFile = `${ETF_ID}_update_${updateDate}.json`;
         const updateOutput = {
             source: 'Pocket 口袋證券',

@@ -25,3 +25,17 @@ test('industry may lag independently but cannot be future or empty',()=>{
  assert.throws(()=>assertIndustryDate({date:'20261013',totalRows:30},'20261012'),/later/);
  assert.throws(()=>assertIndustryDate({date:'20261002',totalRows:0},'20261012'),/empty/);
 });
+
+const {resolveTarget}=require('../scripts/pocket_00981a_freshness');
+test('scheduled cross-midnight and rerun use original occurrence',()=>{
+ assert.equal(resolveTarget({createdAt:'2026-11-24T17:01:00Z',schedule:'22 5 * * 1-5'}),'20261124');
+ assert.equal(resolveTarget({createdAt:'2026-11-24T02:53:00Z',schedule:'52 2 * * 1-5'}),'20261124');
+});
+test('manual pre-close, post-close, holiday and weekend',()=>{
+ assert.equal(resolveTarget({createdAt:'2026-11-24T17:01:00Z'}),'20261124');
+ assert.equal(resolveTarget({createdAt:'2026-11-25T06:00:00Z'}),'20261125');
+ assert.equal(resolveTarget({createdAt:'2026-12-25T06:00:00Z'}),'20261224');
+ assert.equal(resolveTarget({createdAt:'2026-11-29T06:00:00Z'}),'20261127');
+ assert.equal(resolveTarget({createdAt:'2026-11-25T06:00:00Z',override:'20261124'}),'20261124');
+ assert.throws(()=>resolveTarget({createdAt:'2026-11-25T06:00:00Z',override:'20261122'}),/not a trading day/);
+});

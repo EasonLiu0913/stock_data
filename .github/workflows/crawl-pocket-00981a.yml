@@ -11,12 +11,13 @@ on:
   workflow_dispatch:
     inputs:
       expected_holdings_date:
-        description: "Verified target trading date YYYYMMDD (for holidays/manual recovery); blank uses Taipei weekday/weekend policy"
+        description: "Verified target trading date YYYYMMDD (for holidays/manual recovery); blank uses latest closed trading date"
         required: false
         type: string
 
 permissions:
   contents: write
+  actions: read
 
 concurrency:
   group: crawl-pocket-00981a
@@ -38,10 +39,13 @@ jobs:
       - name: Check latest holdings data date
         env:
           POCKET_EXPECTED_HOLDINGS_DATE: ${{ inputs.expected_holdings_date || '' }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          POCKET_SCHEDULE: ${{ github.event.schedule || '' }}
         id: check_holdings
         run: |
+          set -euo pipefail
           TODAY=$(TZ='Asia/Taipei' date '+%Y%m%d')
-          EXPECTED=$(node -e "console.log(require('./scripts/pocket_00981a_freshness').expectedHoldingsDate(process.argv[1], process.env.POCKET_EXPECTED_HOLDINGS_DATE || ''))" "$TODAY")
+          EXPECTED=$(node -e 'const {resolveTarget}=require("./scripts/pocket_00981a_freshness"); (async()=>{const r=await fetch(process.env.GITHUB_API_URL+"/repos/"+process.env.GITHUB_REPOSITORY+"/actions/runs/"+process.env.GITHUB_RUN_ID,{headers:{Authorization:"Bearer "+process.env.GITHUB_TOKEN,Accept:"application/vnd.github+json"},signal:AbortSignal.timeout(30000)});if(!r.ok)throw Error("Run metadata HTTP "+r.status);const p=await r.json();if(!p.created_at)throw Error("Missing run created_at");if(process.env.GITHUB_EVENT_NAME==="schedule"&&!process.env.POCKET_SCHEDULE)throw Error("Missing schedule");console.log(resolveTarget({createdAt:p.created_at,schedule:process.env.POCKET_SCHEDULE,override:process.env.POCKET_EXPECTED_HOLDINGS_DATE}));})().catch(e=>{console.error(e.message);process.exitCode=1})')
           echo "Expected holdings date: $EXPECTED"
           LATEST_FILE="data_pocket/00981A_holdings_latest.json"
 
@@ -58,7 +62,10 @@ jobs:
           HOLDINGS_DATE=$(node -e "const fs=require('fs'); const p=JSON.parse(fs.readFileSync(process.argv[1],'utf8')); console.log(p.summary?.date || '')" "$LATEST_FILE")
           echo "holdings_date=${HOLDINGS_DATE}" >> "$GITHUB_OUTPUT"
 
-          if [ "$HOLDINGS_DATE" = "$EXPECTED" ]; then
+          if [[ "$HOLDINGS_DATE" > "$EXPECTED" ]]; then
+            echo "Newer holdings already present; refusing historical latest overwrite."
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+          elif [ "$HOLDINGS_DATE" = "$EXPECTED" ]; then
             echo "should_run=false" >> "$GITHUB_OUTPUT"
             echo "Latest holdings data date matches expected (${EXPECTED}). Crawler will not run."
           else
@@ -104,6 +111,13 @@ jobs:
             if pocket_remote_equivalent; then
               echo "Remote main already contains equivalent Pocket 00981A data; treating this run as successfully superseded."
               exit 0
+            fi
+
+            if git show origin/main:data_pocket/00981A_holdings_latest.json > "$TMP_DIR/remote_holdings.json" 2>/dev/null; then
+              if node -e 'const fs=require("fs");const a=JSON.parse(fs.readFileSync(process.argv[1]));const b=JSON.parse(fs.readFileSync(process.argv[2]));process.exit(a.summary.date>b.summary.date?0:1)' "$TMP_DIR/remote_holdings.json" "$TMP_DIR/data_pocket/00981A_holdings_latest.json"; then
+                echo "Remote already has newer holdings; refusing rollback."
+                exit 0
+              fi
             fi
 
             # Start each retry from a clean current origin/main. This avoids
