@@ -1,0 +1,198 @@
+{
+  "schemaVersion": 4,
+  "generated_at": "2026-11-27T11:34:55.349Z",
+  "replay_date": "20261127",
+  "source_files": {
+    "prediction_summary": "data_predictions/20261127/summary.json",
+    "replay_summary": "data_predictions/20261127/replay-summary.json",
+    "replay_dashboard": "data_predictions/20261127/replay-dashboard.json",
+    "predicted_environment": "data_market_environment/20261127/market_environment.json",
+    "previous_actual_environment": "data_market_environment/20261126/actual_market_environment.json"
+  },
+  "actual_environment": {
+    "code": "normal",
+    "label": "一般環境",
+    "rules": {
+      "systemic_selloff_first_day": "down_ratio >= 80 && equal_weight_return <= -2.5 && p90_return <= 0.5",
+      "market_stress": "down_ratio >= 70 && equal_weight_return <= -1.5"
+    },
+    "metrics": {
+      "sample_count": 1006,
+      "up_ratio": 40.16,
+      "down_ratio": 51.29,
+      "equal_weight_market_return": -0.14,
+      "weighted_index_return": 0.4,
+      "p90_return": 2.09
+    }
+  },
+  "prediction_evaluation": {
+    "predicted_environment": "risk_warning",
+    "actual_environment": "normal",
+    "match": false,
+    "snapshot_hash": "eda696564ddce6163415e390c45aca170164a379c570573fadd1c67c25b00825"
+  },
+  "relative_leadership_shadow_policy": {
+    "rule": "volume_ratio_5d >= 1.5 && rsi14 >= 70",
+    "policy_state": "reduced_shadow",
+    "policy_rule": "風險警告：確認分數至少 3 分列入核心，2 分列入觀察；相對強勢 7 日達 8 分計 2 分。",
+    "raw_candidates": 1,
+    "raw_hits": 0,
+    "raw_precision": 0,
+    "policy_assessed": true,
+    "policy_candidates": 1,
+    "policy_hits": 0,
+    "policy_precision": 0,
+    "policy_precision_delta": 0,
+    "watchlist_candidates": 0,
+    "excluded_candidates": 0,
+    "avoided_false_positives": 0,
+    "suppressed_true_positives": 0,
+    "net_avoided_errors": 0,
+    "candidate_stocks": [
+      {
+        "stock_code": "4106",
+        "stock_name": "雃博",
+        "volume_ratio_5d": 2.19,
+        "rsi14": 73.68,
+        "r1": 4.75,
+        "gap_sma20": 5.85,
+        "relative_strength_7d": 6.24,
+        "confirmation_score": 4,
+        "confirmation_signals": {
+          "volume_ratio_5d_at_least_2": true,
+          "rsi14_at_least_75": false,
+          "relative_strength_7d_at_least_8": false,
+          "previous_day_non_negative": true,
+          "gap_sma20_at_most_10": true,
+          "chip_bias_bullish": true,
+          "predicted_direction_bullish": true,
+          "breakout_precursor": false
+        },
+        "policy_bucket": "core",
+        "relative_leadership": false,
+        "market_percentile": 23.06
+      }
+    ],
+    "policy_candidate_stocks": [
+      {
+        "stock_code": "4106",
+        "stock_name": "雃博",
+        "volume_ratio_5d": 2.19,
+        "rsi14": 73.68,
+        "r1": 4.75,
+        "gap_sma20": 5.85,
+        "relative_strength_7d": 6.24,
+        "confirmation_score": 4,
+        "confirmation_signals": {
+          "volume_ratio_5d_at_least_2": true,
+          "rsi14_at_least_75": false,
+          "relative_strength_7d_at_least_8": false,
+          "previous_day_non_negative": true,
+          "gap_sma20_at_most_10": true,
+          "chip_bias_bullish": true,
+          "predicted_direction_bullish": true,
+          "breakout_precursor": false
+        },
+        "policy_bucket": "core",
+        "relative_leadership": false,
+        "market_percentile": 23.06
+      }
+    ],
+    "watchlist_stocks": [],
+    "data_quality": {
+      "prediction_stock_count": 1052,
+      "verified_replay_rows": 1006,
+      "matched_rows": 1006,
+      "replay_without_prediction": 0,
+      "prediction_without_verified_replay": 46
+    },
+    "note": "所有政策分層只使用 summary.json 的事前欄位；熊市時防禦抗跌股為探索規則，原候選保留於觀察清單。Shadow mode 未改動正式清單。"
+  },
+  "formal_strategy_evaluation": {
+    "source_file": "data_prediction_analysis/formal-strategy/20261127.json",
+    "strategy_id": "bear_market_defensive_resilience_v1",
+    "label": "熊市時防禦抗跌股",
+    "status": "formal_label",
+    "calculation_status": "completed",
+    "changes_direction_score": false,
+    "evaluation_target": "relative_leadership",
+    "candidates": 0,
+    "verified_candidates": 0,
+    "hits": 0,
+    "precision": null,
+    "missing_replay_candidates": 0,
+    "members": [],
+    "hit_members": [],
+    "stocks": []
+  },
+  "formal_strategy_evaluations": {
+    "bear_market_defensive_resilience_v1": {
+      "strategy_id": "bear_market_defensive_resilience_v1",
+      "label": "熊市時防禦抗跌股",
+      "status": "formal_label",
+      "calculation_status": "completed",
+      "changes_direction_score": false,
+      "evaluation_target": "relative_leadership",
+      "candidates": 0,
+      "verified_candidates": 0,
+      "hits": 0,
+      "precision": null,
+      "missing_replay_candidates": 0,
+      "members": [],
+      "hit_members": [],
+      "stocks": []
+    },
+    "oversold_electronics_rebound_v1": {
+      "strategy_id": "oversold_electronics_rebound_v1",
+      "label": "跌深反彈電子股",
+      "status": "formal_label",
+      "calculation_status": "completed",
+      "changes_direction_score": false,
+      "evaluation_target": "close_return_gt_5",
+      "hit_rule": "當日收盤報酬嚴格大於 5.00%",
+      "candidates": 0,
+      "verified_candidates": 0,
+      "hits": 0,
+      "hit_rate": null,
+      "precision": null,
+      "missing_replay_candidates": 0,
+      "average_return": 0,
+      "median_return": 0,
+      "average_market_excess_return": 0,
+      "members": [],
+      "hit_members": [],
+      "miss_members": [],
+      "hit_stocks": [],
+      "miss_stocks": [],
+      "stocks": []
+    }
+  },
+  "market_rebound_readiness_evaluation": {
+    "source_file": "data_prediction_analysis/oversold-beta-rebound/20261127.json",
+    "strategy_id": "oversold_beta_rebound_v1",
+    "label": "跌深反彈準備度",
+    "score": 3,
+    "status": "尚未形成",
+    "effective_data_weight": 100,
+    "probability": {
+      "mode": "preliminary_calibration",
+      "label": "初步校準",
+      "probability_range": [
+        0.5,
+        14.2
+      ],
+      "sample_count": 36,
+      "hit_count": 1,
+      "historical_hit_rate": 2.8,
+      "confidence_interval": [
+        0.5,
+        14.2
+      ]
+    },
+    "verified": true,
+    "market_rebound_day": false,
+    "actual_equal_weight_return": -0.14,
+    "actual_advancing_issue_ratio": 40.16,
+    "rule": "次日全市場等權重報酬 >= +2% 且上漲家數比例 >= 65%"
+  }
+}
